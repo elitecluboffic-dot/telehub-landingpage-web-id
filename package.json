@@ -1,0 +1,16 @@
+{
+  "name": "telehub-landingpage-web-id",
+  "version": "1.0.0",
+  "description": "Telehub adalah pengalaman web 3D imersif — scroll untuk menerbangkan pesawat melintasi langit prosedural sambil menjelajahi jaringan yang menghubungkan segalanya.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

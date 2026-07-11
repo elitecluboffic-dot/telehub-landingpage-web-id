@@ -1,0 +1,264 @@
+:root{
+  --navy: #0a1636;
+  --blue-deep: #17307a;
+  --blue-mid: #3358d6;
+  --lavender: #8c93e8;
+  --peach: #f3c496;
+  --cloud: #f6f8ff;
+  --accent: #7d94ff;
+  --ink: #eef1ff;
+  --font-display: 'Michroma', 'Space Grotesk', sans-serif;
+  --font-body: 'Space Grotesk', sans-serif;
+}
+
+*{ box-sizing:border-box; margin:0; padding:0; }
+
+html,body{
+  width:100%;
+  background:var(--navy);
+  color:var(--ink);
+  font-family:var(--font-body);
+  overflow-x:hidden;
+  overflow-y:hidden; /* released by JS once the enter button is pressed */
+}
+
+/* scroll distance drives the flight — taller page = more physical scrolling
+   needed to advance through the same flight progress, so the whole journey
+   (not just the fact-panel zones) reads as slower and more deliberate.
+   This is the only lever that slows EVERYTHING uniformly — the in-zone vs
+   out-of-zone speed ratio (set in main.js) only redistributes speed within
+   a fixed total distance, it can't make the whole thing slower by itself. */
+body{ height: 3000vh; }
+
+::selection{ background:var(--accent); color:var(--navy); }
+
+button{ font-family:var(--font-body); cursor:pointer; border:none; background:none; }
+
+a{ color:inherit; text-decoration:none; }
+
+/* ============ 3D LOGO TREATMENT ============ */
+.logo-3d{
+  font-family:var(--font-display);
+  text-transform:uppercase;
+  letter-spacing:0.14em;
+  color:var(--cloud);
+  text-shadow:
+    0 1px 0 #cfd8ff,
+    0 2px 0 #b7c3ff,
+    0 3px 0 #9fadf5,
+    0 4px 0 #8794e0,
+    0 5px 6px rgba(10,22,54,0.55),
+    0 12px 24px rgba(10,22,54,0.35);
+}
+
+/* ============ LOADING SCREEN ============ */
+#loading-screen{
+  position:fixed; inset:0; z-index:1000;
+  background: radial-gradient(ellipse at 50% 40%, #1c2f6e 0%, var(--navy) 70%);
+  display:flex; align-items:center; justify-content:center;
+  transition: opacity 0.8s ease, visibility 0.8s ease;
+}
+#loading-screen.hidden{ opacity:0; visibility:hidden; pointer-events:none; }
+
+.loading-inner{ text-align:center; }
+.loading-logo{ font-size:clamp(2rem, 6vw, 3.6rem); animation: logoFloat 3s ease-in-out infinite; }
+@keyframes logoFloat{ 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(-6px);} }
+
+.loading-bar-track{
+  width:min(280px, 60vw); height:2px; margin:2.2rem auto 0.8rem;
+  background:rgba(255,255,255,0.15); border-radius:2px; overflow:hidden;
+}
+.loading-bar-fill{
+  height:100%; width:0%;
+  background:linear-gradient(90deg, var(--accent), var(--peach));
+  transition: width 0.2s ease-out;
+}
+.loading-percent{ font-size:0.75rem; letter-spacing:0.2em; opacity:0.6; }
+
+/* ============ INTRO SCREEN ============ */
+#intro-screen{
+  position:fixed; inset:0; z-index:900;
+  opacity:0; visibility:hidden; pointer-events:none;
+  transition: opacity 1s ease, visibility 1s ease;
+}
+#intro-screen.visible{ opacity:1; visibility:visible; pointer-events:auto; }
+#intro-screen.fading-out{ opacity:0; visibility:hidden; }
+
+.intro-overlay{
+  position:relative; z-index:2; height:100%;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; padding:2rem;
+}
+.intro-logo{ font-size:clamp(2.4rem, 7vw, 4.4rem); }
+.intro-tagline{
+  font-family:var(--font-body); font-weight:300; letter-spacing:0.08em;
+  margin-top:0.8rem; opacity:0.75; font-size:clamp(0.9rem,2vw,1.1rem);
+}
+
+.enter-btn{
+  position:relative; margin-top:2.6rem; width:132px; height:132px;
+  border-radius:50%; display:flex; align-items:center; justify-content:center;
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(6px);
+  border:1px solid rgba(255,255,255,0.35);
+  transition: transform 0.35s ease, background 0.35s ease;
+}
+.enter-btn:hover{ transform:scale(1.06); background:rgba(255,255,255,0.12); }
+.enter-btn-ring{
+  position:absolute; inset:-10px; border-radius:50%;
+  border:1px solid rgba(255,255,255,0.25);
+  animation: ringPulse 2.6s ease-in-out infinite;
+}
+@keyframes ringPulse{
+  0%,100%{ transform:scale(1); opacity:0.6; }
+  50%{ transform:scale(1.08); opacity:0.15; }
+}
+.enter-btn-label{
+  font-family:var(--font-display); font-size:0.85rem; letter-spacing:0.18em; color:var(--cloud);
+}
+.intro-hint{
+  margin-top:1.4rem; font-size:0.7rem; letter-spacing:0.14em; opacity:0.4; text-transform:uppercase;
+}
+
+/* ============ MAIN EXPERIENCE ============ */
+#experience{
+  position:fixed; inset:0; z-index:1;
+  opacity:0; visibility:hidden; pointer-events:none;
+  transition: opacity 1.2s ease;
+}
+#experience.visible{ opacity:1; visibility:visible; pointer-events:auto; }
+
+#scene-canvas{ position:fixed; inset:0; width:100%; height:100%; display:block; z-index:0; }
+
+.hud{
+  position:fixed; top:0; left:0; right:0; z-index:20;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:1.6rem clamp(1.2rem, 4vw, 3rem);
+  pointer-events:none;
+}
+.hud-logo{ font-size:clamp(1rem,2vw,1.3rem); pointer-events:auto; }
+
+.contact-btn{
+  pointer-events:auto;
+  font-family:var(--font-display); font-size:0.7rem; letter-spacing:0.16em;
+  color:var(--navy); background:var(--cloud);
+  padding:0.85rem 1.5rem; border-radius:999px;
+  box-shadow:0 8px 20px rgba(0,0,0,0.25);
+  transition: transform 0.3s ease, background 0.3s ease;
+}
+.contact-btn:hover{ transform:translateY(-2px); background:var(--peach); }
+
+.scroll-cue{
+  position:fixed; left:50%; bottom:2.4rem; transform:translateX(-50%);
+  z-index:20; display:flex; flex-direction:column; align-items:center; gap:0.6rem;
+  font-size:0.65rem; letter-spacing:0.24em; opacity:0.6;
+  transition: opacity 0.6s ease;
+}
+.scroll-cue.hidden{ opacity:0; }
+.scroll-cue-line{ width:1px; height:38px; background:rgba(255,255,255,0.25); position:relative; overflow:hidden; }
+.scroll-cue-dot{
+  position:absolute; left:-1.5px; top:0; width:4px; height:4px; border-radius:50%;
+  background:var(--cloud); animation: cueDrop 1.8s ease-in-out infinite;
+}
+@keyframes cueDrop{ 0%{ top:-6px; opacity:0;} 30%{ opacity:1;} 100%{ top:38px; opacity:0;} }
+
+/* ============ FACT PANELS ============ */
+.fact-panel{
+  position:fixed; z-index:15;
+  top:50%; left:clamp(1.4rem, 6vw, 6rem);
+  transform:translateY(-50%);
+  max-width:min(420px, 80vw);
+  opacity:0; pointer-events:none;
+  transition: opacity 0.2s linear;
+}
+.fact-eyebrow{
+  display:inline-block; font-family:var(--font-display); font-size:0.65rem;
+  letter-spacing:0.22em; color:var(--peach); margin-bottom:1rem;
+}
+.fact-panel h2{
+  font-family:var(--font-display); font-size:clamp(1.8rem, 4.4vw, 3.2rem);
+  line-height:1.08; letter-spacing:0.01em;
+  text-shadow: 0 2px 0 rgba(255,255,255,0.15), 0 10px 30px rgba(0,0,0,0.4);
+}
+.fact-panel p{
+  margin-top:1.2rem; font-weight:300; line-height:1.6;
+  font-size:clamp(0.9rem, 1.4vw, 1.05rem); opacity:0.8; max-width:34ch;
+}
+
+/* alternate side for even panels, for compositional variety */
+.fact-panel[data-index="1"]{ left:auto; right:clamp(1.4rem, 6vw, 6rem); text-align:right; }
+.fact-panel[data-index="1"] p{ margin-left:auto; }
+.fact-panel[data-index="3"]{ left:auto; right:clamp(1.4rem, 6vw, 6rem); text-align:right; }
+.fact-panel[data-index="3"] p{ margin-left:auto; }
+
+/* ============ END SCREEN ============ */
+.end-screen{
+  position:fixed; inset:0; z-index:30;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; padding:2rem;
+  background: radial-gradient(ellipse at 50% 30%, #3358d6 0%, #0a1636 75%);
+  opacity:0; pointer-events:none;
+  transition: opacity 1s ease;
+}
+.end-screen.visible{ opacity:1; pointer-events:auto; }
+.end-logo{ font-size:clamp(2rem, 5vw, 3rem); }
+.end-message{
+  margin-top:1.4rem; font-weight:300; line-height:1.6; opacity:0.85;
+  font-size:clamp(1rem, 2vw, 1.2rem);
+}
+.end-screen .enter-btn{ width:auto; height:auto; border-radius:999px; padding:1.1rem 2.2rem; margin-top:2.4rem; }
+.end-screen .enter-btn-ring{ display:none; }
+
+/* ============ CONTACT MODAL ============ */
+.contact-modal{
+  position:fixed; inset:0; z-index:2000;
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; visibility:hidden; pointer-events:none;
+  transition: opacity 0.4s ease, visibility 0.4s ease;
+}
+.contact-modal.visible{ opacity:1; visibility:visible; pointer-events:auto; }
+.contact-modal-backdrop{
+  position:absolute; inset:0; background:rgba(6,12,32,0.72); backdrop-filter: blur(8px);
+}
+.contact-modal-panel{
+  position:relative; z-index:2; width:min(420px, 88vw);
+  background: linear-gradient(160deg, #16255c, #0a1636);
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:20px; padding:2.6rem 2.2rem;
+  transform:translateY(12px) scale(0.98);
+  transition: transform 0.4s ease;
+}
+.contact-modal.visible .contact-modal-panel{ transform:translateY(0) scale(1); }
+.contact-modal-panel h3{
+  font-family:var(--font-display); font-size:1.5rem; margin:0.8rem 0 0.6rem; letter-spacing:0.06em;
+}
+.contact-modal-panel p{ font-weight:300; opacity:0.75; margin-bottom:1.4rem; }
+.contact-line{
+  display:block; padding:0.9rem 0; border-top:1px solid rgba(255,255,255,0.1);
+  font-size:0.95rem; letter-spacing:0.02em;
+  transition: color 0.3s ease, padding-left 0.3s ease;
+}
+.contact-line:hover{ color:var(--peach); padding-left:0.4rem; }
+.contact-close{
+  position:absolute; top:1.2rem; right:1.4rem; font-size:1.6rem; line-height:1;
+  color:var(--ink); opacity:0.6; transition: opacity 0.3s ease;
+}
+.contact-close:hover{ opacity:1; }
+
+/* ============ REDUCED MOTION ============ */
+@media (prefers-reduced-motion: reduce){
+  .logo-3d, .enter-btn-ring, .scroll-cue-dot{ animation:none !important; }
+  *{ transition-duration: 0.01ms !important; }
+}
+
+/* ============ FOCUS VISIBILITY ============ */
+button:focus-visible, a:focus-visible{
+  outline:2px solid var(--peach); outline-offset:3px;
+}
+
+/* ============ SMALL SCREENS ============ */
+@media (max-width: 680px){
+  body{ height:2600vh; }
+  .fact-panel{ max-width:88vw; }
+  .enter-btn{ width:104px; height:104px; }
+}

@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Telehub - by Bimxr</title>
+<meta name="description" content="Telehub adalah pengalaman web 3D imersif — scroll untuk menerbangkan pesawat melintasi langit prosedural sambil menjelajahi jaringan yang menghubungkan segalanya." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Michroma&family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="style.css" />
+
+<!-- favicon -->
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+</head>
+<body>
+
+<!-- ============ LOADING SCREEN ============ -->
+<div id="loading-screen">
+  <div class="loading-inner">
+    <div class="logo-3d loading-logo">TELEHUB</div>
+    <div class="loading-bar-track">
+      <div class="loading-bar-fill" id="loading-bar-fill"></div>
+    </div>
+    <div class="loading-percent" id="loading-percent">0%</div>
+  </div>
+</div>
+
+<!-- persistent 3D canvas, lives behind every screen -->
+<canvas id="scene-canvas"></canvas>
+
+<!-- ============ INTRO / GATE SCREEN ============ -->
+<div id="intro-screen" aria-hidden="true">
+  <div class="intro-overlay">
+    <div class="logo-3d intro-logo">TELEHUB</div>
+    <p class="intro-tagline">A network built to fly</p>
+    <button id="enter-btn" class="enter-btn">
+      <span class="enter-btn-ring"></span>
+      <span class="enter-btn-label">ENTER</span>
+    </button>
+    <p class="intro-hint">a story best heard, not just seen</p>
+  </div>
+</div>
+
+<!-- ============ MAIN EXPERIENCE ============ -->
+<div id="experience" aria-hidden="true">
+
+  <!-- fixed chrome -->
+  <header class="hud">
+    <div class="logo-3d hud-logo">TELEHUB</div>
+    <button id="contact-btn" class="contact-btn">CONTACT</button>
+  </header>
+
+  <div class="scroll-cue" id="scroll-cue">
+    <span>SCROLL TO FLY</span>
+    <div class="scroll-cue-line"><div class="scroll-cue-dot"></div></div>
+  </div>
+
+  <!-- scroll-pinned narrative panels -->
+  <div class="fact-panel" data-index="0">
+    <span class="fact-eyebrow">NODE / 01</span>
+    <h2>WELCOME<br/>ABOARD</h2>
+    <p>Every call, every packet, every signal you send passes through a network built to move at the speed of thought. This is Telehub.</p>
+  </div>
+
+  <div class="fact-panel" data-index="1">
+    <span class="fact-eyebrow">NODE / 02</span>
+    <h2>SEAMLESS<br/>SWITCH</h2>
+    <p>Our routing mesh reroutes around failure in milliseconds — before you ever notice the turbulence.</p>
+  </div>
+
+  <div class="fact-panel" data-index="2">
+    <span class="fact-eyebrow">NODE / 03</span>
+    <h2>GLOBAL<br/>REACH</h2>
+    <p>From the ground up, across borders, oceans, and orbits one connection, everywhere at once.</p>
+  </div>
+
+  <div class="fact-panel" data-index="3">
+    <span class="fact-eyebrow">NODE / 04</span>
+    <h2>BUILT FOR<br/>WHAT'S NEXT</h2>
+    <p>Telehub isn't the destination. It's the infrastructure underneath everywhere you're going.</p>
+  </div>
+
+  <!-- landing crash / end screen -->
+  <div class="end-screen" id="end-screen">
+    <div class="logo-3d end-logo">TELEHUB</div>
+    <p class="end-message">Thank you for flying with Telehub.<br/>We hope to connect again very soon.</p>
+    <button id="restart-btn" class="enter-btn">
+      <span class="enter-btn-ring"></span>
+      <span class="enter-btn-label">EXPLORE AGAIN</span>
+    </button>
+  </div>
+
+</div>
+
+<!-- ============ CONTACT MODAL ============ -->
+<div id="contact-modal" class="contact-modal" aria-hidden="true">
+  <div class="contact-modal-backdrop" id="contact-backdrop"></div>
+  <div class="contact-modal-panel">
+    <button class="contact-close" id="contact-close">&times;</button>
+    <span class="fact-eyebrow">GET IN TOUCH</span>
+    <h3>LET'S CONNECT</h3>
+    <p>Reach out and we'll route you to the right place.</p>
+    <a class="contact-line" href="mailto:hello@telehub.web.id">hello@telehub.web.id</a>
+    <a class="contact-line" href="https://telehub.web.id" target="_blank" rel="noopener">telehub.web.id</a>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script src="https://unpkg.com/gsap@3.12.5/dist/gsap.min.js"></script>
+<script src="https://unpkg.com/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+<script type="module" src="main.js"></script>
+</body>
+</html>
