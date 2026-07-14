@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { readFileSync } from 'fs';
+import rateLimit from 'express-rate-limit';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -19,6 +20,26 @@ const SITE = {
   url: 'https://telehub.web.id',
   image: 'https://telehub.web.id/og-image.jpg', // ganti sesuai path gambar preview lo
 };
+
+// Kalau nanti butuh manggil Cloudflare API dari server (bukan wajib untuk
+// DDoS/load balancing — itu tetap diatur di dashboard Cloudflare), token-nya
+// dibaca dari environment variable, BUKAN ditulis langsung di file ini.
+// Set di server: export CF_API_TOKEN="token_baru_lo"
+const CF_API_TOKEN = process.env.CF_API_TOKEN || null;
+
+// Trust Cloudflare's proxy biar req.ip nunjukin IP visitor asli, bukan IP Cloudflare
+app.set('trust proxy', 1);
+
+// Rate limiter — lapisan proteksi tambahan di belakang Cloudflare.
+// Maksimal 100 request per menit per IP ke semua route.
+const limiter = rateLimit({
+  windowMs: 60 * 1000, // 1 menit
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Terlalu banyak request, coba lagi sebentar lagi.',
+});
+app.use(limiter);
 
 // Baca index.html sekali saat server start (bukan setiap request — lebih cepat).
 // Kalau lo sering edit index.html dan pakai `npm run dev` tanpa restart,
@@ -46,6 +67,10 @@ function renderIndexHtml() {
   return indexTemplate.replace('</head>', ogTags);
 }
 
+// Health check endpoint — berguna kalau nanti pakai load balancer beneran
+// (Cloudflare LB / Nginx / dll) untuk cek apakah instance ini masih hidup
+app.get('/health', (req, res) => res.status(200).send('OK'));
+
 // static assets disajikan langsung (JS, CSS, gambar, dll) dengan cache header
 // biar CDN/browser bisa nyimpen file yang jarang berubah lebih lama
 app.use(express.static(__dirname, {
@@ -72,4 +97,7 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`TELEHUB running on port ${PORT}`);
+  if (!CF_API_TOKEN) {
+    console.log('CF_API_TOKEN belum di-set (opsional, tidak wajib untuk server ini jalan).');
+  }
 });
