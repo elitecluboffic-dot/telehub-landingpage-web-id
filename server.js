@@ -24,10 +24,8 @@ const SITE = {
 // Kalau lo sering edit index.html dan pakai `npm run dev` tanpa restart,
 // tinggal ganti readFileSync ini jadi dipanggil ulang tiap request.
 const indexTemplate = readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
-
 const titleMatch = indexTemplate.match(/<title>(.*?)<\/title>/i);
 const descMatch = indexTemplate.match(/<meta\s+name=["']description["']\s+content=["']([^"']*)["']/i);
-
 const pageTitle = titleMatch ? titleMatch[1] : 'Telehub';
 const pageDescription = descMatch ? descMatch[1] : '';
 
@@ -45,16 +43,30 @@ function renderIndexHtml() {
   <meta name="twitter:description" content="${pageDescription}">
   <meta name="twitter:image" content="${SITE.image}">
 </head>`;
-
   return indexTemplate.replace('</head>', ogTags);
 }
 
-// static assets tetap disajikan langsung (JS, CSS, gambar, dll)
-app.use(express.static(__dirname, { extensions: ['html'], index: false }));
+// static assets disajikan langsung (JS, CSS, gambar, dll) dengan cache header
+// biar CDN/browser bisa nyimpen file yang jarang berubah lebih lama
+app.use(express.static(__dirname, {
+  extensions: ['html'],
+  index: false,
+  etag: true,
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      // HTML statis (kalau ada) jangan di-cache lama
+      res.setHeader('Cache-Control', 'no-cache');
+    } else {
+      // JS, CSS, gambar, favicon dll — aman di-cache lama
+      res.setHeader('Cache-Control', 'public, max-age=2592000, immutable');
+    }
+  }
+}));
 
 // semua route lain (termasuk '/') dapet index.html yang sudah disuntik meta tag
 app.get('*', (req, res) => {
   res.set('Content-Type', 'text/html');
+  res.set('Cache-Control', 'no-cache'); // HTML ini di-generate ulang tiap request, jangan di-cache lama
   res.send(renderIndexHtml());
 });
 
