@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ajukan Indexing — Telehub</title>
+<meta name="description" content="Ajukan URL artikel Telehub untuk diindex otomatis ke mesin pencari lewat IndexNow." />
+</head>
+<body style="margin:0; background:#0f1115;">
+
+<section id="telehub-indexing-widget" class="tw-idx">
+  <div class="tw-idx__head">
+    <h2>Ajukan Artikel untuk Diindex</h2>
+    <p>Masukkan URL artikel kamu. Sistem akan meng-crawl halaman tersebut lalu
+       otomatis mengirim sinyal indexing ke mesin pencari (Bing, Yandex, dan
+       jaringan IndexNow lainnya) — tanpa perantara pihak ketiga.</p>
+  </div>
+
+  <form id="tw-idx-form" class="tw-idx__form">
+    <input
+      id="tw-idx-url"
+      type="url"
+      placeholder="https://telehub.web.id/artikel/judul-artikel"
+      required
+    />
+    <button type="submit">Ajukan Indexing</button>
+  </form>
+
+  <p id="tw-idx-msg" class="tw-idx__msg" role="status"></p>
+
+  <div class="tw-idx__list">
+    <div class="tw-idx__list-head">
+      <h3>Riwayat Pengajuan</h3>
+      <button id="tw-idx-refresh" type="button" title="Muat ulang">↻ Refresh</button>
+    </div>
+    <ul id="tw-idx-items"></ul>
+  </div>
+</section>
+
+<style>
+  #telehub-indexing-widget.tw-idx {
+    --tw-bg: #0f1115;
+    --tw-panel: #171a21;
+    --tw-border: #262b35;
+    --tw-text: #e7e9ee;
+    --tw-muted: #8a90a2;
+    --tw-accent: #4f8cff;
+    --tw-ok: #35c98c;
+    --tw-warn: #f2b84b;
+    --tw-err: #f2555a;
+
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 32px 20px 48px;
+    color: var(--tw-text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
+
+  .tw-idx__head h2 {
+    font-size: 1.6rem;
+    margin: 0 0 8px;
+  }
+  .tw-idx__head p {
+    color: var(--tw-muted);
+    line-height: 1.55;
+    margin: 0 0 24px;
+  }
+
+  .tw-idx__form {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .tw-idx__form input {
+    flex: 1 1 320px;
+    background: var(--tw-panel);
+    border: 1px solid var(--tw-border);
+    color: var(--tw-text);
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color .15s ease;
+  }
+  .tw-idx__form input:focus {
+    border-color: var(--tw-accent);
+  }
+  .tw-idx__form button {
+    background: var(--tw-accent);
+    color: #fff;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: filter .15s ease;
+  }
+  .tw-idx__form button:hover { filter: brightness(1.1); }
+  .tw-idx__form button:disabled { opacity: .6; cursor: not-allowed; }
+
+  .tw-idx__msg {
+    min-height: 1.3em;
+    margin: 12px 2px 0;
+    font-size: 0.9rem;
+  }
+  .tw-idx__msg[data-kind="ok"] { color: var(--tw-ok); }
+  .tw-idx__msg[data-kind="err"] { color: var(--tw-err); }
+
+  .tw-idx__list {
+    margin-top: 32px;
+    border-top: 1px solid var(--tw-border);
+    padding-top: 20px;
+  }
+  .tw-idx__list-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .tw-idx__list-head h3 {
+    font-size: 1.05rem;
+    margin: 0;
+  }
+  .tw-idx__list-head button {
+    background: none;
+    border: 1px solid var(--tw-border);
+    color: var(--tw-muted);
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+  .tw-idx__list-head button:hover { color: var(--tw-text); border-color: var(--tw-accent); }
+
+  #tw-idx-items {
+    list-style: none;
+    margin: 14px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  #tw-idx-items li {
+    background: var(--tw-panel);
+    border: 1px solid var(--tw-border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .tw-idx-url {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.9rem;
+    color: var(--tw-text);
+    text-decoration: none;
+  }
+  .tw-idx-url:hover { color: var(--tw-accent); }
+  .tw-idx-badge {
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+  }
+  .tw-idx-badge[data-status="submitted"] { background: rgba(53,201,140,.15); color: var(--tw-ok); }
+  .tw-idx-badge[data-status="crawled"]   { background: rgba(79,140,255,.15); color: var(--tw-accent); }
+  .tw-idx-badge[data-status="queued"],
+  .tw-idx-badge[data-status="crawling"]  { background: rgba(242,184,75,.15); color: var(--tw-warn); }
+  .tw-idx-badge[data-status="failed"]    { background: rgba(242,85,90,.15); color: var(--tw-err); }
+
+  .tw-idx__empty { color: var(--tw-muted); font-size: 0.9rem; padding: 8px 2px; }
+</style>
+
+<script>
+(function () {
+  const API_BASE_URL = "https://comfortable-fulfillment-production-f360.up.railway.app";
+
+  const form      = document.getElementById("tw-idx-form");
+  const input     = document.getElementById("tw-idx-url");
+  const msg       = document.getElementById("tw-idx-msg");
+  const list      = document.getElementById("tw-idx-items");
+  const refreshBt = document.getElementById("tw-idx-refresh");
+
+  function setMsg(text, kind) {
+    msg.textContent = text || "";
+    if (kind) msg.setAttribute("data-kind", kind);
+    else msg.removeAttribute("data-kind");
+  }
+
+  function statusLabel(status) {
+    const map = {
+      queued: "Menunggu",
+      crawling: "Sedang di-crawl",
+      crawled: "Sudah di-crawl",
+      submitted: "Berhasil diindex",
+      failed: "Gagal",
+    };
+    return map[status] || status;
+  }
+
+  async function loadHistory() {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/list`);
+      if (!res.ok) throw new Error("Gagal memuat riwayat");
+      const data = await res.json();
+      renderHistory(data.records || []);
+    } catch (err) {
+      list.innerHTML = `<li class="tw-idx__empty">Belum bisa memuat riwayat (${err.message}).</li>`;
+    }
+  }
+
+  function renderHistory(records) {
+    if (!records.length) {
+      list.innerHTML = `<li class="tw-idx__empty">Belum ada URL yang diajukan.</li>`;
+      return;
+    }
+    list.innerHTML = records
+      .slice(0, 20)
+      .map((r) => `
+        <li>
+          <a class="tw-idx-url" href="${r.url}" target="_blank" rel="noopener">${r.url}</a>
+          <span class="tw-idx-badge" data-status="${r.status}">${statusLabel(r.status)}</span>
+        </li>
+      `)
+      .join("");
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const url = input.value.trim();
+    if (!url) return;
+
+    const btn = form.querySelector("button");
+    btn.disabled = true;
+    setMsg("Mengirim...", null);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMsg(data.error || "Terjadi kesalahan, coba lagi.", "err");
+      } else {
+        setMsg("URL diterima dan sedang diproses untuk indexing.", "ok");
+        input.value = "";
+        setTimeout(loadHistory, 1500);
+      }
+    } catch (err) {
+      setMsg("Tidak bisa menghubungi server API. Coba lagi nanti.", "err");
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  refreshBt.addEventListener("click", loadHistory);
+
+  loadHistory();
+})();
+</script>
+
+</body>
+</html>
