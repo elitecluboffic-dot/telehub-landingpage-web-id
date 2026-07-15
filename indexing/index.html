@@ -3,188 +3,684 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Ajukan Indexing — Telehub</title>
-<meta name="description" content="Ajukan URL artikel Telehub untuk diindex otomatis ke mesin pencari lewat IndexNow." />
-</head>
-<body style="margin:0; background:#0f1115;">
-
-<section id="telehub-indexing-widget" class="tw-idx">
-  <div class="tw-idx__head">
-    <h2>Ajukan Artikel untuk Diindex</h2>
-    <p>Masukkan URL artikel kamu. Sistem akan meng-crawl halaman tersebut lalu
-       otomatis mengirim sinyal indexing ke mesin pencari (Bing, Yandex, dan
-       jaringan IndexNow lainnya) — tanpa perantara pihak ketiga.</p>
-  </div>
-
-  <form id="tw-idx-form" class="tw-idx__form">
-    <input
-      id="tw-idx-url"
-      type="url"
-      placeholder="https://telehub.web.id/artikel/judul-artikel"
-      required
-    />
-    <button type="submit">Ajukan Indexing</button>
-  </form>
-
-  <p id="tw-idx-msg" class="tw-idx__msg" role="status"></p>
-
-  <div class="tw-idx__list">
-    <div class="tw-idx__list-head">
-      <h3>Riwayat Pengajuan</h3>
-      <button id="tw-idx-refresh" type="button" title="Muat ulang">↻ Refresh</button>
-    </div>
-    <ul id="tw-idx-items"></ul>
-  </div>
-</section>
-
+<title>Telehub — Top Indexing Tool</title>
+<meta name="description" content="Submit multiple URLs to search engines simultaneously using our free Telehub Signal Indexing service. Perform mass pings for your websites, backlinks, sitemaps, and RSS feeds—no registration required." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  #telehub-indexing-widget.tw-idx {
-    --tw-bg: #0f1115;
-    --tw-panel: #171a21;
-    --tw-border: #262b35;
-    --tw-text: #e7e9ee;
-    --tw-muted: #8a90a2;
-    --tw-accent: #4f8cff;
-    --tw-ok: #35c98c;
-    --tw-warn: #f2b84b;
-    --tw-err: #f2555a;
-
-    max-width: 760px;
-    margin: 0 auto;
-    padding: 32px 20px 48px;
-    color: var(--tw-text);
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  :root{
+    --bg-0:#060911;
+    --bg-1:#0b1120;
+    --panel:#10182a;
+    --panel-2:#141f38;
+    --border:#232f4d;
+    --text:#eef2fb;
+    --muted:#8b96b4;
+    --cyan:#00e5ff;
+    --magenta:#ff4d8d;
+    --violet:#7c5cff;
+    --ok:#3ddc97;
+    --warn:#ffb547;
+    --err:#ff5470;
+    --font-display:'Sora', system-ui, sans-serif;
+    --font-body:'Inter', system-ui, sans-serif;
+    --font-mono:'JetBrains Mono', monospace;
   }
 
-  .tw-idx__head h2 {
-    font-size: 1.6rem;
-    margin: 0 0 8px;
-  }
-  .tw-idx__head p {
-    color: var(--tw-muted);
-    line-height: 1.55;
-    margin: 0 0 24px;
+  *{ box-sizing:border-box; }
+
+  html,body{
+    margin:0;
+    background:var(--bg-0);
+    color:var(--text);
+    font-family:var(--font-body);
+    overflow-x:hidden;
   }
 
-  .tw-idx__form {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
+  #telehub-root{
+    position:relative;
+    min-height:100vh;
+    isolation:isolate;
   }
-  .tw-idx__form input {
-    flex: 1 1 320px;
-    background: var(--tw-panel);
-    border: 1px solid var(--tw-border);
-    color: var(--tw-text);
-    padding: 12px 14px;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    outline: none;
-    transition: border-color .15s ease;
-  }
-  .tw-idx__form input:focus {
-    border-color: var(--tw-accent);
-  }
-  .tw-idx__form button {
-    background: var(--tw-accent);
-    color: #fff;
-    border: none;
-    padding: 12px 20px;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: filter .15s ease;
-  }
-  .tw-idx__form button:hover { filter: brightness(1.1); }
-  .tw-idx__form button:disabled { opacity: .6; cursor: not-allowed; }
 
-  .tw-idx__msg {
-    min-height: 1.3em;
-    margin: 12px 2px 0;
-    font-size: 0.9rem;
+  /* ---------- 3D backdrop ---------- */
+  #tw-canvas-wrap{
+    position:absolute;
+    top:0; left:0;
+    width:100%;
+    height:min(100vh, 720px);
+    min-height:560px;
+    z-index:0;
+    overflow:hidden;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 0%, rgba(124,92,255,.16), transparent 60%),
+      radial-gradient(ellipse 60% 50% at 80% 30%, rgba(0,229,255,.10), transparent 60%),
+      linear-gradient(180deg, var(--bg-0) 0%, var(--bg-1) 60%, var(--bg-0) 100%);
   }
-  .tw-idx__msg[data-kind="ok"] { color: var(--tw-ok); }
-  .tw-idx__msg[data-kind="err"] { color: var(--tw-err); }
+  #tw-canvas-wrap canvas{
+    display:block;
+    width:100% !important;
+    height:100% !important;
+  }
+  .tw-node-label{
+    position:absolute;
+    top:0; left:0;
+    transform:translate(-50%,-50%);
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    padding:4px 9px;
+    border-radius:999px;
+    border:1px solid var(--border);
+    background:rgba(10,14,24,.55);
+    backdrop-filter:blur(6px);
+    white-space:nowrap;
+    pointer-events:none;
+    transition:opacity .2s ease;
+  }
+  .tw-node-label b{
+    display:inline-block;
+    width:6px; height:6px;
+    border-radius:50%;
+    margin-right:6px;
+    vertical-align:middle;
+    box-shadow:0 0 8px currentColor;
+  }
 
-  .tw-idx__list {
-    margin-top: 32px;
-    border-top: 1px solid var(--tw-border);
-    padding-top: 20px;
+  /* ---------- content ---------- */
+  .tw-content{
+    position:relative;
+    z-index:1;
+    max-width:840px;
+    margin:0 auto;
+    padding:0 22px 72px;
   }
-  .tw-idx__list-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .tw-idx__list-head h3 {
-    font-size: 1.05rem;
-    margin: 0;
-  }
-  .tw-idx__list-head button {
-    background: none;
-    border: 1px solid var(--tw-border);
-    color: var(--tw-muted);
-    padding: 6px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.85rem;
-  }
-  .tw-idx__list-head button:hover { color: var(--tw-text); border-color: var(--tw-accent); }
 
-  #tw-idx-items {
-    list-style: none;
-    margin: 14px 0 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+  .tw-hero{
+    padding:min(14vh, 132px) 0 46px;
+    text-align:left;
   }
-  #tw-idx-items li {
-    background: var(--tw-panel);
-    border: 1px solid var(--tw-border);
-    border-radius: 8px;
-    padding: 12px 14px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+  .tw-eyebrow{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-family:var(--font-mono);
+    font-size:12px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--cyan);
+    margin:0 0 18px;
   }
-  .tw-idx-url {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 0.9rem;
-    color: var(--tw-text);
-    text-decoration: none;
+  .tw-eyebrow::before{
+    content:'';
+    width:7px; height:7px;
+    border-radius:50%;
+    background:var(--cyan);
+    box-shadow:0 0 10px var(--cyan);
+    animation:tw-blink 1.6s ease-in-out infinite;
   }
-  .tw-idx-url:hover { color: var(--tw-accent); }
-  .tw-idx-badge {
-    flex-shrink: 0;
-    font-size: 0.75rem;
-    font-weight: 600;
-    padding: 3px 10px;
-    border-radius: 999px;
-    text-transform: uppercase;
-    letter-spacing: .03em;
+  @keyframes tw-blink{ 50%{ opacity:.25; } }
+
+  .tw-hero h1{
+    font-family:var(--font-display);
+    font-weight:800;
+    font-size:clamp(2rem, 5.4vw, 3.4rem);
+    line-height:1.06;
+    letter-spacing:-.02em;
+    margin:0 0 18px;
+    background:linear-gradient(100deg, #ffffff 0%, #ffffff 45%, var(--cyan) 100%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    max-width:15ch;
   }
-  .tw-idx-badge[data-status="submitted"] { background: rgba(53,201,140,.15); color: var(--tw-ok); }
-  .tw-idx-badge[data-status="crawled"]   { background: rgba(79,140,255,.15); color: var(--tw-accent); }
+  .tw-hero p{
+    font-size:1.02rem;
+    line-height:1.65;
+    color:var(--muted);
+    max-width:52ch;
+    margin:0;
+  }
+
+  .tw-hero-stats{
+    display:flex;
+    gap:28px;
+    margin-top:34px;
+    flex-wrap:wrap;
+  }
+  .tw-hero-stats div{
+    font-family:var(--font-mono);
+  }
+  .tw-hero-stats span{
+    display:block;
+  }
+  .tw-hero-stats .tw-stat-val{
+    font-size:1.3rem;
+    font-weight:500;
+    color:var(--text);
+  }
+  .tw-hero-stats .tw-stat-lbl{
+    font-size:11px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    margin-top:2px;
+  }
+
+  /* ---------- panel / form ---------- */
+  .tw-panel{
+    background:linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:28px;
+    box-shadow:0 30px 60px -30px rgba(0,0,0,.6);
+  }
+  .tw-panel-label{
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin:0 0 14px;
+  }
+
+  .tw-form{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .tw-form input{
+    flex:1 1 320px;
+    background:rgba(6,9,17,.6);
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:14px 16px;
+    border-radius:10px;
+    font-size:.95rem;
+    font-family:var(--font-mono);
+    outline:none;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  .tw-form input::placeholder{ color:#4c5674; }
+  .tw-form input:focus{
+    border-color:var(--cyan);
+    box-shadow:0 0 0 3px rgba(0,229,255,.14);
+  }
+
+  .tw-form textarea{
+    flex:1 1 100%;
+    background:rgba(6,9,17,.6);
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:14px 16px;
+    border-radius:10px;
+    font-size:.9rem;
+    line-height:1.6;
+    font-family:var(--font-mono);
+    outline:none;
+    resize:vertical;
+    min-height:120px;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  .tw-form textarea::placeholder{ color:#4c5674; }
+  .tw-form textarea:focus{
+    border-color:var(--cyan);
+    box-shadow:0 0 0 3px rgba(0,229,255,.14);
+  }
+  .tw-form button{ flex:0 0 auto; align-self:flex-end; }
+
+  .tw-form-hint{
+    margin:10px 2px 0;
+    font-size:.8rem;
+    color:var(--muted);
+    line-height:1.5;
+  }
+  .tw-form button{
+    background:linear-gradient(120deg, var(--cyan), var(--violet));
+    color:#04101a;
+    border:none;
+    padding:14px 24px;
+    border-radius:10px;
+    font-weight:700;
+    font-size:.92rem;
+    cursor:pointer;
+    transition:filter .15s ease, transform .1s ease;
+    font-family:var(--font-body);
+  }
+  .tw-form button:hover{ filter:brightness(1.08); }
+  .tw-form button:active{ transform:scale(.98); }
+  .tw-form button:disabled{ opacity:.55; cursor:not-allowed; filter:none; }
+
+  .tw-msg{
+    min-height:1.3em;
+    margin:14px 2px 0;
+    font-size:.88rem;
+    font-family:var(--font-mono);
+  }
+  .tw-msg[data-kind="ok"]{ color:var(--ok); }
+  .tw-msg[data-kind="err"]{ color:var(--err); }
+
+  /* ---------- batch status ---------- */
+  .tw-batch{
+    margin-top:20px;
+    border-top:1px solid var(--border);
+    padding-top:18px;
+  }
+  #tw-batch-items{
+    list-style:none;
+    margin:12px 0 0;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    max-height:260px;
+    overflow-y:auto;
+  }
+  #tw-batch-items li{
+    background:rgba(6,9,17,.5);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:10px 13px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    font-size:.84rem;
+  }
+  .tw-batch-url{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font-family:var(--font-mono);
+    color:var(--text);
+  }
+  .tw-batch-status{
+    flex-shrink:0;
+    font-family:var(--font-mono);
+    font-size:.72rem;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .tw-batch-status::before{
+    content:'';
+    width:6px; height:6px;
+    border-radius:50%;
+    background:currentColor;
+  }
+  .tw-batch-status[data-state="pending"]{ color:var(--muted); }
+  .tw-batch-status[data-state="sending"]{ color:var(--warn); }
+  .tw-batch-status[data-state="ok"]{ color:var(--ok); }
+  .tw-batch-status[data-state="err"]{ color:var(--err); }
+  .tw-batch-status[data-state="invalid"]{ color:var(--err); }
+
+  /* ---------- history ---------- */
+  .tw-history{
+    margin-top:34px;
+  }
+  .tw-history-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:14px;
+  }
+  .tw-history-head h3{
+    font-family:var(--font-display);
+    font-size:1.05rem;
+    font-weight:600;
+    margin:0;
+  }
+  .tw-refresh{
+    background:none;
+    border:1px solid var(--border);
+    color:var(--muted);
+    padding:7px 14px;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:.82rem;
+    font-family:var(--font-mono);
+    transition:color .15s ease, border-color .15s ease;
+  }
+  .tw-refresh:hover{ color:var(--text); border-color:var(--cyan); }
+
+  #tw-idx-items{
+    list-style:none;
+    margin:0;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    gap:9px;
+  }
+  #tw-idx-items li{
+    background:rgba(6,9,17,.5);
+    border:1px solid var(--border);
+    border-left:2px solid var(--border);
+    border-radius:9px;
+    padding:12px 14px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    transition:border-color .15s ease;
+  }
+  #tw-idx-items li:hover{ border-left-color:var(--cyan); }
+  .tw-idx-url{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font-size:.86rem;
+    font-family:var(--font-mono);
+    color:var(--text);
+    text-decoration:none;
+  }
+  .tw-idx-url:hover{ color:var(--cyan); }
+  .tw-idx-badge{
+    flex-shrink:0;
+    font-size:.72rem;
+    font-weight:600;
+    font-family:var(--font-mono);
+    padding:4px 11px;
+    border-radius:999px;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .tw-idx-badge::before{
+    content:'';
+    width:6px; height:6px;
+    border-radius:50%;
+    background:currentColor;
+  }
+  .tw-idx-badge[data-status="submitted"]{ background:rgba(61,220,151,.13); color:var(--ok); }
+  .tw-idx-badge[data-status="crawled"]{ background:rgba(0,229,255,.13); color:var(--cyan); }
   .tw-idx-badge[data-status="queued"],
-  .tw-idx-badge[data-status="crawling"]  { background: rgba(242,184,75,.15); color: var(--tw-warn); }
-  .tw-idx-badge[data-status="failed"]    { background: rgba(242,85,90,.15); color: var(--tw-err); }
+  .tw-idx-badge[data-status="crawling"]{ background:rgba(255,181,71,.13); color:var(--warn); }
+  .tw-idx-badge[data-status="failed"]{ background:rgba(255,84,112,.13); color:var(--err); }
 
-  .tw-idx__empty { color: var(--tw-muted); font-size: 0.9rem; padding: 8px 2px; }
+  .tw-empty{ color:var(--muted); font-size:.88rem; padding:10px 2px; font-family:var(--font-mono); }
+
+  @media (max-width: 560px){
+    .tw-hero{ padding-top:18vh; }
+    .tw-panel{ padding:20px; border-radius:14px; }
+    .tw-node-label{ font-size:10px; padding:3px 7px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .tw-eyebrow::before{ animation:none; }
+  }
 </style>
+</head>
+<body>
 
+<div id="telehub-root">
+
+  <div id="tw-canvas-wrap">
+    <div id="tw-labels"></div>
+  </div>
+
+  <div class="tw-content">
+
+    <header class="tw-hero">
+      <p class="tw-eyebrow">Telehub · Mass Indexing Gratis</p>
+      <h1>Kirim banyak URL sekaligus ke seluruh mesin pencari</h1>
+      <p>Layanan Telehub Signal Indexing gratis untuk siapa saja, tanpa perlu
+         daftar akun. Tempel banyak URL sekaligus — artikel, backlink,
+         sitemap.xml, atau RSS feed — dan Telehub akan mem-ping semuanya ke
+         Bing, Yandex, dan jaringan IndexNow dalam satu kali proses.</p>
+
+      <div class="tw-hero-stats">
+        <div><span class="tw-stat-val" id="tw-stat-total">—</span><span class="tw-stat-lbl">Total diajukan</span></div>
+        <div><span class="tw-stat-val" id="tw-stat-ok">—</span><span class="tw-stat-lbl">Berhasil diindex</span></div>
+        <div><span class="tw-stat-val">3</span><span class="tw-stat-lbl">Jaringan aktif</span></div>
+        <div><span class="tw-stat-val">Gratis</span><span class="tw-stat-lbl">Tanpa registrasi</span></div>
+      </div>
+    </header>
+
+    <section class="tw-panel">
+      <p class="tw-panel-label">Ajukan URL secara massal</p>
+      <form id="tw-idx-form" class="tw-form">
+        <textarea
+          id="tw-idx-urls"
+          rows="5"
+          placeholder="https://situsmu.com/artikel/judul-artikel
+https://situsmu.com/sitemap.xml
+https://situsmu.com/feed
+https://situsmu.com/backlink-target"
+          required
+        ></textarea>
+        <button type="submit">Ajukan Semua Indexing</button>
+      </form>
+      <p class="tw-form-hint">Satu URL per baris — bisa dicampur: artikel, backlink, sitemap.xml, atau RSS feed. Gratis, tanpa perlu daftar akun.</p>
+      <p id="tw-idx-msg" class="tw-msg" role="status"></p>
+
+      <div id="tw-batch" class="tw-batch" hidden>
+        <p class="tw-panel-label">Status pengajuan batch</p>
+        <ul id="tw-batch-items"></ul>
+      </div>
+
+      <div class="tw-history">
+        <div class="tw-history-head">
+          <h3>Riwayat Pengajuan</h3>
+          <button id="tw-idx-refresh" class="tw-refresh" type="button" title="Muat ulang">↻ Refresh</button>
+        </div>
+        <ul id="tw-idx-items"></ul>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (function () {
-  const API_BASE_URL = "https://comfortable-fulfillment-production-f360.up.railway.app";
+  "use strict";
 
-  const form      = document.getElementById("tw-idx-form");
-  const input     = document.getElementById("tw-idx-url");
-  const msg       = document.getElementById("tw-idx-msg");
-  const list      = document.getElementById("tw-idx-items");
-  const refreshBt = document.getElementById("tw-idx-refresh");
+  /* ============================================================
+     3D SIGNAL HUB
+     A central wireframe core with three orbiting rings, each
+     carrying one node (Bing / Yandex / IndexNow). Submitting a
+     URL fires a pulse from the core out to a random node.
+  ============================================================ */
+
+  var wrap = document.getElementById('tw-canvas-wrap');
+  var labelLayer = document.getElementById('tw-labels');
+  var threeReady = typeof THREE !== 'undefined';
+  var pulseQueue = [];
+  var nodeMeshes = [];
+
+  function initScene() {
+    if (!threeReady || !wrap) return null;
+
+    var width = wrap.clientWidth;
+    var height = wrap.clientHeight;
+
+    var scene = new THREE.Scene();
+    var camera = new THREE.PerspectiveCamera(46, width / height, 0.1, 100);
+    camera.position.set(0, 1.4, 9.5);
+
+    var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(width, height);
+    renderer.setClearColor(0x000000, 0);
+    wrap.appendChild(renderer.domElement);
+
+    var hubGroup = new THREE.Group();
+    scene.add(hubGroup);
+
+    /* ---- starfield backdrop ---- */
+    var starGeo = new THREE.BufferGeometry();
+    var starCount = 260;
+    var starPos = new Float32Array(starCount * 3);
+    for (var i = 0; i < starCount; i++) {
+      var r = 14 + Math.random() * 10;
+      var theta = Math.random() * Math.PI * 2;
+      var phi = Math.acos((Math.random() * 2) - 1);
+      starPos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      starPos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta) * 0.6;
+      starPos[i * 3 + 2] = r * Math.cos(phi);
+    }
+    starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+    var starMat = new THREE.PointsMaterial({ color: 0x3a4568, size: 0.045, transparent: true, opacity: 0.7 });
+    scene.add(new THREE.Points(starGeo, starMat));
+
+    /* ---- central core ---- */
+    var coreGeo = new THREE.IcosahedronGeometry(1.15, 1);
+    var coreMat = new THREE.MeshBasicMaterial({ color: 0x00e5ff, wireframe: true, transparent: true, opacity: 0.85 });
+    var core = new THREE.Mesh(coreGeo, coreMat);
+    hubGroup.add(core);
+
+    var coreGlowGeo = new THREE.IcosahedronGeometry(0.72, 1);
+    var coreGlowMat = new THREE.MeshBasicMaterial({ color: 0x7c5cff, wireframe: true, transparent: true, opacity: 0.5 });
+    var coreGlow = new THREE.Mesh(coreGlowGeo, coreGlowMat);
+    hubGroup.add(coreGlow);
+
+    /* ---- orbit rings + nodes ---- */
+    var orbitDefs = [
+      { radius: 2.6, tilt: 0.15, speed: 0.35, color: 0x00e5ff, label: 'Bing', phase: 0 },
+      { radius: 3.35, tilt: -0.55, speed: -0.26, color: 0xff4d8d, label: 'Yandex', phase: 2.1 },
+      { radius: 4.1, tilt: 1.0, speed: 0.19, color: 0x7c5cff, label: 'IndexNow', phase: 4.2 }
+    ];
+
+    orbitDefs.forEach(function (def) {
+      var ringGeo = new THREE.TorusGeometry(def.radius, 0.006, 8, 96);
+      var ringMat = new THREE.MeshBasicMaterial({ color: def.color, transparent: true, opacity: 0.28 });
+      var ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.rotation.x = Math.PI / 2 + def.tilt;
+      hubGroup.add(ring);
+
+      var nodeGeo = new THREE.SphereGeometry(0.16, 20, 20);
+      var nodeMat = new THREE.MeshBasicMaterial({ color: def.color });
+      var node = new THREE.Mesh(nodeGeo, nodeMat);
+      hubGroup.add(node);
+
+      var haloGeo = new THREE.SphereGeometry(0.32, 16, 16);
+      var haloMat = new THREE.MeshBasicMaterial({ color: def.color, transparent: true, opacity: 0.16 });
+      var halo = new THREE.Mesh(haloGeo, haloMat);
+      node.add(halo);
+
+      var label = document.createElement('div');
+      label.className = 'tw-node-label';
+      label.style.color = '#' + def.color.toString(16).padStart(6, '0');
+      label.innerHTML = '<b></b>' + def.label;
+      labelLayer.appendChild(label);
+
+      nodeMeshes.push({ mesh: node, def: def, label: label, angle: def.phase });
+    });
+
+    /* ---- pulse particles (fired on submit) ---- */
+    function spawnPulse(target) {
+      var geo = new THREE.SphereGeometry(0.09, 10, 10);
+      var mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1 });
+      var mesh = new THREE.Mesh(geo, mat);
+      hubGroup.add(mesh);
+      pulseQueue.push({ mesh: mesh, target: target, t: 0 });
+    }
+
+    var clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      var dt = Math.min(clock.getDelta(), 0.05);
+      var elapsed = clock.getElapsedTime();
+
+      core.rotation.y += dt * 0.18;
+      core.rotation.x += dt * 0.07;
+      coreGlow.rotation.y -= dt * 0.24;
+
+      hubGroup.rotation.y = Math.sin(elapsed * 0.05) * 0.25;
+      hubGroup.rotation.x = 0.08 + Math.sin(elapsed * 0.08) * 0.05;
+
+      nodeMeshes.forEach(function (n) {
+        n.angle += dt * n.def.speed;
+        var x = Math.cos(n.angle) * n.def.radius;
+        var z = Math.sin(n.angle) * n.def.radius;
+        var y = Math.sin(n.angle) * Math.sin(n.def.tilt) * n.def.radius;
+        var yTilt = z * Math.sin(n.def.tilt);
+        n.mesh.position.set(x, yTilt, z * Math.cos(n.def.tilt));
+      });
+
+      // pulses
+      for (var i = pulseQueue.length - 1; i >= 0; i--) {
+        var p = pulseQueue[i];
+        p.t += dt * 0.9;
+        if (p.t >= 1) {
+          hubGroup.remove(p.mesh);
+          pulseQueue.splice(i, 1);
+          continue;
+        }
+        var targetPos = p.target.mesh.position;
+        p.mesh.position.lerpVectors(new THREE.Vector3(0, 0, 0), targetPos, p.t);
+        p.mesh.material.opacity = 1 - p.t;
+      }
+
+      // project node labels to screen space
+      var rect = wrap.getBoundingClientRect();
+      nodeMeshes.forEach(function (n) {
+        var v = new THREE.Vector3();
+        n.mesh.getWorldPosition(v);
+        v.project(camera);
+        var visible = v.z < 1;
+        n.label.style.opacity = visible ? '1' : '0';
+        n.label.style.left = ((v.x * 0.5 + 0.5) * rect.width) + 'px';
+        n.label.style.top = ((-v.y * 0.5 + 0.5) * rect.height - 26) + 'px';
+      });
+
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    function onResize() {
+      var w = wrap.clientWidth;
+      var h = wrap.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    }
+    window.addEventListener('resize', onResize);
+
+    /* subtle parallax on pointer move */
+    window.addEventListener('pointermove', function (e) {
+      var nx = (e.clientX / window.innerWidth) - 0.5;
+      var ny = (e.clientY / window.innerHeight) - 0.5;
+      camera.position.x += (nx * 1.6 - camera.position.x) * 0.04;
+      camera.position.y += (1.4 - ny * 1.2 - camera.position.y) * 0.04;
+      camera.lookAt(0, 0, 0);
+    });
+
+    return { spawnPulse: spawnPulse, nodes: nodeMeshes };
+  }
+
+  var scene3d = initScene();
+
+  function fireRandomPulse() {
+    if (!scene3d || !scene3d.nodes.length) return;
+    var pick = scene3d.nodes[Math.floor(Math.random() * scene3d.nodes.length)];
+    scene3d.spawnPulse(pick);
+  }
+
+  /* ============================================================
+     APP LOGIC — bulk submit (many URLs at once) + shared history
+  ============================================================ */
+
+  var API_BASE_URL = "https://comfortable-fulfillment-production-f360.up.railway.app";
+  var BATCH_CONCURRENCY = 3;
+
+  var form = document.getElementById("tw-idx-form");
+  var urlsBox = document.getElementById("tw-idx-urls");
+  var msg = document.getElementById("tw-idx-msg");
+  var list = document.getElementById("tw-idx-items");
+  var refreshBt = document.getElementById("tw-idx-refresh");
+  var statTotal = document.getElementById("tw-stat-total");
+  var statOk = document.getElementById("tw-stat-ok");
+  var batchWrap = document.getElementById("tw-batch");
+  var batchList = document.getElementById("tw-batch-items");
 
   function setMsg(text, kind) {
     msg.textContent = text || "";
@@ -192,76 +688,190 @@
     else msg.removeAttribute("data-kind");
   }
 
+  function isValidUrl(str) {
+    try {
+      var u = new URL(str);
+      return u.protocol === "http:" || u.protocol === "https:";
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function parseUrlList(raw) {
+    var seen = {};
+    return raw
+      .split(/[\n,]+/)
+      .map(function (s) { return s.trim(); })
+      .filter(function (s) {
+        if (!s || seen[s]) return false;
+        seen[s] = true;
+        return true;
+      });
+  }
+
   function statusLabel(status) {
-    const map = {
+    var map = {
       queued: "Menunggu",
       crawling: "Sedang di-crawl",
       crawled: "Sudah di-crawl",
       submitted: "Berhasil diindex",
-      failed: "Gagal",
+      failed: "Gagal"
     };
     return map[status] || status;
   }
 
-  async function loadHistory() {
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/list`);
-      if (!res.ok) throw new Error("Gagal memuat riwayat");
-      const data = await res.json();
-      renderHistory(data.records || []);
-    } catch (err) {
-      list.innerHTML = `<li class="tw-idx__empty">Belum bisa memuat riwayat (${err.message}).</li>`;
-    }
-  }
-
   function renderHistory(records) {
     if (!records.length) {
-      list.innerHTML = `<li class="tw-idx__empty">Belum ada URL yang diajukan.</li>`;
+      list.innerHTML = '<li class="tw-empty">Belum ada URL yang diajukan.</li>';
+      statTotal.textContent = "0";
+      statOk.textContent = "0";
       return;
     }
+
+    statTotal.textContent = String(records.length);
+    statOk.textContent = String(records.filter(function (r) { return r.status === 'submitted'; }).length);
+
     list.innerHTML = records
       .slice(0, 20)
-      .map((r) => `
-        <li>
-          <a class="tw-idx-url" href="${r.url}" target="_blank" rel="noopener">${r.url}</a>
-          <span class="tw-idx-badge" data-status="${r.status}">${statusLabel(r.status)}</span>
-        </li>
-      `)
+      .map(function (r) {
+        return '' +
+          '<li>' +
+            '<a class="tw-idx-url" href="' + r.url + '" target="_blank" rel="noopener">' + r.url + '</a>' +
+            '<span class="tw-idx-badge" data-status="' + r.status + '">' + statusLabel(r.status) + '</span>' +
+          '</li>';
+      })
       .join("");
   }
 
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const url = input.value.trim();
-    if (!url) return;
-
-    const btn = form.querySelector("button");
-    btn.disabled = true;
-    setMsg("Mengirim...", null);
-
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/submit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
+  function loadHistory() {
+    return fetch(API_BASE_URL + "/api/list")
+      .then(function (res) {
+        if (!res.ok) throw new Error("Gagal memuat riwayat");
+        return res.json();
+      })
+      .then(function (data) {
+        renderHistory(data.records || []);
+      })
+      .catch(function (err) {
+        list.innerHTML = '<li class="tw-empty">Belum bisa memuat riwayat (' + err.message + ').</li>';
       });
-      const data = await res.json();
+  }
 
-      if (!res.ok) {
-        setMsg(data.error || "Terjadi kesalahan, coba lagi.", "err");
-      } else {
-        setMsg("URL diterima dan sedang diproses untuk indexing.", "ok");
-        input.value = "";
-        setTimeout(loadHistory, 1500);
-      }
-    } catch (err) {
-      setMsg("Tidak bisa menghubungi server API. Coba lagi nanti.", "err");
-    } finally {
-      btn.disabled = false;
+  function renderBatch(items) {
+    batchWrap.hidden = items.length === 0;
+    batchList.innerHTML = items
+      .map(function (it, i) {
+        var stateLabel = {
+          pending: "Menunggu",
+          sending: "Mengirim",
+          ok: "Terkirim",
+          err: "Gagal",
+          invalid: "URL tidak valid"
+        }[it.state] || it.state;
+        return '' +
+          '<li data-i="' + i + '">' +
+            '<span class="tw-batch-url">' + it.url + '</span>' +
+            '<span class="tw-batch-status" data-state="' + it.state + '">' + stateLabel + '</span>' +
+          '</li>';
+      })
+      .join("");
+  }
+
+  function updateBatchItem(items, index, state) {
+    items[index].state = state;
+    renderBatch(items);
+  }
+
+  function submitOne(url) {
+    return fetch(API_BASE_URL + "/api/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: url })
+    }).then(function (res) {
+      return res.json().then(function (data) { return { ok: res.ok, data: data }; });
+    });
+  }
+
+  /* run submissions with a small concurrency pool so a big batch
+     doesn't fire everything at once */
+  function runBatch(items) {
+    var next = 0;
+    var okCount = 0;
+    var errCount = 0;
+
+    function worker() {
+      if (next >= items.length) return Promise.resolve();
+      var i = next++;
+      updateBatchItem(items, i, "sending");
+      fireRandomPulse();
+
+      return submitOne(items[i].url)
+        .then(function (result) {
+          if (result.ok) {
+            okCount++;
+            updateBatchItem(items, i, "ok");
+          } else {
+            errCount++;
+            updateBatchItem(items, i, "err");
+          }
+        })
+        .catch(function () {
+          errCount++;
+          updateBatchItem(items, i, "err");
+        })
+        .then(worker);
     }
+
+    var workers = [];
+    for (var w = 0; w < Math.min(BATCH_CONCURRENCY, items.length); w++) {
+      workers.push(worker());
+    }
+    return Promise.all(workers).then(function () {
+      return { okCount: okCount, errCount: errCount };
+    });
+  }
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var candidates = parseUrlList(urlsBox.value);
+    if (!candidates.length) {
+      setMsg("Masukkan minimal satu URL.", "err");
+      return;
+    }
+
+    var items = candidates.map(function (url) {
+      return { url: url, state: isValidUrl(url) ? "pending" : "invalid" };
+    });
+    renderBatch(items);
+
+    var toSend = items.filter(function (it) { return it.state === "pending"; });
+    var invalidCount = items.length - toSend.length;
+
+    if (!toSend.length) {
+      setMsg("Semua URL tidak valid — cek kembali formatnya.", "err");
+      return;
+    }
+
+    var btn = form.querySelector("button");
+    btn.disabled = true;
+    setMsg("Mengirim " + toSend.length + " URL...", null);
+
+    runBatch(toSend).then(function (summary) {
+      var parts = [];
+      parts.push(summary.okCount + " terkirim");
+      if (summary.errCount) parts.push(summary.errCount + " gagal");
+      if (invalidCount) parts.push(invalidCount + " URL tidak valid dilewati");
+      setMsg(parts.join(", ") + ".", summary.errCount ? "err" : "ok");
+      urlsBox.value = "";
+      setTimeout(loadHistory, 1500);
+      btn.disabled = false;
+    });
   });
 
-  refreshBt.addEventListener("click", loadHistory);
+  refreshBt.addEventListener("click", function () {
+    fireRandomPulse();
+    loadHistory();
+  });
 
   loadHistory();
 })();
