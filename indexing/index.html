@@ -743,6 +743,8 @@ https://situsmu.com/backlink-target"
       .join("");
   }
 
+  // loadHistory sekarang me-return array records-nya (bukan cuma render),
+  // supaya bisa dicek statusnya oleh pollHistoryUntilSettled() di bawah.
   function loadHistory() {
     return fetch(API_BASE_URL + "/api/list")
       .then(function (res) {
@@ -750,11 +752,45 @@ https://situsmu.com/backlink-target"
         return res.json();
       })
       .then(function (data) {
-        renderHistory(data.records || []);
+        var records = data.records || [];
+        renderHistory(records);
+        return records;
       })
       .catch(function (err) {
         list.innerHTML = '<li class="tw-empty">Belum bisa memuat riwayat (' + err.message + ').</li>';
+        return [];
       });
+  }
+
+  // Backend memproses crawl + submit IndexNow secara async — bisa makan
+  // waktu beberapa detik, tergantung ukuran halaman & kecepatan network.
+  // Daripada nembak loadHistory() sekali setelah delay tetap (yang kadang
+  // keburu status belum selesai diproses), di sini kita polling /api/list
+  // berkala sampai semua URL yang baru diajukan sudah bukan lagi
+  // "queued"/"crawling", atau batas percobaan habis.
+  function pollHistoryUntilSettled(submittedUrls, opts) {
+    var maxAttempts = (opts && opts.maxAttempts) || 10;
+    var intervalMs = (opts && opts.intervalMs) || 1500;
+    var attempt = 0;
+
+    function tick() {
+      attempt++;
+      loadHistory().then(function (records) {
+        var byUrl = {};
+        records.forEach(function (r) { byUrl[r.url] = r.status; });
+
+        var stillPending = submittedUrls.some(function (u) {
+          var s = byUrl[u];
+          return s === "queued" || s === "crawling" || typeof s === "undefined";
+        });
+
+        if (stillPending && attempt < maxAttempts) {
+          setTimeout(tick, intervalMs);
+        }
+      });
+    }
+
+    tick();
   }
 
   function renderBatch(items) {
@@ -863,7 +899,7 @@ https://situsmu.com/backlink-target"
       if (invalidCount) parts.push(invalidCount + " URL tidak valid dilewati");
       setMsg(parts.join(", ") + ".", summary.errCount ? "err" : "ok");
       urlsBox.value = "";
-      setTimeout(loadHistory, 1500);
+      pollHistoryUntilSettled(toSend.map(function (it) { return it.url; }));
       btn.disabled = false;
     });
   });
