@@ -71,6 +71,17 @@ function renderIndexHtml() {
 // (Cloudflare LB / Nginx / dll) untuk cek apakah instance ini masih hidup
 app.get('/health', (req, res) => res.status(200).send('OK'));
 
+// Halaman widget "Ajukan Indexing" — dilayani apa adanya dari
+// folder indexing/index.html, tanpa disuntik OG/Twitter tag seperti
+// landing page utama, karena ini halaman utilitas internal.
+// Route ini HARUS ditaruh sebelum static middleware & catch-all '*'
+// di bawah, supaya tidak "ketiban" index.html landing page utama.
+app.get('/indexing', (req, res) => {
+  res.set('Content-Type', 'text/html');
+  res.set('Cache-Control', 'no-cache');
+  res.sendFile(path.join(__dirname, 'indexing', 'index.html'));
+});
+
 // static assets disajikan langsung (JS, CSS, gambar, dll) dengan cache header
 // biar CDN/browser bisa nyimpen file yang jarang berubah lebih lama
 app.use(express.static(__dirname, {
