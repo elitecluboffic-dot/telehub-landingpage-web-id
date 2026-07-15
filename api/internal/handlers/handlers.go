@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -48,7 +47,9 @@ func (a *API) Health(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// IndexNowKeyFile menyajikan file verifikasi key IndexNow di /<key>.txt
+// IndexNowKeyFile menyajikan file verifikasi key IndexNow di /<key>.txt.
+// Route ini otomatis berlaku di domain manapun yang diarahkan ke backend
+// ini, karena isinya sama (satu key untuk semua domain).
 func (a *API) IndexNowKeyFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	_, _ = w.Write([]byte(a.IndexNow.KeyFileContent()))
@@ -65,11 +66,8 @@ type submitResponse struct {
 }
 
 // Submit menerima satu atau banyak URL, meng-crawl-nya, lalu mengirim
-// notifikasi indexing (IndexNow) ke mesin pencari — khusus untuk URL
-// yang domainnya sama dengan domain yang key IndexNow-nya terverifikasi.
-// URL dari domain lain tetap di-crawl (proses crawling memang multi-domain,
-// bebas dipakai siapa saja), tapi notifikasi IndexNow-nya dilewati secara
-// aman, bukan dipaksakan lalu berakhir gagal.
+// notifikasi indexing (IndexNow) ke mesin pencari. Domain apapun boleh,
+// selama backend ini yang serve key file-nya di domain tersebut.
 func (a *API) Submit(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeErr(w, http.StatusMethodNotAllowed, "gunakan method POST")
@@ -131,21 +129,6 @@ func (a *API) Submit(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusAccepted, resp)
 }
 
-// sameHost membandingkan hostname sebuah URL dengan host referensi
-// (host yang key IndexNow-nya sudah terverifikasi). Perbandingan
-// case-insensitive dan mengabaikan prefix "www.", supaya
-// "https://Telehub.web.id/x" dan "https://www.telehub.web.id/x"
-// tetap dianggap domain yang sama.
-func sameHost(rawURL, referenceHost string) bool {
-	u, err := url.Parse(rawURL)
-	if err != nil {
-		return false
-	}
-	got := strings.ToLower(strings.TrimPrefix(u.Hostname(), "www."))
-	want := strings.ToLower(strings.TrimPrefix(referenceHost, "www."))
-	return got != "" && got == want
-}
-
 func (a *API) processURL(rec *store.IndexRecord) {
 	rec.Status = store.StatusCrawling
 	_ = a.Store.Put(rec)
@@ -166,22 +149,11 @@ func (a *API) processURL(rec *store.IndexRecord) {
 	rec.Error = ""
 	_ = a.Store.Put(rec)
 
-	// --- 2. Submit IndexNow: hanya valid untuk domain yang key-nya terverifikasi. ---
-	// Protokol IndexNow mewajibkan URL yang disubmit berasal dari domain yang
-	// sama dengan lokasi file verifikasi key (lihat internal/indexer/indexnow.go).
-	// Kalau dipaksakan untuk domain lain, IndexNow akan selalu menolak dengan
-	// error "not related to your verified domain" — jadi di sini kita cek dulu
-	// dan lewati submit-nya secara terkendali, bukan menganggapnya "gagal".
-	if !sameHost(rec.URL, a.IndexNow.Host) {
-		rec.Error = fmt.Sprintf(
-			"Berhasil di-crawl. Notifikasi otomatis ke mesin pencari (IndexNow) hanya aktif untuk domain %s, sehingga dilewati untuk domain URL ini.",
-			a.IndexNow.Host,
-		)
-		_ = a.Store.Put(rec)
-		log.Printf("skip indexnow submit untuk %s: domain berbeda dari %s", rec.URL, a.IndexNow.Host)
-		return
-	}
-
+	// --- 2. Submit ke IndexNow: otomatis untuk domain apapun, selama
+	// domain tersebut memang diarahkan ke backend ini (key file-nya
+	// otomatis ikut ke-serve di domain itu juga). Kalau IndexNow menolak
+	// (misal domain belum diarahkan ke backend ini sama sekali), itu
+	// dicatat sebagai gagal submit, bukan sukses diam-diam.
 	if err := a.IndexNow.SubmitOne(rec.URL); err != nil {
 		rec.Status = store.StatusFailed
 		rec.Error = "crawl sukses, tapi submit indexing gagal: " + err.Error()
