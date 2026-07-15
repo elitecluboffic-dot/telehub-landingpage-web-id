@@ -13,10 +13,10 @@ RUN apk add --no-cache ca-certificates
 WORKDIR /app
 COPY --from=builder /app/telehub-indexer-api .
 
-# Volume ini opsional; kalau Railway kamu pasang persistent volume,
-# arahkan ke /app/data supaya histori indexing tidak hilang tiap deploy.
+# Folder data untuk menyimpan histori indexing. Kalau kamu pasang Railway
+# Volume, arahkan mount path-nya ke /app/data (diatur lewat UI Railway,
+# bukan lewat instruksi VOLUME di Dockerfile -- Railway tidak mendukung itu).
 RUN mkdir -p /app/data
-VOLUME ["/app/data"]
 
 ENV PORT=8080
 EXPOSE 8080
