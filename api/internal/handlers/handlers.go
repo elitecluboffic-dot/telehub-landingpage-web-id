@@ -21,6 +21,9 @@ type API struct {
 	Crawler  *crawler.Crawler
 	IndexNow *indexer.IndexNowClient
 	APIKey   string // optional: kalau diisi, endpoint submit butuh header X-API-Key
+
+	TGBotToken string // optional: token bot telegram untuk backup data
+	TGChatID   string // optional: chat tujuan pengiriman backup
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
@@ -216,6 +219,35 @@ func (a *API) List(w http.ResponseWriter, r *http.Request) {
 		"total":   len(records),
 		"counts":  counts,
 		"records": records,
+	})
+}
+
+// Backup memicu pengiriman file data records.json saat ini ke Telegram
+// secara manual, tanpa menunggu jadwal backup mingguan otomatis.
+// Diproteksi dengan API key yang sama dengan /api/submit (kalau diset).
+func (a *API) Backup(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeErr(w, http.StatusMethodNotAllowed, "gunakan method POST")
+		return
+	}
+	if a.APIKey != "" && r.Header.Get("X-API-Key") != a.APIKey {
+		writeErr(w, http.StatusUnauthorized, "X-API-Key tidak valid")
+		return
+	}
+	if a.TGBotToken == "" || a.TGChatID == "" {
+		writeErr(w, http.StatusServiceUnavailable, "TG_BOT_TOKEN/TG_CHAT_ID belum diset di server")
+		return
+	}
+
+	if err := a.Store.BackupToTelegram(a.TGBotToken, a.TGChatID); err != nil {
+		log.Printf("backup manual ke telegram gagal: %v", err)
+		writeErr(w, http.StatusInternalServerError, "gagal kirim backup ke telegram: "+err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{
+		"status": "backup terkirim ke telegram",
+		"time":   time.Now().UTC().Format(time.RFC3339),
 	})
 }
 
