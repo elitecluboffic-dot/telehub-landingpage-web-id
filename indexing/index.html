@@ -453,6 +453,36 @@
 
   .tw-empty{ color:var(--muted); font-size:.88rem; padding:10px 2px; font-family:var(--font-mono); }
 
+  /* ---------- pagination ---------- */
+  .tw-pagination{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    margin-top:16px;
+  }
+  .tw-page-btn{
+    background:none;
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:7px 16px;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:.82rem;
+    font-family:var(--font-mono);
+    transition:color .15s ease, border-color .15s ease, opacity .15s ease;
+  }
+  .tw-page-btn:hover:not(:disabled){ border-color:var(--cyan); color:var(--cyan); }
+  .tw-page-btn:disabled{ opacity:.35; cursor:not-allowed; }
+  .tw-page-info{
+    font-family:var(--font-mono);
+    font-size:.78rem;
+    color:var(--muted);
+    letter-spacing:.04em;
+    min-width:88px;
+    text-align:center;
+  }
+
   @media (max-width: 560px){
     .tw-hero{ padding-top:18vh; }
     .tw-panel{ padding:20px; border-radius:14px; }
@@ -534,6 +564,11 @@ https://situsmu.com/backlink-target"
           <button id="tw-idx-refresh" class="tw-refresh" type="button" title="Muat ulang">↻ Refresh</button>
         </div>
         <ul id="tw-idx-items"></ul>
+        <div id="tw-pagination" class="tw-pagination" hidden>
+          <button id="tw-page-prev" class="tw-page-btn" type="button">‹ Prev</button>
+          <span id="tw-page-info" class="tw-page-info">Halaman 1</span>
+          <button id="tw-page-next" class="tw-page-btn" type="button">Next ›</button>
+        </div>
       </div>
     </section>
 
@@ -734,6 +769,7 @@ https://situsmu.com/backlink-target"
 
   var API_BASE_URL = "https://comfortable-fulfillment-production-f360.up.railway.app";
   var BATCH_CONCURRENCY = 3;
+  var HISTORY_PAGE_SIZE = 10;
 
   var form = document.getElementById("tw-idx-form");
   var urlsBox = document.getElementById("tw-idx-urls");
@@ -744,6 +780,13 @@ https://situsmu.com/backlink-target"
   var statOk = document.getElementById("tw-stat-ok");
   var batchWrap = document.getElementById("tw-batch");
   var batchList = document.getElementById("tw-batch-items");
+  var paginationWrap = document.getElementById("tw-pagination");
+  var pagePrevBt = document.getElementById("tw-page-prev");
+  var pageNextBt = document.getElementById("tw-page-next");
+  var pageInfo = document.getElementById("tw-page-info");
+
+  var historyRecords = [];
+  var historyPage = 1;
 
   function setMsg(text, kind) {
     msg.textContent = text || "";
@@ -783,19 +826,43 @@ https://situsmu.com/backlink-target"
     return map[status] || status;
   }
 
+  function renderPagination(totalRecords) {
+    var totalPages = Math.max(1, Math.ceil(totalRecords / HISTORY_PAGE_SIZE));
+
+    if (historyPage > totalPages) historyPage = totalPages;
+    if (historyPage < 1) historyPage = 1;
+
+    if (totalRecords <= HISTORY_PAGE_SIZE) {
+      paginationWrap.hidden = true;
+      return;
+    }
+
+    paginationWrap.hidden = false;
+    pageInfo.textContent = "Halaman " + historyPage + " / " + totalPages;
+    pagePrevBt.disabled = historyPage <= 1;
+    pageNextBt.disabled = historyPage >= totalPages;
+  }
+
   function renderHistory(records) {
+    historyRecords = records;
+
     if (!records.length) {
       list.innerHTML = '<li class="tw-empty">Belum ada URL yang diajukan.</li>';
       statTotal.textContent = "0";
       statOk.textContent = "0";
+      paginationWrap.hidden = true;
       return;
     }
 
     statTotal.textContent = String(records.length);
     statOk.textContent = String(records.filter(function (r) { return r.status === 'submitted'; }).length);
 
-    list.innerHTML = records
-      .slice(0, 20)
+    renderPagination(records.length);
+
+    var start = (historyPage - 1) * HISTORY_PAGE_SIZE;
+    var pageItems = records.slice(start, start + HISTORY_PAGE_SIZE);
+
+    list.innerHTML = pageItems
       .map(function (r) {
         return '' +
           '<li>' +
@@ -969,7 +1036,21 @@ https://situsmu.com/backlink-target"
 
   refreshBt.addEventListener("click", function () {
     fireRandomPulse();
+    historyPage = 1;
     loadHistory();
+  });
+
+  pagePrevBt.addEventListener("click", function () {
+    if (historyPage <= 1) return;
+    historyPage--;
+    renderHistory(historyRecords);
+  });
+
+  pageNextBt.addEventListener("click", function () {
+    var totalPages = Math.max(1, Math.ceil(historyRecords.length / HISTORY_PAGE_SIZE));
+    if (historyPage >= totalPages) return;
+    historyPage++;
+    renderHistory(historyRecords);
   });
 
   loadHistory();
