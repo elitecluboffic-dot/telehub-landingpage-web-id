@@ -270,6 +270,46 @@
   .tw-form button:active{ transform:scale(.98); }
   .tw-form button:disabled{ opacity:.55; cursor:not-allowed; filter:none; }
 
+  .tw-home-btn{
+    flex:0 0 auto;
+    align-self:flex-end;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:52px;
+    height:52px;
+    border:none;
+    border-radius:10px;
+    font-size:1.3rem;
+    line-height:1;
+    text-decoration:none;
+    color:#04101a;
+    background:linear-gradient(90deg,
+      #ff004c, #ff8a00, #ffee00, #26ff5c, #00e5ff, #7c5cff, #ff4dd8, #ff004c);
+    background-size:400% 100%;
+    animation:tw-home-rainbow 4s linear infinite;
+    box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 0 16px rgba(124,92,255,.35);
+    transition:transform .1s ease, box-shadow .2s ease;
+  }
+  .tw-home-btn svg{
+    stroke:#04101a;
+    filter:drop-shadow(0 0 2px rgba(255,255,255,.55));
+  }
+  .tw-home-btn:hover{
+    box-shadow:0 0 0 1px rgba(255,255,255,.14), 0 0 24px rgba(0,229,255,.55);
+    animation-duration:1.4s;
+  }
+  .tw-home-btn:active{ transform:scale(.94); }
+
+  @keyframes tw-home-rainbow{
+    0%{ background-position:0% 50%; }
+    100%{ background-position:400% 50%; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .tw-home-btn{ animation:none; }
+  }
+
   .tw-msg{
     min-height:1.3em;
     margin:14px 2px 0;
@@ -534,6 +574,12 @@ https://situsmu.com/backlink-target"
           required
         ></textarea>
         <button type="submit">Ajukan Semua Indexing</button>
+        <a href="/" class="tw-home-btn" title="Home">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 11.5 12 4l9 7.5"/>
+            <path d="M5.5 10v9a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1v-9"/>
+          </svg>
+        </a>
       </form>
       <p class="tw-form-hint">Satu URL per baris — bisa dicampur: artikel, backlink, sitemap.xml, atau RSS feed. Gratis, tanpa perlu daftar akun.</p>
       <p id="tw-idx-msg" class="tw-msg" role="status"></p>
