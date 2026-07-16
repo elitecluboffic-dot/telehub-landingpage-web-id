@@ -319,7 +319,9 @@
   .tw-msg[data-kind="ok"]{ color:var(--ok); }
   .tw-msg[data-kind="err"]{ color:var(--err); }
 
-  /* ---------- ad box (desktop/PC only — disembunyikan total di mobile) ---------- */
+  /* ---------- ad box lama (Social Bar / banner disturbknockedcaterpillar) —
+       HANYA desktop/PC, disembunyikan total di mobile. Dibiarkan apa
+       adanya, tidak diubah, supaya tidak bentrok dengan AdSense. ---------- */
   .tw-ad-box{
     margin-top:20px;
     border-top:1px solid var(--border);
@@ -350,10 +352,48 @@
   }
 
   /* Jaring pengaman CSS: di layar sempit (mobile/tablet kecil) kotak iklan
-     selalu disembunyikan, apa pun status JS-nya. Kontrol utama tetap di JS
-     (deteksi device), ini hanya lapisan cadangan. */
+     LAMA selalu disembunyikan, apa pun status JS-nya. Kontrol utama tetap
+     di JS (deteksi device), ini hanya lapisan cadangan. */
   @media (max-width: 768px){
     .tw-ad-box{ display:none !important; }
+  }
+
+  /* ---------- kotak AdSense BARU — terpisah dari ad box lama, tampil di
+       SEMUA device (HP & PC), full responsif ---------- */
+  .tw-adsense-box{
+    margin-top:20px;
+    border-top:1px solid var(--border);
+    padding-top:20px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+  }
+  .tw-adsense-box-label{
+    font-family:var(--font-mono);
+    font-size:10px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin:0;
+    align-self:center;
+  }
+  .tw-adsense-slot{
+    width:100%;
+    max-width:100%;
+    min-height:100px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    border-radius:10px;
+  }
+  /* adsbygoogle mengisi lebar penuh slot-nya secara responsif berkat
+     data-full-width-responsive="true"; kita bantu supaya tidak overflow
+     di layar sempit. */
+  .tw-adsense-slot .adsbygoogle{
+    display:block;
+    width:100%;
   }
 
   /* ---------- batch status ---------- */
@@ -591,13 +631,31 @@ https://situsmu.com/backlink-target"
       <p class="tw-form-hint">Satu URL per baris — bisa dicampur: artikel, backlink, sitemap.xml, atau RSS feed. Gratis, tanpa perlu daftar akun.</p>
       <p id="tw-idx-msg" class="tw-msg" role="status"></p>
 
-      <!-- Kotak iklan: HANYA dirender di desktop/PC. Di mobile, div ini
-           tetap kosong dan disembunyikan total lewat JS + CSS, tidak ada
-           script iklan apa pun yang dimuat. -->
+      <!-- Kotak iklan LAMA (Social Bar / banner disturbknockedcaterpillar):
+           HANYA dirender di desktop/PC. Di mobile, div ini tetap kosong
+           dan disembunyikan total lewat JS + CSS. Dibiarkan tidak berubah. -->
       <div class="tw-ad-box" id="tw-ad-box">
         <p class="tw-ad-box-label">Iklan</p>
         <div class="tw-ad-box-slot" id="tw-ad-slot"></div>
       </div>
+
+      <!-- Kotak AdSense BARU — terpisah, tampil di HP maupun PC, full
+           responsif berkat data-full-width-responsive="true". -->
+      <div class="tw-adsense-box" id="tw-adsense-box">
+        <p class="tw-adsense-box-label">Iklan</p>
+        <div class="tw-adsense-slot" id="tw-adsense-slot">
+          <!-- IKLAN TELEHUB -->
+          <ins class="adsbygoogle"
+               style="display:block"
+               data-ad-client="ca-pub-1296306359438663"
+               data-ad-slot="1569683214"
+               data-ad-format="auto"
+               data-full-width-responsive="true"></ins>
+        </div>
+      </div>
+      <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+      </script>
 
       <div id="tw-batch" class="tw-batch" hidden>
         <p class="tw-panel-label">Status pengajuan batch</p>
@@ -624,7 +682,8 @@ https://situsmu.com/backlink-target"
 <!-- CATATAN: script iklan "Social Bar" (overlay) SUDAH TIDAK dimuat langsung
      di sini. Script ini sekarang hanya di-inject lewat JS di bawah, dan HANYA
      jika perangkat terdeteksi sebagai desktop/PC. Di mobile, script ini tidak
-     pernah dimuat sama sekali. -->
+     pernah dimuat sama sekali. AdSense di atas TIDAK terpengaruh oleh
+     deteksi ini — selalu tampil di semua device. -->
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -632,11 +691,13 @@ https://situsmu.com/backlink-target"
   "use strict";
 
   /* ============================================================
-     DETEKSI DESKTOP vs MOBILE — mengontrol semua iklan di halaman
-     ini. Iklan (kotak iklan di dalam panel form + social bar
-     overlay) HANYA akan dimuat/ditampilkan jika perangkat
-     terdeteksi sebagai desktop/PC. Di mobile, kotak iklan
-     disembunyikan total dan tidak ada script iklan yang dimuat.
+     DETEKSI DESKTOP vs MOBILE — mengontrol iklan LAMA (Social Bar /
+     banner disturbknockedcaterpillar) saja. Iklan (kotak iklan lama
+     di dalam panel form + social bar overlay) HANYA akan dimuat/
+     ditampilkan jika perangkat terdeteksi sebagai desktop/PC. Di
+     mobile, kotak iklan lama disembunyikan total dan tidak ada
+     script iklan yang dimuat. Kotak AdSense yang baru TIDAK diatur
+     oleh fungsi ini — dia selalu tampil di semua device.
   ============================================================ */
 
   function isMobileDevice() {
@@ -653,13 +714,13 @@ https://situsmu.com/backlink-target"
     var adBox = document.getElementById('tw-ad-box');
 
     if (isMobileDevice()) {
-      // Mobile/tablet kecil: sembunyikan total kotak iklan, jangan muat
-      // script iklan apa pun (baik banner maupun social bar overlay).
+      // Mobile/tablet kecil: sembunyikan total kotak iklan lama, jangan
+      // muat script iklan apa pun (baik banner maupun social bar overlay).
       if (adBox) adBox.style.display = 'none';
       return;
     }
 
-    // Desktop/PC: tampilkan kotak iklan dan muat script-script iklan.
+    // Desktop/PC: tampilkan kotak iklan lama dan muat script-script iklan.
     if (adBox) adBox.style.display = '';
 
     var slot = document.getElementById('tw-ad-slot');
