@@ -17,7 +17,8 @@
 //   5. /sitemap.xml otomatis berisi seluruh URL yang sudah berhasil diindex.
 //   6. Data record di-backup berkala (dan bisa manual) ke sebuah chat
 //      Telegram lewat Bot API, supaya tidak hilang kalau pindah
-//      server/volume Railway.
+//      server/volume Railway. Endpoint /api/restore dipakai untuk
+//      mengembalikan data dari backup tersebut saat migrasi.
 package main
 
 import (
@@ -54,7 +55,7 @@ func envInt(key string, fallback int) int {
 func main() {
 	port := env("PORT", "8080")
 	indexNowKey := env("INDEXNOW_KEY", "") // kosongkan supaya digenerate otomatis saat start
-	apiKey := env("API_KEY", "")           // opsional: proteksi endpoint /api/submit
+	apiKey := env("API_KEY", "")           // opsional: proteksi endpoint /api/submit, /api/backup, /api/restore
 	dataFile := env("DATA_FILE", "./data/records.json")
 	rateLimitPerMin := envInt("RATE_LIMIT_PER_MINUTE", 60)
 	rateLimitBurst := envInt("RATE_LIMIT_BURST", 20)
@@ -106,7 +107,8 @@ func main() {
 	mux.HandleFunc("/api/submit", api.Submit)
 	mux.HandleFunc("/api/status", api.Status)
 	mux.HandleFunc("/api/list", api.List)
-	mux.HandleFunc("/api/backup", api.Backup) // trigger backup manual data ke telegram
+	mux.HandleFunc("/api/backup", api.Backup)   // trigger backup manual data ke telegram
+	mux.HandleFunc("/api/restore", api.Restore) // restore data dari backup (dipakai saat migrasi server)
 	mux.HandleFunc("/sitemap.xml", api.Sitemap)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
@@ -114,7 +116,7 @@ func main() {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Write([]byte(`{"service":"telehub-indexer-api","docs":"lihat README.md","endpoints":["/health","/api/submit","/api/status","/api/list","/api/backup","/sitemap.xml"]}`))
+		w.Write([]byte(`{"service":"telehub-indexer-api","docs":"lihat README.md","endpoints":["/health","/api/submit","/api/status","/api/list","/api/backup","/api/restore","/sitemap.xml"]}`))
 	})
 
 	limiter := middleware.NewRateLimiter(rateLimitPerMin, rateLimitBurst)
