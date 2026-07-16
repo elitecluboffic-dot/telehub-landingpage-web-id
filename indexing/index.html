@@ -319,7 +319,7 @@
   .tw-msg[data-kind="ok"]{ color:var(--ok); }
   .tw-msg[data-kind="err"]{ color:var(--err); }
 
-  /* ---------- ad box ---------- */
+  /* ---------- ad box (desktop/PC only — disembunyikan total di mobile) ---------- */
   .tw-ad-box{
     margin-top:20px;
     border-top:1px solid var(--border);
@@ -347,6 +347,13 @@
     border:1px dashed var(--border);
     border-radius:10px;
     overflow:hidden;
+  }
+
+  /* Jaring pengaman CSS: di layar sempit (mobile/tablet kecil) kotak iklan
+     selalu disembunyikan, apa pun status JS-nya. Kontrol utama tetap di JS
+     (deteksi device), ini hanya lapisan cadangan. */
+  @media (max-width: 768px){
+    .tw-ad-box{ display:none !important; }
   }
 
   /* ---------- batch status ---------- */
@@ -584,20 +591,12 @@ https://situsmu.com/backlink-target"
       <p class="tw-form-hint">Satu URL per baris — bisa dicampur: artikel, backlink, sitemap.xml, atau RSS feed. Gratis, tanpa perlu daftar akun.</p>
       <p id="tw-idx-msg" class="tw-msg" role="status"></p>
 
-      <div class="tw-ad-box">
+      <!-- Kotak iklan: HANYA dirender di desktop/PC. Di mobile, div ini
+           tetap kosong dan disembunyikan total lewat JS + CSS, tidak ada
+           script iklan apa pun yang dimuat. -->
+      <div class="tw-ad-box" id="tw-ad-box">
         <p class="tw-ad-box-label">Iklan</p>
-        <div class="tw-ad-box-slot">
-          <script type="text/javascript">
-            atOptions = {
-              'key' : '670c3dfdfa30ce76064083d0d8dde152',
-              'format' : 'iframe',
-              'height' : 300,
-              'width' : 160,
-              'params' : {}
-            };
-          </script>
-          <script src="https://disturbknockedcaterpillar.com/670c3dfdfa30ce76064083d0d8dde152/invoke.js"></script>
-        </div>
+        <div class="tw-ad-box-slot" id="tw-ad-slot"></div>
       </div>
 
       <div id="tw-batch" class="tw-batch" hidden>
@@ -622,13 +621,73 @@ https://situsmu.com/backlink-target"
   </div>
 </div>
 
-<!-- Social Bar ad network script (overlay-style, injects its own UI — does not need a container) -->
-<script src="https://disturbknockedcaterpillar.com/23/ca/82/23ca828838893778d760b727c9a62f7a.js"></script>
+<!-- CATATAN: script iklan "Social Bar" (overlay) SUDAH TIDAK dimuat langsung
+     di sini. Script ini sekarang hanya di-inject lewat JS di bawah, dan HANYA
+     jika perangkat terdeteksi sebagai desktop/PC. Di mobile, script ini tidak
+     pernah dimuat sama sekali. -->
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (function () {
   "use strict";
+
+  /* ============================================================
+     DETEKSI DESKTOP vs MOBILE — mengontrol semua iklan di halaman
+     ini. Iklan (kotak iklan di dalam panel form + social bar
+     overlay) HANYA akan dimuat/ditampilkan jika perangkat
+     terdeteksi sebagai desktop/PC. Di mobile, kotak iklan
+     disembunyikan total dan tidak ada script iklan yang dimuat.
+  ============================================================ */
+
+  function isMobileDevice() {
+    var uaMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(navigator.userAgent);
+    var narrowViewport = window.innerWidth <= 768;
+    var coarsePointer = false;
+    try {
+      coarsePointer = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    } catch (e) { /* abaikan */ }
+    return uaMobile || (narrowViewport && coarsePointer) || narrowViewport;
+  }
+
+  function initAdsIfDesktop() {
+    var adBox = document.getElementById('tw-ad-box');
+
+    if (isMobileDevice()) {
+      // Mobile/tablet kecil: sembunyikan total kotak iklan, jangan muat
+      // script iklan apa pun (baik banner maupun social bar overlay).
+      if (adBox) adBox.style.display = 'none';
+      return;
+    }
+
+    // Desktop/PC: tampilkan kotak iklan dan muat script-script iklan.
+    if (adBox) adBox.style.display = '';
+
+    var slot = document.getElementById('tw-ad-slot');
+    if (slot) {
+      var optScript = document.createElement('script');
+      optScript.type = 'text/javascript';
+      optScript.text =
+        "atOptions = {" +
+        "'key':'670c3dfdfa30ce76064083d0d8dde152'," +
+        "'format':'iframe'," +
+        "'height':300," +
+        "'width':160," +
+        "'params':{}" +
+        "};";
+      slot.appendChild(optScript);
+
+      var invokeScript = document.createElement('script');
+      invokeScript.src = 'https://disturbknockedcaterpillar.com/670c3dfdfa30ce76064083d0d8dde152/invoke.js';
+      slot.appendChild(invokeScript);
+    }
+
+    // Social bar (overlay ad network) — hanya di-inject di desktop.
+    var socialScript = document.createElement('script');
+    socialScript.src = 'https://disturbknockedcaterpillar.com/23/ca/82/23ca828838893778d760b727c9a62f7a.js';
+    document.body.appendChild(socialScript);
+  }
+
+  initAdsIfDesktop();
 
   /* ============================================================
      3D SIGNAL HUB
