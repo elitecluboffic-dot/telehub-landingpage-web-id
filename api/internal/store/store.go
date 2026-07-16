@@ -27,17 +27,14 @@ func New(path string) (*Store, error) {
 		records:  make(map[string]*IndexRecord),
 		autosave: true,
 	}
-
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return nil, fmt.Errorf("gagal membuat direktori data: %w", err)
 	}
-
 	if _, err := os.Stat(path); err == nil {
 		if err := s.load(); err != nil {
 			return nil, fmt.Errorf("gagal memuat data: %w", err)
 		}
 	}
-
 	return s, nil
 }
 
@@ -68,12 +65,10 @@ func (s *Store) persistLocked() error {
 	sort.Slice(list, func(i, j int) bool {
 		return list[i].CreatedAt.Before(list[j].CreatedAt)
 	})
-
 	raw, err := json.MarshalIndent(list, "", "  ")
 	if err != nil {
 		return err
 	}
-
 	tmp := s.path + ".tmp"
 	if err := os.WriteFile(tmp, raw, 0o644); err != nil {
 		return err
@@ -124,7 +119,6 @@ func (s *Store) FindByURL(url string) (*IndexRecord, bool) {
 func (s *Store) List(limit int) []*IndexRecord {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-
 	list := make([]*IndexRecord, 0, len(s.records))
 	for _, r := range s.records {
 		list = append(list, r)
@@ -132,7 +126,6 @@ func (s *Store) List(limit int) []*IndexRecord {
 	sort.Slice(list, func(i, j int) bool {
 		return list[i].CreatedAt.After(list[j].CreatedAt)
 	})
-
 	if limit > 0 && len(list) > limit {
 		list = list[:limit]
 	}
@@ -143,12 +136,10 @@ func (s *Store) List(limit int) []*IndexRecord {
 func (s *Store) URLsWithStatus(statuses ...Status) []string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-
 	want := make(map[Status]bool, len(statuses))
 	for _, st := range statuses {
 		want[st] = true
 	}
-
 	out := make([]string, 0)
 	for _, r := range s.records {
 		if want[r.Status] {
@@ -168,4 +159,18 @@ func (s *Store) Count() map[Status]int {
 		out[r.Status]++
 	}
 	return out
+}
+
+// RestoreAll mengganti seluruh isi store dengan daftar record yang diberikan,
+// lalu langsung menyimpannya ke disk. Dipakai saat migrasi server: restore
+// dari file backup (misal yang diambil dari Telegram) ke server yang baru.
+func (s *Store) RestoreAll(records []*IndexRecord) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	newMap := make(map[string]*IndexRecord, len(records))
+	for _, r := range records {
+		newMap[r.ID] = r
+	}
+	s.records = newMap
+	return s.persistLocked()
 }
