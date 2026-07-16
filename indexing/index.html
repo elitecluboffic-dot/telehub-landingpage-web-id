@@ -279,6 +279,36 @@
   .tw-msg[data-kind="ok"]{ color:var(--ok); }
   .tw-msg[data-kind="err"]{ color:var(--err); }
 
+  /* ---------- ad box ---------- */
+  .tw-ad-box{
+    margin-top:20px;
+    border-top:1px solid var(--border);
+    padding-top:20px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+  }
+  .tw-ad-box-label{
+    font-family:var(--font-mono);
+    font-size:10px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin:0;
+  }
+  .tw-ad-box-slot{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-width:160px;
+    min-height:300px;
+    background:rgba(6,9,17,.4);
+    border:1px dashed var(--border);
+    border-radius:10px;
+    overflow:hidden;
+  }
+
   /* ---------- batch status ---------- */
   .tw-batch{
     margin-top:20px;
@@ -476,6 +506,22 @@ https://situsmu.com/backlink-target"
       </form>
       <p class="tw-form-hint">Satu URL per baris — bisa dicampur: artikel, backlink, sitemap.xml, atau RSS feed. Gratis, tanpa perlu daftar akun.</p>
       <p id="tw-idx-msg" class="tw-msg" role="status"></p>
+
+      <div class="tw-ad-box">
+        <p class="tw-ad-box-label">Iklan</p>
+        <div class="tw-ad-box-slot">
+          <script type="text/javascript">
+            atOptions = {
+              'key' : '670c3dfdfa30ce76064083d0d8dde152',
+              'format' : 'iframe',
+              'height' : 300,
+              'width' : 160,
+              'params' : {}
+            };
+          </script>
+          <script src="https://disturbknockedcaterpillar.com/670c3dfdfa30ce76064083d0d8dde152/invoke.js"></script>
+        </div>
+      </div>
 
       <div id="tw-batch" class="tw-batch" hidden>
         <p class="tw-panel-label">Status pengajuan batch</p>
@@ -929,18 +975,6 @@ https://situsmu.com/backlink-target"
   loadHistory();
 })();
 </script>
-
-  <script>
-  atOptions = {
-    'key' : '670c3dfdfa30ce76064083d0d8dde152',
-    'format' : 'iframe',
-    'height' : 300,
-    'width' : 160,
-    'params' : {}
-  };
-</script>
-<script src="https://disturbknockedcaterpillar.com/670c3dfdfa30ce76064083d0d8dde152/invoke.js"></script>
-
 
 </body>
 </html>
