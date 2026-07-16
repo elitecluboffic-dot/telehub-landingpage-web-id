@@ -77,10 +77,10 @@ func (a *API) Submit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if a.APIKey != "" && r.Header.Get("X-API-Key") != a.APIKey {
-		writeErr(w, http.StatusUnauthorized, "X-API-Key tidak valid")
-		return
-	}
+	// Catatan: /api/submit SENGAJA tidak diproteksi X-API-Key, karena endpoint
+	// ini dipanggil langsung dari browser pengunjung lewat frontend publik
+	// (lihat index.html) -- ini memang layanan gratis tanpa perlu daftar akun.
+	// Proteksi API key hanya berlaku untuk /api/backup dan /api/restore.
 
 	var req submitRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
