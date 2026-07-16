@@ -251,6 +251,39 @@ func (a *API) Backup(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Restore mengganti seluruh data yang ada dengan isi backup JSON yang dikirim
+// di body request (format array IndexRecord, sama seperti isi file
+// records.json). Dipakai sekali saat migrasi ke server/project Railway baru:
+// download file JSON terakhir dari Telegram, lalu POST isinya ke endpoint ini.
+func (a *API) Restore(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeErr(w, http.StatusMethodNotAllowed, "gunakan method POST")
+		return
+	}
+	if a.APIKey != "" && r.Header.Get("X-API-Key") != a.APIKey {
+		writeErr(w, http.StatusUnauthorized, "X-API-Key tidak valid")
+		return
+	}
+
+	var records []*store.IndexRecord
+	if err := json.NewDecoder(r.Body).Decode(&records); err != nil {
+		writeErr(w, http.StatusBadRequest, "body harus berupa JSON array record (format sama seperti isi records.json)")
+		return
+	}
+
+	if err := a.Store.RestoreAll(records); err != nil {
+		log.Printf("restore data gagal: %v", err)
+		writeErr(w, http.StatusInternalServerError, "gagal restore data: "+err.Error())
+		return
+	}
+
+	log.Printf("restore data berhasil, total %d record", len(records))
+	writeJSON(w, http.StatusOK, map[string]any{
+		"status": "restore berhasil",
+		"total":  len(records),
+	})
+}
+
 // urlset/urlXML dipakai untuk menghasilkan sitemap.xml dinamis.
 type urlEntry struct {
 	Loc string `xml:"loc"`
