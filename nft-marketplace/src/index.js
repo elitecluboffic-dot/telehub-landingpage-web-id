@@ -22,6 +22,9 @@ import {
   handleAdminDeleteNft,
   handleAdminListAvailableFiles,
   handleAdminCreateNftFromExisting,
+  handleAdminListOrders,
+  handleAdminApproveOrder,
+  handleAdminRejectOrder,
 } from "./routes/adminApi.js";
 import { listUnregisteredR2Files } from "./lib/store.js";
 
@@ -115,10 +118,34 @@ export default {
         return handleAdminDeleteNft(request, env, id);
       }
 
+      // ---------- API admin: order management ----------
+      if (path === "/nft/api/admin/orders" && method === "GET") {
+        const unauthorized = await requireAdmin(request, env);
+        if (unauthorized) return unauthorized;
+        return handleAdminListOrders(request, env);
+      }
+      if (path.startsWith("/nft/api/admin/orders/") && path.endsWith("/approve") && method === "POST") {
+        const unauthorized = await requireAdmin(request, env);
+        if (unauthorized) return unauthorized;
+        const id = decodeURIComponent(
+          path.slice("/nft/api/admin/orders/".length, -"/approve".length)
+        );
+        return handleAdminApproveOrder(request, env, id);
+      }
+      if (path.startsWith("/nft/api/admin/orders/") && path.endsWith("/reject") && method === "POST") {
+        const unauthorized = await requireAdmin(request, env);
+        if (unauthorized) return unauthorized;
+        const id = decodeURIComponent(
+          path.slice("/nft/api/admin/orders/".length, -"/reject".length)
+        );
+        return handleAdminRejectOrder(request, env, id);
+      }
+
       // ---------- Proxy asset R2 (GIF/gambar NFT) ----------
       // Skema baru: GET /nft/asset/<base64url-encoded-filename>
       // Nama file asli TIDAK PERNAH muncul di URL yang terlihat browser.
-      // Wajib login (pembeli ATAU admin) sebelum file di-stream — dicek di
+      // Wajib login (pembeli ATAU admin) sebelum file di-stream, DAN kepemilikan
+      // spesifik per-file dicek lewat order berstatus "approved" - dicek di
       // dalam handleAssetProxy. Domain publik bucket R2 tetap tidak pernah
       // terekspos ke browser.
       if (method === "GET" && path.startsWith(ASSET_PREFIX)) {
