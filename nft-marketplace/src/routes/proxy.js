@@ -1,5 +1,6 @@
-import { r2Key } from "../lib/store.js";
+import { r2Key, getNftOwnerByFilename } from "../lib/store.js";
 import { getUserFromRequest, isAdminRequest } from "../lib/session.js";
+import { renderWatermarked } from "../lib/watermark.js";
 
 const CONTENT_TYPES = {
   gif: "image/gif",
@@ -9,14 +10,21 @@ const CONTENT_TYPES = {
   webp: "image/webp",
 };
 
+const WATERMARKABLE_EXT = new Set(["png", "jpg", "jpeg", "webp"]);
+
 // GET /nft/asset/:encoded  ->  :encoded adalah base64url dari filename asli
 // (mis. "ChillFlame.gif" -> "Q2hpbGxGbGFtZS5naWY"). Ini menyembunyikan nama
 // file asli dari URL yang terlihat di address bar/Network tab.
 //
-// PROTEKSI UTAMA: wajib session pembeli (getUserFromRequest) ATAU session
-// admin (isAdminRequest) yang valid. Tanpa keduanya -> 401. Base64 di URL
-// bukan enkripsi, jadi proteksi session ini yang menutup akses sesungguhnya.
-
+// PROTEKSI:
+// 1. Wajib login (getUserFromRequest) ATAU admin (isAdminRequest). Tanpa
+//    keduanya -> 401.
+// 2. Kepemilikan SPESIFIK per-file dicek lewat getNftOwnerByFilename(),
+//    yang hanya menganggap sah kalau ada order berstatus "approved".
+//    Login saja TIDAK cukup untuk dapat file asli.
+// 3. User yang login tapi bukan pemilik file ini tetap dikasih preview,
+//    versi watermark, bukan 403 polos -> supaya listing marketplace tetap
+//    bisa menampilkan gambar ke calon pembeli.
 function decodeBase64Url(encoded) {
   try {
     const padded = encoded.replace(/-/g, "+").replace(/_/g, "/");
@@ -42,6 +50,7 @@ export async function handleAssetProxy(request, env, encodedFilename) {
     getUserFromRequest(request, env),
     isAdminRequest(request, env),
   ]);
+
   if (!username && !isAdmin) {
     return new Response("Unauthorized", { status: 401 });
   }
@@ -52,13 +61,30 @@ export async function handleAssetProxy(request, env, encodedFilename) {
   }
 
   const headers = new Headers();
-  headers.set("Content-Type", CONTENT_TYPES[ext]);
   headers.set("Cache-Control", "private, no-store");
   headers.set("Content-Disposition", "inline");
   headers.set("X-Content-Type-Options", "nosniff");
   if (object.httpEtag) headers.set("ETag", object.httpEtag);
 
-  return new Response(object.body, { headers });
+  const owner = isAdmin ? null : await getNftOwnerByFilename(filename, env);
+  const isOwner = Boolean(username) && owner === username;
+
+  if (isOwner || isAdmin) {
+    headers.set("Content-Type", CONTENT_TYPES[ext]);
+    return new Response(object.body, { headers });
+  }
+
+  if (WATERMARKABLE_EXT.has(ext)) {
+    try {
+      const watermarked = await renderWatermarked(object.body, ext, env);
+      headers.set("Content-Type", CONTENT_TYPES[ext]);
+      return new Response(watermarked, { headers });
+    } catch {
+      return new Response("Forbidden", { status: 403 });
+    }
+  }
+
+  return new Response("Forbidden", { status: 403 });
 }
 
 export function encodeFilenameToUrl(filename) {
