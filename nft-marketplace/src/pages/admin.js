@@ -24,15 +24,40 @@ function nftRow(nft) {
   </tr>`;
 }
 
+function statusBadge(status) {
+  const s = status || "pending";
+  const colorMap = {
+    pending: "var(--gold)",
+    approved: "var(--green)",
+    rejected: "var(--magenta)",
+  };
+  const labelMap = {
+    pending: "Pending",
+    approved: "Disetujui",
+    rejected: "Ditolak",
+  };
+  const color = colorMap[s] || "var(--text-muted)";
+  const label = labelMap[s] || s;
+  return `<span style="display:inline-block;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:600;color:${color};border:1px solid ${color};">${escapeHtml(label)}</span>`;
+}
+
 function orderRow(order) {
   const date = new Date(order.createdAt).toLocaleString("id-ID");
+  const status = order.status || "pending";
+  const isPending = status === "pending";
   return `
-  <tr>
+  <tr data-order-id="${escapeHtml(order.id)}">
     <td>${escapeHtml(order.nftName || order.nftId)}</td>
+    <td>${escapeHtml(order.buyerUsername || "-")}</td>
     <td>${escapeHtml(order.telegram)}</td>
     <td>${escapeHtml(order.whatsapp)}</td>
     <td>${escapeHtml(order.payment)}</td>
     <td style="color:var(--text-muted);font-size:12px;">${escapeHtml(date)}</td>
+    <td class="order-status">${statusBadge(status)}</td>
+    <td class="row-actions">
+      <button class="icon-btn approve-order" ${isPending ? "" : "disabled"}>Approve</button>
+      <button class="icon-btn danger reject-order" ${isPending ? "" : "disabled"}>Tolak</button>
+    </td>
   </tr>`;
 }
 
@@ -43,7 +68,7 @@ export function renderAdminPage({ nfts, orders, availableFiles = [] }) {
 
   const orderRows = orders.length
     ? orders.map(orderRow).join("\n")
-    : `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">Belum ada pengajuan pembelian.</td></tr>`;
+    : `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);">Belum ada pengajuan pembelian.</td></tr>`;
 
   const fileOptions = availableFiles.length
     ? availableFiles.map((f) => `<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`).join("\n")
@@ -138,9 +163,12 @@ export function renderAdminPage({ nfts, orders, availableFiles = [] }) {
       <h3 style="font-family:var(--font-display);margin:0 0 12px;">Pengajuan Pembelian Terbaru</h3>
       <table>
         <thead>
-          <tr><th>NFT</th><th>Telegram</th><th>WhatsApp</th><th>Metode</th><th>Waktu</th></tr>
+          <tr>
+            <th>NFT</th><th>Akun</th><th>Telegram</th><th>WhatsApp</th><th>Metode</th>
+            <th>Waktu</th><th>Status</th><th>Aksi</th>
+          </tr>
         </thead>
-        <tbody>${orderRows}</tbody>
+        <tbody id="orderTableBody">${orderRows}</tbody>
       </table>
     </div>
   </div>
@@ -259,6 +287,62 @@ export function renderAdminPage({ nfts, orders, availableFiles = [] }) {
         } catch (err) {
           alert(err.message);
         }
+      });
+    });
+
+    const STATUS_BADGE = {
+      pending: { color: 'var(--gold)', label: 'Pending' },
+      approved: { color: 'var(--green)', label: 'Disetujui' },
+      rejected: { color: 'var(--magenta)', label: 'Ditolak' },
+    };
+
+    function applyOrderStatus(tr, status) {
+      const badge = STATUS_BADGE[status] || { color: 'var(--text-muted)', label: status };
+      const statusCell = tr.querySelector('.order-status');
+      statusCell.innerHTML =
+        '<span style="display:inline-block;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:600;color:' +
+        badge.color + ';border:1px solid ' + badge.color + ';">' + badge.label + '</span>';
+      const isPending = status === 'pending';
+      tr.querySelector('.approve-order').disabled = !isPending;
+      tr.querySelector('.reject-order').disabled = !isPending;
+    }
+
+    async function handleOrderAction(btn, action) {
+      const tr = btn.closest('tr');
+      const orderId = tr.dataset.orderId;
+      const approveBtn = tr.querySelector('.approve-order');
+      const rejectBtn = tr.querySelector('.reject-order');
+      approveBtn.disabled = true;
+      rejectBtn.disabled = true;
+      const originalText = btn.textContent;
+      btn.textContent = '...';
+      try {
+        const res = await fetch(
+          '/nft/api/admin/orders/' + encodeURIComponent(orderId) + '/' + action,
+          { method: 'POST' }
+        );
+        const data = await res.json();
+        if (!res.ok || !data.ok) throw new Error(data.error || 'Gagal memproses order.');
+        applyOrderStatus(tr, data.order.status);
+      } catch (err) {
+        alert(err.message);
+        btn.textContent = originalText;
+        approveBtn.disabled = false;
+        rejectBtn.disabled = false;
+      }
+    }
+
+    document.querySelectorAll('.approve-order').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!confirm('Setujui pembelian ini? Pembeli akan langsung bisa akses file asli.')) return;
+        handleOrderAction(btn, 'approve');
+      });
+    });
+
+    document.querySelectorAll('.reject-order').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!confirm('Tolak pengajuan pembelian ini?')) return;
+        handleOrderAction(btn, 'reject');
       });
     });
   </script>
