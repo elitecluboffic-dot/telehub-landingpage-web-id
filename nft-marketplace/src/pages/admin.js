@@ -1,4 +1,5 @@
 import { layout, escapeHtml } from "../lib/render.js";
+import { encodeFilenameToUrl } from "../routes/proxy.js";
 
 function formatPrice(price) {
   const n = Number(price) || 0;
@@ -6,10 +7,10 @@ function formatPrice(price) {
 }
 
 function nftRow(nft) {
-  const thumb = `/nft/${encodeURIComponent(nft.filename)}`;
+  const asset = encodeFilenameToUrl(nft.filename);
   return `
   <tr data-id="${escapeHtml(nft.id)}">
-    <td><img class="thumb" src="${thumb}" alt="" /></td>
+    <td><div class="thumb protected-media" data-asset="${asset}" oncontextmenu="return false;"></div></td>
     <td>${escapeHtml(nft.name)}</td>
     <td><code style="color:var(--text-muted)">${escapeHtml(nft.filename)}</code></td>
     <td>
@@ -145,6 +146,24 @@ export function renderAdminPage({ nfts, orders, availableFiles = [] }) {
   </div>
 
   <script>
+    async function loadProtectedImages() {
+      const els = document.querySelectorAll('.protected-media');
+      for (const el of els) {
+        try {
+          const res = await fetch('/nft/asset/' + el.dataset.asset, { credentials: 'same-origin' });
+          if (!res.ok) continue;
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          el.style.backgroundImage = 'url(' + url + ')';
+          el.style.backgroundSize = 'cover';
+          el.style.backgroundPosition = 'center';
+        } catch (e) {
+          // biarkan kosong kalau gagal
+        }
+      }
+    }
+    loadProtectedImages();
+
     function adminLogout(){
       fetch('/nft/api/admin/logout', { method:'POST' }).then(()=> location.href = '/nft/admin/login');
     }
