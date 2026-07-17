@@ -7,6 +7,9 @@
     "deploy": "wrangler deploy",
     "tail": "wrangler tail"
   },
+  "dependencies": {
+    "@cf-wasm/photon": "^0.3.6"
+  },
   "devDependencies": {
     "wrangler": "^3.90.0"
   }
