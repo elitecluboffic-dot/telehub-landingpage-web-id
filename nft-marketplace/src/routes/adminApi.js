@@ -13,6 +13,9 @@ import {
   getNft,
   r2Key,
   listUnregisteredR2Files,
+  listOrders,
+  getOrder,
+  updateOrderStatus,
 } from "../lib/store.js";
 
 async function readJson(request) {
@@ -159,4 +162,25 @@ export async function handleAdminDeleteNft(request, env, id) {
   if (!existing) return jsonResponse({ ok: false, error: "NFT tidak ditemukan." }, 404);
   await deleteNft(env, id);
   return jsonResponse({ ok: true });
+}
+
+// --- Order management ---
+
+export async function handleAdminListOrders(request, env) {
+  const orders = await listOrders(env, 200);
+  return jsonResponse({ ok: true, orders });
+}
+
+export async function handleAdminApproveOrder(request, env, id) {
+  const existing = await getOrder(env, id);
+  if (!existing) return jsonResponse({ ok: false, error: "Order tidak ditemukan." }, 404);
+  const updated = await updateOrderStatus(env, id, "approved");
+  return jsonResponse({ ok: true, order: updated });
+}
+
+export async function handleAdminRejectOrder(request, env, id) {
+  const existing = await getOrder(env, id);
+  if (!existing) return jsonResponse({ ok: false, error: "Order tidak ditemukan." }, 404);
+  const updated = await updateOrderStatus(env, id, "rejected");
+  return jsonResponse({ ok: true, order: updated });
 }
