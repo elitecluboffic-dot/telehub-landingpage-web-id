@@ -9,7 +9,7 @@ function formatPrice(price) {
 
 function nftCard(nft, loggedIn) {
   const media = loggedIn
-    ? `<img class="card-media" src="/nft/asset/${encodeFilenameToUrl(nft.filename)}" alt="${escapeHtml(nft.name)}" loading="lazy" draggable="false" oncontextmenu="return false;" ondragstart="return false;" />`
+    ? `<div class="card-media protected-media" data-asset="${encodeFilenameToUrl(nft.filename)}" oncontextmenu="return false;"></div>`
     : `<div class="card-media locked-media" role="img" aria-label="${escapeHtml(nft.name)}">
          <span class="locked-icon">&#128274;</span>
          <span class="locked-text">Login untuk melihat</span>
@@ -90,6 +90,24 @@ export function renderMarketplacePage({ nfts, username }) {
   </div>
 
   <script>
+    async function loadProtectedImages() {
+      const els = document.querySelectorAll('.protected-media');
+      for (const el of els) {
+        try {
+          const res = await fetch('/nft/asset/' + el.dataset.asset, { credentials: 'same-origin' });
+          if (!res.ok) continue;
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          el.style.backgroundImage = 'url(' + url + ')';
+          el.style.backgroundSize = 'cover';
+          el.style.backgroundPosition = 'center';
+        } catch (e) {
+          // biarkan kosong kalau gagal
+        }
+      }
+    }
+    loadProtectedImages();
+
     const isLoggedIn = ${loggedIn ? "true" : "false"};
     let currentNftId = null;
 
