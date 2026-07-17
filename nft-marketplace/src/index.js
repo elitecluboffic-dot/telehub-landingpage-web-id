@@ -25,7 +25,7 @@ import {
 } from "./routes/adminApi.js";
 import { listUnregisteredR2Files } from "./lib/store.js";
 
-const IMAGE_EXT_RE = /\.(gif|png|jpe?g|webp)$/i;
+const ASSET_PREFIX = "/nft/asset/";
 
 export default {
   async fetch(request, env, ctx) {
@@ -116,11 +116,14 @@ export default {
       }
 
       // ---------- Proxy asset R2 (GIF/gambar NFT) ----------
-      // Contoh: GET /nft/SnoopDogg.gif -> di-stream langsung dari R2 lewat binding,
-      // domain publik bucket R2 TIDAK PERNAH terekspos ke browser.
-      if (method === "GET" && path.startsWith("/nft/") && IMAGE_EXT_RE.test(path)) {
-        const filename = decodeURIComponent(path.slice("/nft/".length));
-        return handleAssetProxy(request, env, filename);
+      // Skema baru: GET /nft/asset/<base64url-encoded-filename>
+      // Nama file asli TIDAK PERNAH muncul di URL yang terlihat browser.
+      // Wajib login (pembeli ATAU admin) sebelum file di-stream — dicek di
+      // dalam handleAssetProxy. Domain publik bucket R2 tetap tidak pernah
+      // terekspos ke browser.
+      if (method === "GET" && path.startsWith(ASSET_PREFIX)) {
+        const encoded = path.slice(ASSET_PREFIX.length);
+        return handleAssetProxy(request, env, encoded);
       }
 
       return new Response("Not found", { status: 404 });
