@@ -117,6 +117,12 @@ a{color:inherit;}
 }
 .card:hover::before{opacity:.9;}
 .card-media{aspect-ratio:1/1;width:100%;background:#0A0510;display:block;object-fit:cover;}
+.locked-media{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:8px;color:var(--text-muted);background:var(--surface-2);
+}
+.locked-icon{font-size:28px;opacity:.6;}
+.locked-text{font-size:12px;font-weight:600;}
 .card-body{padding:16px 16px 18px;}
 .card-name{font-family:var(--font-display);font-size:16px;margin:0 0 4px;}
 .card-desc{font-size:13px;color:var(--text-muted);margin:0 0 14px;
