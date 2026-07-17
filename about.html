@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tentang Telehub</title>
+<meta name="description" content="Telehub adalah jaringan dua domain: telehub.web.id sebagai induk dengan landing page 3D dan alat indexing, serta telehub.nfy.fyi sebagai cabang komunitas untuk promosi Telegram, artikel, dan foto publik." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-0:#060911;
+    --bg-1:#0b1120;
+    --panel:#10182a;
+    --panel-2:#141f38;
+    --border:#232f4d;
+    --text:#eef2fb;
+    --muted:#8b96b4;
+    --cyan:#00e5ff;
+    --magenta:#ff4d8d;
+    --violet:#7c5cff;
+    --ok:#3ddc97;
+    --warn:#ffb547;
+    --font-display:'Sora', system-ui, sans-serif;
+    --font-body:'Inter', system-ui, sans-serif;
+    --font-mono:'JetBrains Mono', monospace;
+  }
+
+  *{ box-sizing:border-box; }
+
+  html,body{
+    margin:0;
+    background:var(--bg-0);
+    color:var(--text);
+    font-family:var(--font-body);
+    overflow-x:hidden;
+  }
+
+  #about-root{
+    position:relative;
+    min-height:100vh;
+    isolation:isolate;
+  }
+
+  /* ---------- 3D backdrop ---------- */
+  #ab-canvas-wrap{
+    position:absolute;
+    top:0; left:0;
+    width:100%;
+    height:min(100vh, 760px);
+    min-height:600px;
+    z-index:0;
+    overflow:hidden;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 0%, rgba(124,92,255,.16), transparent 60%),
+      radial-gradient(ellipse 60% 50% at 80% 30%, rgba(0,229,255,.10), transparent 60%),
+      linear-gradient(180deg, var(--bg-0) 0%, var(--bg-1) 60%, var(--bg-0) 100%);
+  }
+  #ab-canvas-wrap canvas{
+    display:block;
+    width:100% !important;
+    height:100% !important;
+  }
+  .ab-node-label{
+    position:absolute;
+    top:0; left:0;
+    transform:translate(-50%,-50%);
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:.05em;
+    padding:5px 10px;
+    border-radius:999px;
+    border:1px solid var(--border);
+    background:rgba(10,14,24,.6);
+    backdrop-filter:blur(6px);
+    white-space:nowrap;
+    pointer-events:none;
+    transition:opacity .2s ease;
+  }
+  .ab-node-label b{
+    display:inline-block;
+    width:6px; height:6px;
+    border-radius:50%;
+    margin-right:7px;
+    vertical-align:middle;
+    box-shadow:0 0 8px currentColor;
+  }
+  .ab-node-label span.tag{
+    color:var(--muted);
+    margin-left:6px;
+    font-size:9px;
+    text-transform:uppercase;
+    letter-spacing:.1em;
+  }
+
+  /* ---------- content shell ---------- */
+  .ab-content{
+    position:relative;
+    z-index:1;
+    max-width:900px;
+    margin:0 auto;
+    padding:0 22px 90px;
+  }
+
+  .ab-topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:26px 0 0;
+  }
+  .ab-back{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-family:var(--font-mono);
+    font-size:12px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--muted);
+    text-decoration:none;
+    border:1px solid var(--border);
+    padding:8px 14px;
+    border-radius:999px;
+    transition:color .15s ease, border-color .15s ease;
+  }
+  .ab-back:hover{ color:var(--cyan); border-color:var(--cyan); }
+  .ab-back svg{ width:14px; height:14px; }
+
+  .ab-hero{
+    padding:min(11vh, 110px) 0 40px;
+  }
+  .ab-eyebrow{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-family:var(--font-mono);
+    font-size:12px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--cyan);
+    margin:0 0 18px;
+  }
+  .ab-eyebrow::before{
+    content:'';
+    width:7px; height:7px;
+    border-radius:50%;
+    background:var(--cyan);
+    box-shadow:0 0 10px var(--cyan);
+    animation:ab-blink 1.6s ease-in-out infinite;
+  }
+  @keyframes ab-blink{ 50%{ opacity:.25; } }
+
+  .ab-hero h1{
+    font-family:var(--font-display);
+    font-weight:800;
+    font-size:clamp(2rem, 5.6vw, 3.6rem);
+    line-height:1.06;
+    letter-spacing:-.02em;
+    margin:0 0 20px;
+    background:linear-gradient(100deg, #ffffff 0%, #ffffff 45%, var(--cyan) 100%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    max-width:16ch;
+  }
+  .ab-hero p{
+    font-size:1.04rem;
+    line-height:1.7;
+    color:var(--muted);
+    max-width:56ch;
+    margin:0 0 14px;
+  }
+  .ab-hero p:last-child{ margin-bottom:0; }
+  .ab-hero strong{ color:var(--text); font-weight:600; }
+
+  .ab-hero-stats{
+    display:flex;
+    gap:30px;
+    margin-top:36px;
+    flex-wrap:wrap;
+  }
+  .ab-hero-stats div{ font-family:var(--font-mono); }
+  .ab-hero-stats span{ display:block; }
+  .ab-hero-stats .val{ font-size:1.25rem; font-weight:500; color:var(--text); }
+  .ab-hero-stats .lbl{
+    font-size:11px; color:var(--muted); text-transform:uppercase;
+    letter-spacing:.08em; margin-top:2px;
+  }
+
+  /* ---------- section headers ---------- */
+  .ab-section{ margin-top:64px; }
+  .ab-section-label{
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin:0 0 12px;
+  }
+  .ab-section h2{
+    font-family:var(--font-display);
+    font-size:clamp(1.4rem, 3vw, 1.9rem);
+    font-weight:700;
+    margin:0 0 16px;
+    letter-spacing:-.01em;
+  }
+
+  /* ---------- lineage diagram ---------- */
+  .ab-lineage{
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    gap:0;
+    margin-top:8px;
+  }
+  .ab-node-card{
+    background:linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:26px 28px;
+    box-shadow:0 30px 60px -30px rgba(0,0,0,.6);
+    position:relative;
+  }
+  .ab-node-card.root{ border-color:rgba(0,229,255,.35); }
+  .ab-node-card.branch{ border-color:rgba(255,77,141,.3); }
+
+  .ab-node-top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+    flex-wrap:wrap;
+    margin-bottom:10px;
+  }
+  .ab-domain{
+    font-family:var(--font-mono);
+    font-size:1.15rem;
+    font-weight:500;
+    color:var(--text);
+  }
+  .ab-domain a{ color:inherit; text-decoration:none; border-bottom:1px dashed var(--border); }
+  .ab-domain a:hover{ color:var(--cyan); border-color:var(--cyan); }
+  .ab-badge{
+    font-family:var(--font-mono);
+    font-size:10px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    padding:5px 12px;
+    border-radius:999px;
+    white-space:nowrap;
+  }
+  .ab-badge.root{ background:rgba(0,229,255,.12); color:var(--cyan); }
+  .ab-badge.branch{ background:rgba(255,77,141,.12); color:var(--magenta); }
+
+  .ab-node-desc{
+    color:var(--muted);
+    font-size:.95rem;
+    line-height:1.65;
+    margin:0 0 18px;
+    max-width:64ch;
+  }
+
+  .ab-feature-list{
+    list-style:none;
+    margin:0;
+    padding:0;
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+    gap:10px;
+  }
+  .ab-feature-list li{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    font-size:.87rem;
+    color:var(--text);
+    background:rgba(6,9,17,.5);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:11px 13px;
+    line-height:1.45;
+  }
+  .ab-feature-list li b{
+    flex-shrink:0;
+    width:7px; height:7px;
+    border-radius:50%;
+    margin-top:6px;
+  }
+  .ab-node-card.root .ab-feature-list li b{ background:var(--cyan); box-shadow:0 0 8px var(--cyan); }
+  .ab-node-card.branch .ab-feature-list li b{ background:var(--magenta); box-shadow:0 0 8px var(--magenta); }
+
+  .ab-cta-row{
+    margin-top:20px;
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  .ab-cta{
+    font-family:var(--font-body);
+    font-size:.86rem;
+    font-weight:600;
+    padding:10px 18px;
+    border-radius:9px;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    transition:filter .15s ease, transform .1s ease;
+  }
+  .ab-cta:active{ transform:scale(.98); }
+  .ab-cta.primary{
+    background:linear-gradient(120deg, var(--cyan), var(--violet));
+    color:#04101a;
+  }
+  .ab-cta.primary:hover{ filter:brightness(1.08); }
+  .ab-cta.ghost{
+    background:none;
+    border:1px solid var(--border);
+    color:var(--text);
+  }
+  .ab-cta.ghost:hover{ border-color:var(--magenta); color:var(--magenta); }
+
+  /* connector between the two lineage cards */
+  .ab-lineage-connector{
+    display:flex;
+    align-items:center;
+    justify-content:flex-start;
+    padding:6px 0 6px 46px;
+    margin:0;
+  }
+  .ab-lineage-connector svg{ display:block; }
+  .ab-lineage-connector-label{
+    font-family:var(--font-mono);
+    font-size:10.5px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-left:12px;
+    white-space:nowrap;
+  }
+
+  /* ---------- indexing callout ---------- */
+  .ab-callout{
+    margin-top:20px;
+    border:1px dashed var(--border);
+    border-radius:12px;
+    padding:16px 18px;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    flex-wrap:wrap;
+  }
+  .ab-callout p{
+    margin:0;
+    font-size:.86rem;
+    color:var(--muted);
+    line-height:1.55;
+    flex:1 1 320px;
+  }
+  .ab-callout code{
+    font-family:var(--font-mono);
+    color:var(--cyan);
+    background:rgba(0,229,255,.08);
+    padding:2px 6px;
+    border-radius:5px;
+    font-size:.84em;
+  }
+
+  /* ---------- closing footer ---------- */
+  .ab-footer{
+    margin-top:70px;
+    padding-top:26px;
+    border-top:1px solid var(--border);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:16px;
+  }
+  .ab-footer p{
+    margin:0;
+    font-family:var(--font-mono);
+    font-size:.8rem;
+    color:var(--muted);
+  }
+  .ab-footer-links{
+    display:flex;
+    gap:18px;
+    flex-wrap:wrap;
+  }
+  .ab-footer-links a{
+    font-family:var(--font-mono);
+    font-size:.82rem;
+    color:var(--text);
+    text-decoration:none;
+    border-bottom:1px solid var(--border);
+  }
+  .ab-footer-links a:hover{ color:var(--cyan); border-color:var(--cyan); }
+
+  @media (max-width: 560px){
+    .ab-hero{ padding-top:16vh; }
+    .ab-node-card{ padding:20px; border-radius:14px; }
+    .ab-node-label{ font-size:10px; padding:4px 8px; }
+    .ab-lineage-connector{ padding-left:20px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .ab-eyebrow::before{ animation:none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="about-root">
+
+  <div id="ab-canvas-wrap">
+    <div id="ab-labels"></div>
+  </div>
+
+  <div class="ab-content">
+
+    <div class="ab-topbar">
+      <a href="/" class="ab-back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        Kembali ke Telehub
+      </a>
+    </div>
+
+    <header class="ab-hero">
+      <p class="ab-eyebrow">Tentang Sumber · Struktur Jaringan</p>
+      <h1>Satu akar, dua wajah Telehub</h1>
+      <p>Telehub bukan cuma satu situs — Sebuah jaringan kecil dengan
+         <strong>induk</strong> dan <strong>cabang</strong>, masing-masing
+         punya tugasnya sendiri. Halaman ini menjelaskan siapa mengurus apa,
+         supaya kamu tahu persis sedang berada di bagian mana dari jaringan
+         saat membuka salah satu domainnya.</p>
+      <p>Induknya membawamu terbang mengelilingi dunia lewat sebuah
+         landing page 3D, sekaligus jadi rumah untuk alat indexing.
+         Cabangnya adalah ruang publik — tempat Telegram, artikel, dan
+         foto publik hidup berdampingan.</p>
+
+      <div class="ab-hero-stats">
+        <div><span class="val">telehub.web.id</span><span class="lbl">Domain induk</span></div>
+        <div><span class="val">telehub.nfy.fyi</span><span class="lbl">Domain cabang</span></div>
+        <div><span class="val">1</span><span class="lbl">Cabang komunitas</span></div>
+        <div><span class="val">Gratis</span><span class="lbl">Tanpa registrasi</span></div>
+      </div>
+    </header>
+
+    <section class="ab-section">
+      <p class="ab-section-label">Struktur jaringan</p>
+      <h2>Siapa induk, siapa cabang</h2>
+
+      <div class="ab-lineage">
+
+        <article class="ab-node-card root">
+          <div class="ab-node-top">
+            <span class="ab-domain"><a href="https://telehub.web.id" target="_blank" rel="noopener">telehub.web.id</a></span>
+            <span class="ab-badge root">Domain induk</span>
+          </div>
+          <p class="ab-node-desc">
+            Ini pusatnya. Begitu halaman dibuka, kamu langsung disambut
+            landing page 3D berupa sebuah pesawat yang membawamu terbang
+            berkeliling dunia — bukan halaman statis biasa. Dari sinilah
+            seluruh jaringan Telehub berakar, termasuk alat indexing
+            di <code>/indexing</code>.
+          </p>
+          <ul class="ab-feature-list">
+            <li><b></b>Landing page 3D — pesawat terbang keliling dunia saat halaman dibuka</li>
+            <li><b></b><strong>/indexing</strong> — kirim domain, sitemap.xml, RSS feed, dan link artikel sekaligus ke mesin pencari</li>
+            <li><b></b>Gratis, tanpa perlu bikin akun</li>
+            <li><b></b>Menjadi rumah / titik rujukan seluruh sub-domain Telehub</li>
+          </ul>
+          <div class="ab-cta-row">
+            <a class="ab-cta primary" href="https://telehub.web.id/indexing" target="_blank" rel="noopener">Buka /indexing</a>
+            <a class="ab-cta ghost" href="https://telehub.web.id" target="_blank" rel="noopener">Kunjungi telehub.web.id</a>
+          </div>
+        </article>
+
+        <div class="ab-lineage-connector">
+          <svg width="28" height="46" viewBox="0 0 28 46" fill="none">
+            <path d="M2 2 V30 Q2 38 10 38 H26" stroke="#3a4568" stroke-width="2" stroke-linecap="round"/>
+            <path d="M20 32 L26 38 L20 44" stroke="#3a4568" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+          <span class="ab-lineage-connector-label">bercabang menjadi</span>
+        </div>
+
+        <article class="ab-node-card branch">
+          <div class="ab-node-top">
+            <span class="ab-domain"><a href="https://telehub.nfy.fyi" target="_blank" rel="noopener">telehub.nfy.fyi</a></span>
+            <span class="ab-badge branch">Domain cabang · telehub.nfy.fyi</span>
+          </div>
+          <p class="ab-node-desc">
+            Ini ruang publik. Di dalam <code>telehub.nfy.fyi</code>,
+            siapa pun bisa mempromosikan akun Telegram masing-masing,
+            menulis artikel, dan mengunggah foto secara publik — jadi
+            fungsinya lebih ke arah sosial dan konten, berbeda dari
+            induknya yang fokus di tur dunia 3D dan alat indexing.
+          </p>
+          <ul class="ab-feature-list">
+            <li><b></b>Promosikan akun Telegram pribadi ke publik</li>
+            <li><b></b>Tulis dan publikasikan artikel sendiri</li>
+            <li><b></b>Unggah foto secara publik</li>
+            <li><b></b>Terus berkembang — fitur lain menyusul</li>
+          </ul>
+          <div class="ab-cta-row">
+            <a class="ab-cta primary" href="https://telehub.nfy.fyi" target="_blank" rel="noopener">Kunjungi telehub.nfy.fyi</a>
+          </div>
+        </article>
+
+      </div>
+
+      <div class="ab-callout">
+        <p>
+          Singkatnya: <code>telehub.web.id</code> = induk (tur dunia 3D + alat indexing),
+          <code>telehub.nfy.fyi</code> = cabang (Telegram, artikel, foto). Keduanya
+          bagian dari satu jaringan Telehub yang sama.
+        </p>
+      </div>
+    </section>
+
+    <footer class="ab-footer">
+      <p>Telehub · jaringan induk &amp; cabang</p>
+      <div class="ab-footer-links">
+        <a href="https://telehub.web.id" target="_blank" rel="noopener">telehub.web.id</a>
+        <a href="https://telehub.web.id/indexing" target="_blank" rel="noopener">/indexing</a>
+        <a href="https://telehub.nfy.fyi" target="_blank" rel="noopener">telehub.nfy.fyi</a>
+      </div>
+    </footer>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  /* ============================================================
+     3D LINEAGE SCENE
+     A wireframe "world" core (telehub.web.id) with a small plane
+     mesh orbiting it — echoing the root domain's own landing page
+     (a plane touring the world). A second, farther node orbits at
+     a wider radius and dimmer speed, representing the community
+     branch (telehub.nfy.fyi), linked to the core by an occasional
+     pulse — the same visual grammar as the /indexing tool's signal
+     hub, so the whole family of pages feels like one network.
+  ============================================================ */
+
+  var wrap = document.getElementById('ab-canvas-wrap');
+  var labelLayer = document.getElementById('ab-labels');
+  var threeReady = typeof THREE !== 'undefined';
+  var pulseQueue = [];
+
+  function initScene() {
+    if (!threeReady || !wrap) return null;
+
+    var width = wrap.clientWidth;
+    var height = wrap.clientHeight;
+
+    var scene = new THREE.Scene();
+    var camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+    camera.position.set(0, 1.6, 10);
+
+    var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(width, height);
+    renderer.setClearColor(0x000000, 0);
+    wrap.appendChild(renderer.domElement);
+
+    var group = new THREE.Group();
+    scene.add(group);
+
+    /* ---- starfield ---- */
+    var starGeo = new THREE.BufferGeometry();
+    var starCount = 260;
+    var starPos = new Float32Array(starCount * 3);
+    for (var i = 0; i < starCount; i++) {
+      var r = 14 + Math.random() * 10;
+      var theta = Math.random() * Math.PI * 2;
+      var phi = Math.acos((Math.random() * 2) - 1);
+      starPos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      starPos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta) * 0.6;
+      starPos[i * 3 + 2] = r * Math.cos(phi);
+    }
+    starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+    var starMat = new THREE.PointsMaterial({ color: 0x3a4568, size: 0.045, transparent: true, opacity: 0.7 });
+    scene.add(new THREE.Points(starGeo, starMat));
+
+    /* ---- core: "the world" — telehub.web.id ---- */
+    var coreGeo = new THREE.IcosahedronGeometry(1.25, 1);
+    var coreMat = new THREE.MeshBasicMaterial({ color: 0x00e5ff, wireframe: true, transparent: true, opacity: 0.85 });
+    var core = new THREE.Mesh(coreGeo, coreMat);
+    group.add(core);
+
+    var coreGlowGeo = new THREE.IcosahedronGeometry(0.8, 1);
+    var coreGlowMat = new THREE.MeshBasicMaterial({ color: 0x7c5cff, wireframe: true, transparent: true, opacity: 0.45 });
+    var coreGlow = new THREE.Mesh(coreGlowGeo, coreGlowMat);
+    group.add(coreGlow);
+
+    /* ---- the orbiting "plane" — root's own landing-page motif ---- */
+    var planeGroup = new THREE.Group();
+    var planeBodyGeo = new THREE.ConeGeometry(0.11, 0.42, 5);
+    var planeMat = new THREE.MeshBasicMaterial({ color: 0x00e5ff });
+    var planeBody = new THREE.Mesh(planeBodyGeo, planeMat);
+    planeBody.rotation.x = Math.PI / 2;
+    planeGroup.add(planeBody);
+
+    var wingGeo = new THREE.ConeGeometry(0.05, 0.34, 4);
+    var wingL = new THREE.Mesh(wingGeo, planeMat);
+    wingL.rotation.z = Math.PI / 2;
+    wingL.position.set(-0.02, 0, -0.05);
+    var wingR = wingL.clone();
+    wingR.position.set(-0.02, 0, 0.05);
+    planeGroup.add(wingL, wingR);
+    group.add(planeGroup);
+
+    var planeOrbit = { radius: 2.5, tilt: 0.32, speed: 0.5, angle: 0 };
+
+    /* ---- branch node — telehub.nfy.fyi ---- */
+    var branchGeo = new THREE.SphereGeometry(0.15, 20, 20);
+    var branchMat = new THREE.MeshBasicMaterial({ color: 0xff4d8d });
+    var branchNode = new THREE.Mesh(branchGeo, branchMat);
+    group.add(branchNode);
+
+    var branchHaloGeo = new THREE.SphereGeometry(0.3, 16, 16);
+    var branchHaloMat = new THREE.MeshBasicMaterial({ color: 0xff4d8d, transparent: true, opacity: 0.15 });
+    branchNode.add(new THREE.Mesh(branchHaloGeo, branchHaloMat));
+
+    var branchOrbit = { radius: 3.9, tilt: -0.5, speed: 0.22, angle: 2.4 };
+
+    var branchRingGeo = new THREE.TorusGeometry(branchOrbit.radius, 0.005, 8, 96);
+    var branchRingMat = new THREE.MeshBasicMaterial({ color: 0xff4d8d, transparent: true, opacity: 0.2 });
+    var branchRing = new THREE.Mesh(branchRingGeo, branchRingMat);
+    branchRing.rotation.x = Math.PI / 2 + branchOrbit.tilt;
+    group.add(branchRing);
+
+    /* labels */
+    function makeLabel(text, tag, colorHex) {
+      var el = document.createElement('div');
+      el.className = 'ab-node-label';
+      el.style.color = colorHex;
+      el.innerHTML = '<b></b>' + text + '<span class="tag">' + tag + '</span>';
+      labelLayer.appendChild(el);
+      return el;
+    }
+    var planeLabel = makeLabel('telehub.web.id', 'induk', '#00e5ff');
+    var branchLabel = makeLabel('telehub.nfy.fyi', 'cabang', '#ff4d8d');
+
+    /* ---- pulses linking core -> branch ---- */
+    function spawnPulse() {
+      var geo = new THREE.SphereGeometry(0.07, 10, 10);
+      var mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1 });
+      var mesh = new THREE.Mesh(geo, mat);
+      group.add(mesh);
+      pulseQueue.push({ mesh: mesh, t: 0 });
+    }
+
+    var clock = new THREE.Clock();
+    var pulseTimer = 0;
+
+    function animate() {
+      requestAnimationFrame(animate);
+      var dt = Math.min(clock.getDelta(), 0.05);
+      var elapsed = clock.getElapsedTime();
+
+      core.rotation.y += dt * 0.16;
+      core.rotation.x += dt * 0.06;
+      coreGlow.rotation.y -= dt * 0.22;
+
+      group.rotation.y = Math.sin(elapsed * 0.05) * 0.22;
+      group.rotation.x = 0.1 + Math.sin(elapsed * 0.07) * 0.05;
+
+      // plane orbit
+      planeOrbit.angle += dt * planeOrbit.speed;
+      var px = Math.cos(planeOrbit.angle) * planeOrbit.radius;
+      var pz = Math.sin(planeOrbit.angle) * planeOrbit.radius;
+      var py = Math.sin(planeOrbit.angle) * Math.sin(planeOrbit.tilt) * planeOrbit.radius;
+      planeGroup.position.set(px, py, pz * Math.cos(planeOrbit.tilt));
+      planeGroup.rotation.y = -planeOrbit.angle + Math.PI / 2;
+      planeGroup.rotation.z = Math.sin(elapsed * 2) * 0.08;
+
+      // branch orbit
+      branchOrbit.angle += dt * branchOrbit.speed;
+      var bx = Math.cos(branchOrbit.angle) * branchOrbit.radius;
+      var bz = Math.sin(branchOrbit.angle) * branchOrbit.radius;
+      var by = Math.sin(branchOrbit.angle) * Math.sin(branchOrbit.tilt) * branchOrbit.radius;
+      branchNode.position.set(bx, by, bz * Math.cos(branchOrbit.tilt));
+
+      // periodic pulse from core toward branch
+      pulseTimer += dt;
+      if (pulseTimer > 3.2) {
+        pulseTimer = 0;
+        spawnPulse();
+      }
+      for (var i = pulseQueue.length - 1; i >= 0; i--) {
+        var p = pulseQueue[i];
+        p.t += dt * 0.6;
+        if (p.t >= 1) {
+          group.remove(p.mesh);
+          pulseQueue.splice(i, 1);
+          continue;
+        }
+        p.mesh.position.lerpVectors(new THREE.Vector3(0, 0, 0), branchNode.position, p.t);
+        p.mesh.material.opacity = 1 - p.t;
+      }
+
+      // project labels to screen space
+      var rect = wrap.getBoundingClientRect();
+      var v1 = new THREE.Vector3();
+      planeGroup.getWorldPosition(v1);
+      v1.project(camera);
+      planeLabel.style.opacity = v1.z < 1 ? '1' : '0';
+      planeLabel.style.left = ((v1.x * 0.5 + 0.5) * rect.width) + 'px';
+      planeLabel.style.top = ((-v1.y * 0.5 + 0.5) * rect.height - 26) + 'px';
+
+      var v2 = new THREE.Vector3();
+      branchNode.getWorldPosition(v2);
+      v2.project(camera);
+      branchLabel.style.opacity = v2.z < 1 ? '1' : '0';
+      branchLabel.style.left = ((v2.x * 0.5 + 0.5) * rect.width) + 'px';
+      branchLabel.style.top = ((-v2.y * 0.5 + 0.5) * rect.height - 26) + 'px';
+
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    function onResize() {
+      var w = wrap.clientWidth;
+      var h = wrap.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    }
+    window.addEventListener('resize', onResize);
+
+    window.addEventListener('pointermove', function (e) {
+      var nx = (e.clientX / window.innerWidth) - 0.5;
+      var ny = (e.clientY / window.innerHeight) - 0.5;
+      camera.position.x += (nx * 1.6 - camera.position.x) * 0.04;
+      camera.position.y += (1.6 - ny * 1.2 - camera.position.y) * 0.04;
+      camera.lookAt(0, 0, 0);
+    });
+  }
+
+  initScene();
+})();
+</script>
+
+</body>
+</html>
