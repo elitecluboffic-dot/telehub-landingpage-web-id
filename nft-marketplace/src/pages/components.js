@@ -23,5 +23,5 @@ export function publicNav(username) {
 }
 
 export function publicFooter() {
-  return `<div class="footer">Telehub NFT Marketplace &middot; Pembayaran manual, konfirmasi via Telegram/WhatsApp.</div>`;
+  return `<div class="footer">Telehub NFT Marketplace &middot; Based on NFT.</div>`;
 }
