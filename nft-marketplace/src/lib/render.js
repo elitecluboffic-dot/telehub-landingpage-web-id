@@ -123,6 +123,7 @@ a{color:inherit;}
 }
 .locked-icon{font-size:28px;opacity:.6;}
 .locked-text{font-size:12px;font-weight:600;}
+.protected-media{background-color:#0A0510;background-repeat:no-repeat;user-select:none;}
 .card-body{padding:16px 16px 18px;}
 .card-name{font-family:var(--font-display);font-size:16px;margin:0 0 4px;}
 .card-desc{font-size:13px;color:var(--text-muted);margin:0 0 14px;
