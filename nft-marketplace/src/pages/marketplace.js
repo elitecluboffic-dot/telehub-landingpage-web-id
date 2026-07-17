@@ -35,7 +35,7 @@ export function renderMarketplacePage({ nfts, username }) {
   <div class="hero">
     <div class="container">
       <span class="eyebrow">Drop Terbaru</span>
-      <h1>Koleksi NFT GIF eksklusif dari Telehub</h1>
+      <h1>Koleksi NFT Telehub</h1>
       <p>Pilih koleksi favoritmu, isi form pemesanan, dan tim kami akan menghubungimu langsung untuk proses pembayaran manual.</p>
     </div>
   </div>
