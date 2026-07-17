@@ -1,16 +1,23 @@
 import { layout, escapeHtml } from "../lib/render.js";
 import { publicNav, publicFooter } from "./components.js";
+import { encodeFilenameToUrl } from "../routes/proxy.js";
 
 function formatPrice(price) {
   const n = Number(price) || 0;
   return "Rp " + n.toLocaleString("id-ID");
 }
 
-function nftCard(nft) {
-  const img = `/nft/${encodeURIComponent(nft.filename)}`;
+function nftCard(nft, loggedIn) {
+  const media = loggedIn
+    ? `<img class="card-media" src="/nft/asset/${encodeFilenameToUrl(nft.filename)}" alt="${escapeHtml(nft.name)}" loading="lazy" draggable="false" oncontextmenu="return false;" ondragstart="return false;" />`
+    : `<div class="card-media locked-media" role="img" aria-label="${escapeHtml(nft.name)}">
+         <span class="locked-icon">&#128274;</span>
+         <span class="locked-text">Login untuk melihat</span>
+       </div>`;
+
   return `
   <div class="card" data-id="${escapeHtml(nft.id)}" data-name="${escapeHtml(nft.name)}" data-price="${escapeHtml(String(nft.price))}">
-    <img class="card-media" src="${img}" alt="${escapeHtml(nft.name)}" loading="lazy" />
+    ${media}
     <div class="card-body">
       <p class="card-name">${escapeHtml(nft.name)}</p>
       <p class="card-desc">${escapeHtml(nft.description || "Koleksi eksklusif Telehub.")}</p>
@@ -23,11 +30,11 @@ function nftCard(nft) {
 }
 
 export function renderMarketplacePage({ nfts, username }) {
-  const cards = nfts.length
-    ? nfts.map(nftCard).join("\n")
-    : `<div class="empty-state">Belum ada NFT yang dirilis. Cek lagi nanti ya.</div>`;
-
   const loggedIn = Boolean(username);
+
+  const cards = nfts.length
+    ? nfts.map((nft) => nftCard(nft, loggedIn)).join("\n")
+    : `<div class="empty-state">Belum ada NFT yang dirilis. Cek lagi nanti ya.</div>`;
 
   const body = `
   ${publicNav(username)}
