@@ -7,6 +7,7 @@ const ORDER_PREFIX = "order:";
 // filename yang dipakai di KV/URL publik TIDAK termasuk prefix ini (mis. "SnoopDogg.gif"),
 // tapi key aslinya di R2 adalah "nft/SnoopDogg.gif". r2Key() menjembatani keduanya.
 const R2_PREFIX = "nft/";
+
 export function r2Key(filename) {
   return R2_PREFIX + filename;
 }
@@ -38,6 +39,12 @@ export async function listNfts(env) {
 export async function getNft(env, id) {
   const raw = await env.NFT_KV.get(NFT_PREFIX + id);
   return raw ? JSON.parse(raw) : null;
+}
+
+// Cari record NFT berdasarkan filename. Dipakai untuk ownership check di proxy.
+export async function getNftByFilename(env, filename) {
+  const nfts = await listNfts(env);
+  return nfts.find((n) => n.filename === filename) || null;
 }
 
 export async function createNft(env, { name, price, description, filename }) {
@@ -86,9 +93,44 @@ export async function listOrders(env, limit = 50) {
     .slice(0, limit);
 }
 
+export async function getOrder(env, id) {
+  const raw = await env.NFT_KV.get(ORDER_PREFIX + id);
+  return raw ? JSON.parse(raw) : null;
+}
+
 export async function createOrder(env, order) {
   const id = randomId("order_");
-  const record = { id, createdAt: Date.now(), ...order };
+  const record = {
+    id,
+    createdAt: Date.now(),
+    status: "pending", // "pending" | "approved" | "rejected"
+    ...order,
+  };
   await env.NFT_KV.put(ORDER_PREFIX + id, JSON.stringify(record));
   return record;
+}
+
+// Ubah status order (dipakai admin untuk approve/reject setelah verifikasi
+// pembayaran manual). status: "approved" | "rejected" | "pending"
+export async function updateOrderStatus(env, id, status) {
+  const existing = await getOrder(env, id);
+  if (!existing) return null;
+  existing.status = status;
+  existing.statusUpdatedAt = Date.now();
+  await env.NFT_KV.put(ORDER_PREFIX + id, JSON.stringify(existing));
+  return existing;
+}
+
+// Mengembalikan username pemilik sah NFT dengan filename tsb, atau null
+// kalau belum ada order berstatus "approved" untuk NFT tsb.
+export async function getNftOwnerByFilename(filename, env) {
+  const nft = await getNftByFilename(env, filename);
+  if (!nft) return null;
+
+  const orders = await listOrders(env, 1000);
+  const approvedOrder = orders.find(
+    (o) => o.nftId === nft.id && o.status === "approved"
+  );
+
+  return approvedOrder ? approvedOrder.buyerUsername : null;
 }
