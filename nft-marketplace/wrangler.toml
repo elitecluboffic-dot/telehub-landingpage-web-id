@@ -1,0 +1,28 @@
+name = "telehub-nft-marketplace"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+# Route path /nft/* di domain telehub.web.id ke Worker ini.
+# Ganti zone_name kalau perlu, dan pastikan domain sudah proxied (orange cloud) di Cloudflare.
+routes = [
+  { pattern = "telehub.web.id/nft*", zone_name = "telehub.web.id" }
+]
+
+[[kv_namespaces]]
+binding = "NFT_KV"
+id = "77171569b3554d2499885887abe60c57"
+
+[[r2_buckets]]
+binding = "NFT_R2"
+bucket_name = "photos-telehub"
+
+[vars]
+SESSION_TTL_SECONDS = "604800"
+ADMIN_SESSION_TTL_SECONDS = "43200"
+
+# Secrets JANGAN pernah ditulis di file ini / di-commit ke git.
+# Set lewat terminal dengan wrangler secret put, contoh:
+#   wrangler secret put TELEGRAM_BOT_TOKEN
+#   wrangler secret put TELEGRAM_CHAT_ID
+#   wrangler secret put ADMIN_USERNAME
+#   wrangler secret put ADMIN_PASSWORD
