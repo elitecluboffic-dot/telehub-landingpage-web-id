@@ -1,5 +1,5 @@
 import { r2Key } from "../lib/store.js";
-import { getUserFromRequest } from "../lib/session.js";
+import { getUserFromRequest, isAdminRequest } from "../lib/session.js";
 
 const CONTENT_TYPES = {
   gif: "image/gif",
@@ -9,14 +9,13 @@ const CONTENT_TYPES = {
   webp: "image/webp",
 };
 
-// GET /nft/:encoded  ->  :encoded adalah base64url dari filename asli
+// GET /nft/asset/:encoded  ->  :encoded adalah base64url dari filename asli
 // (mis. "ChillFlame.gif" -> "Q2hpbGxGbGFtZS5naWY"). Ini menyembunyikan nama
-// file asli dari URL yang terlihat di address bar/Network tab, walau bukan
-// enkripsi sungguhan — hanya obfuscation tambahan di atas proteksi session.
+// file asli dari URL yang terlihat di address bar/Network tab.
 //
-// PROTEKSI UTAMA tetap: wajib session user valid (getUserFromRequest).
-// Tanpa login -> 401. Tanpa ini, base64 saja TIDAK aman karena bisa di-decode
-// siapa saja.
+// PROTEKSI UTAMA: wajib session pembeli (getUserFromRequest) ATAU session
+// admin (isAdminRequest) yang valid. Tanpa keduanya -> 401. Base64 di URL
+// bukan enkripsi, jadi proteksi session ini yang menutup akses sesungguhnya.
 
 function decodeBase64Url(encoded) {
   try {
@@ -39,8 +38,11 @@ export async function handleAssetProxy(request, env, encodedFilename) {
     return new Response("Not found", { status: 404 });
   }
 
-  const username = await getUserFromRequest(request, env);
-  if (!username) {
+  const [username, isAdmin] = await Promise.all([
+    getUserFromRequest(request, env),
+    isAdminRequest(request, env),
+  ]);
+  if (!username && !isAdmin) {
     return new Response("Unauthorized", { status: 401 });
   }
 
@@ -52,7 +54,6 @@ export async function handleAssetProxy(request, env, encodedFilename) {
   const headers = new Headers();
   headers.set("Content-Type", CONTENT_TYPES[ext]);
   headers.set("Cache-Control", "private, no-store");
-  // Cegah browser nampilin dialog "Save As" otomatis / nebak nama file asli
   headers.set("Content-Disposition", "inline");
   headers.set("X-Content-Type-Options", "nosniff");
   if (object.httpEtag) headers.set("ETag", object.httpEtag);
@@ -61,7 +62,7 @@ export async function handleAssetProxy(request, env, encodedFilename) {
 }
 
 export function encodeFilenameToUrl(filename) {
-  // Dipakai di lib/render.js untuk generate <img src="/nft/<encoded>">
+  // Dipakai di lib/render.js untuk generate <img src="/nft/asset/<encoded>">
   const b64 = btoa(filename);
   return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
