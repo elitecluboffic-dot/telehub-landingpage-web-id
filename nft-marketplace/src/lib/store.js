@@ -12,6 +12,13 @@ export function r2Key(filename) {
   return R2_PREFIX + filename;
 }
 
+// Bukti transfer pembeli disimpan terpisah dari file NFT, di folder/prefix "proof/".
+const PROOF_PREFIX = "proof/";
+
+export function proofR2Key(filename) {
+  return PROOF_PREFIX + filename;
+}
+
 // List file yang sudah ada di bucket (prefix nft/) tapi BELUM punya record NFT di KV,
 // supaya admin bisa langsung pilih file lama tanpa upload ulang.
 export async function listUnregisteredR2Files(env) {
