@@ -128,6 +128,16 @@ export async function updateOrderStatus(env, id, status) {
   return existing;
 }
 
+export async function deleteOrder(env, id) {
+  const existing = await getOrder(env, id);
+  if (!existing) return null;
+  await env.NFT_KV.delete(ORDER_PREFIX + id);
+  if (existing.proofFilename) {
+    await env.NFT_R2.delete(proofR2Key(existing.proofFilename)).catch(() => {});
+  }
+  return existing;
+}
+
 // Mengembalikan username pemilik sah NFT dengan filename tsb, atau null
 // kalau belum ada order berstatus "approved" untuk NFT tsb.
 export async function getNftOwnerByFilename(filename, env) {
