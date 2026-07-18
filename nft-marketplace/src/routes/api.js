@@ -7,8 +7,8 @@ import {
   clearUserSessionCookie,
   destroyUserSession,
 } from "../lib/session.js";
-import { getNft, createOrder } from "../lib/store.js";
-import { sendTelegramMessage, escapeHtmlForTelegram } from "../lib/telegram.js";
+import { getNft, createOrder, proofR2Key } from "../lib/store.js";
+import { sendTelegramMessage, sendTelegramPhoto, escapeHtmlForTelegram } from "../lib/telegram.js";
 
 const USER_PREFIX = "user:";
 
@@ -84,24 +84,44 @@ export async function handleSubmitPurchase(request, env) {
     return jsonResponse({ ok: false, error: "Silakan masuk terlebih dahulu." }, 401);
   }
 
-  const body = await readJson(request);
-  if (!body) return jsonResponse({ ok: false, error: "Body tidak valid." }, 400);
+  let form;
+  try {
+    form = await request.formData();
+  } catch {
+    return jsonResponse({ ok: false, error: "Form tidak valid." }, 400);
+  }
 
-  const telegram = String(body.telegram || "").trim();
-  const whatsapp = String(body.whatsapp || "").trim();
-  const email = String(body.email || "").trim();
-  const payment = String(body.payment || "").trim().toUpperCase();
-  const nftId = String(body.nftId || "").trim();
+  const telegram = String(form.get("telegram") || "").trim();
+  const whatsapp = String(form.get("whatsapp") || "").trim();
+  const email = String(form.get("email") || "").trim();
+  const payment = String(form.get("payment") || "").trim().toUpperCase();
+  const nftId = String(form.get("nftId") || "").trim();
+  const proofFile = form.get("proof");
 
   if (!telegram || !whatsapp) {
     return jsonResponse({ ok: false, error: "Username Telegram dan nomor WhatsApp wajib diisi." }, 400);
   }
-  if (!["DANA", "SEABANK"].includes(payment)) {
+  if (!["GOPAY", "SEABANK"].includes(payment)) {
     return jsonResponse({ ok: false, error: "Metode pembayaran tidak valid." }, 400);
+  }
+  if (!(proofFile instanceof File) || proofFile.size === 0) {
+    return jsonResponse({ ok: false, error: "Bukti transfer wajib diupload." }, 400);
+  }
+
+  const allowedExt = ["png", "jpg", "jpeg", "webp"];
+  const ext = (proofFile.name.split(".").pop() || "").toLowerCase();
+  if (!allowedExt.includes(ext)) {
+    return jsonResponse({ ok: false, error: "Format bukti transfer harus png/jpg/jpeg/webp." }, 400);
   }
 
   const nft = await getNft(env, nftId);
   if (!nft) return jsonResponse({ ok: false, error: "NFT tidak ditemukan." }, 404);
+
+  const proofFilename = `${Date.now()}-${username}.${ext}`;
+  const proofBuffer = await proofFile.arrayBuffer();
+  await env.NFT_R2.put(proofR2Key(proofFilename), proofBuffer, {
+    httpMetadata: { contentType: proofFile.type || undefined },
+  });
 
   const order = await createOrder(env, {
     nftId: nft.id,
@@ -112,10 +132,11 @@ export async function handleSubmitPurchase(request, env) {
     whatsapp,
     email,
     payment,
+    proofFilename,
   });
 
   const priceFmt = "Rp " + Number(nft.price || 0).toLocaleString("id-ID");
-  const text = [
+  const caption = [
     "<b>\uD83D\uDED2 Pengajuan Pembelian NFT Baru</b>",
     `NFT: <b>${escapeHtmlForTelegram(nft.name)}</b>`,
     `Harga: ${escapeHtmlForTelegram(priceFmt)}`,
@@ -129,7 +150,16 @@ export async function handleSubmitPurchase(request, env) {
     .filter(Boolean)
     .join("\n");
 
-  await sendTelegramMessage(env, text);
+  const photoResult = await sendTelegramPhoto(
+    env,
+    new Blob([proofBuffer], { type: proofFile.type || "image/jpeg" }),
+    caption,
+    proofFilename
+  );
+  if (!photoResult.ok) {
+    // fallback tetap kasih notifikasi teks kalau kirim foto gagal
+    await sendTelegramMessage(env, caption);
+  }
 
   return jsonResponse({ ok: true });
 }
