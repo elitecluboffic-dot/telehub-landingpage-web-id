@@ -105,6 +105,7 @@ a{color:inherit;}
 .card{
   position:relative;border-radius:var(--radius);background:var(--surface);
   border:1px solid var(--border);overflow:hidden;
+  display:flex;flex-direction:column;
   transition:transform .18s ease, border-color .18s ease;
 }
 .card:hover{transform:translateY(-4px);border-color:var(--violet);}
@@ -124,11 +125,11 @@ a{color:inherit;}
 .locked-icon{font-size:28px;opacity:.6;}
 .locked-text{font-size:12px;font-weight:600;}
 .protected-media{background-color:#0A0510;background-repeat:no-repeat;user-select:none;}
-.card-body{padding:16px 16px 18px;}
+.card-body{padding:16px 16px 18px;display:flex;flex-direction:column;height:100%;}
 .card-name{font-family:var(--font-display);font-size:16px;margin:0 0 4px;}
-.card-desc{font-size:13px;color:var(--text-muted);margin:0 0 14px;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-.card-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.card-desc{font-size:13px;color:var(--text-muted);margin:0 0 14px;flex:1;
+  display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden;}
+.card-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;}
 .price-tag{
   font-family:var(--font-mono);font-size:14px;font-weight:600;color:var(--gold);
   border:1px dashed var(--gold);border-radius:8px;padding:4px 10px;
