@@ -62,6 +62,7 @@ function orderRow(order) {
     <td class="row-actions">
       <button class="icon-btn approve-order" ${isPending ? "" : "disabled"}>Approve</button>
       <button class="icon-btn danger reject-order" ${isPending ? "" : "disabled"}>Tolak</button>
+      <button class="icon-btn danger delete-order">Hapus</button>
     </td>
   </tr>`;
 }
@@ -317,9 +318,10 @@ export function renderAdminPage({ nfts, orders, availableFiles = [] }) {
       const orderId = tr.dataset.orderId;
       const approveBtn = tr.querySelector('.approve-order');
       const rejectBtn = tr.querySelector('.reject-order');
+      const approveOriginal = approveBtn.textContent;
+      const rejectOriginal = rejectBtn.textContent;
       approveBtn.disabled = true;
       rejectBtn.disabled = true;
-      const originalText = btn.textContent;
       btn.textContent = '...';
       try {
         const res = await fetch(
@@ -328,10 +330,13 @@ export function renderAdminPage({ nfts, orders, availableFiles = [] }) {
         );
         const data = await res.json();
         if (!res.ok || !data.ok) throw new Error(data.error || 'Gagal memproses order.');
+        approveBtn.textContent = approveOriginal;
+        rejectBtn.textContent = rejectOriginal;
         applyOrderStatus(tr, data.order.status);
       } catch (err) {
         alert(err.message);
-        btn.textContent = originalText;
+        approveBtn.textContent = approveOriginal;
+        rejectBtn.textContent = rejectOriginal;
         approveBtn.disabled = false;
         rejectBtn.disabled = false;
       }
@@ -348,6 +353,26 @@ export function renderAdminPage({ nfts, orders, availableFiles = [] }) {
       btn.addEventListener('click', () => {
         if (!confirm('Tolak pengajuan pembelian ini?')) return;
         handleOrderAction(btn, 'reject');
+      });
+    });
+
+    document.querySelectorAll('.delete-order').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Hapus pengajuan ini beserta bukti transfernya? Tindakan ini tidak bisa dibatalkan.')) return;
+        const tr = btn.closest('tr');
+        const orderId = tr.dataset.orderId;
+        btn.disabled = true;
+        try {
+          const res = await fetch('/nft/api/admin/orders/' + encodeURIComponent(orderId), {
+            method: 'DELETE',
+          });
+          const data = await res.json();
+          if (!res.ok || !data.ok) throw new Error(data.error || 'Gagal menghapus order.');
+          tr.remove();
+        } catch (err) {
+          alert(err.message);
+          btn.disabled = false;
+        }
       });
     });
   </script>
