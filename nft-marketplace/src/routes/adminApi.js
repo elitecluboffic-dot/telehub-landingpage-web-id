@@ -17,6 +17,7 @@ import {
   listOrders,
   getOrder,
   updateOrderStatus,
+  deleteOrder,
 } from "../lib/store.js";
 
 async function readJson(request) {
@@ -205,4 +206,11 @@ export async function handleAdminRejectOrder(request, env, id) {
   if (!existing) return jsonResponse({ ok: false, error: "Order tidak ditemukan." }, 404);
   const updated = await updateOrderStatus(env, id, "rejected");
   return jsonResponse({ ok: true, order: updated });
+}
+
+export async function handleAdminDeleteOrder(request, env, id) {
+  const existing = await getOrder(env, id);
+  if (!existing) return jsonResponse({ ok: false, error: "Order tidak ditemukan." }, 404);
+  await deleteOrder(env, id);
+  return jsonResponse({ ok: true });
 }
