@@ -12,6 +12,7 @@ import {
   deleteNft,
   getNft,
   r2Key,
+  proofR2Key,
   listUnregisteredR2Files,
   listOrders,
   getOrder,
@@ -176,6 +177,27 @@ export async function handleAdminApproveOrder(request, env, id) {
   if (!existing) return jsonResponse({ ok: false, error: "Order tidak ditemukan." }, 404);
   const updated = await updateOrderStatus(env, id, "approved");
   return jsonResponse({ ok: true, order: updated });
+}
+
+const PROOF_CONTENT_TYPES = {
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  webp: "image/webp",
+};
+
+export async function handleAdminGetOrderProof(request, env, id) {
+  const order = await getOrder(env, id);
+  if (!order || !order.proofFilename) return new Response("Not found", { status: 404 });
+
+  const object = await env.NFT_R2.get(proofR2Key(order.proofFilename));
+  if (!object) return new Response("Not found", { status: 404 });
+
+  const ext = (order.proofFilename.split(".").pop() || "").toLowerCase();
+  const headers = new Headers();
+  headers.set("Content-Type", PROOF_CONTENT_TYPES[ext] || "application/octet-stream");
+  headers.set("Cache-Control", "private, no-store");
+  return new Response(object.body, { headers });
 }
 
 export async function handleAdminRejectOrder(request, env, id) {
