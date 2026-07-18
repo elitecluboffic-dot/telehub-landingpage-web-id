@@ -43,7 +43,7 @@ export function renderMarketplacePage({ nfts, username }) {
     <div class="container">
       <span class="eyebrow">Drop Terbaru</span>
       <h1>Koleksi NFT Telehub</h1>
-      <p>Pilih koleksi favoritmu, isi form pemesanan, dan tim kami akan menghubungimu langsung untuk proses pembayaran manual.</p>
+      <p>Setiap karya dirilis dalam jumlah terbatas. Ajukan pembelian dalam satu langkah mudah, dan tim kami akan segera menghubungimu untuk menyelesaikan transaksi.</p>
     </div>
   </div>
 
