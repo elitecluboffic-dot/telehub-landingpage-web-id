@@ -25,6 +25,7 @@ import {
   handleAdminListOrders,
   handleAdminApproveOrder,
   handleAdminRejectOrder,
+  handleAdminDeleteOrder,
   handleAdminGetOrderProof,
 } from "./routes/adminApi.js";
 import { listUnregisteredR2Files } from "./lib/store.js";
@@ -148,6 +149,12 @@ export default {
           path.slice("/nft/api/admin/orders/".length, -"/proof".length)
         );
         return handleAdminGetOrderProof(request, env, id);
+      }
+      if (path.startsWith("/nft/api/admin/orders/") && method === "DELETE") {
+        const unauthorized = await requireAdmin(request, env);
+        if (unauthorized) return unauthorized;
+        const id = decodeURIComponent(path.slice("/nft/api/admin/orders/".length));
+        return handleAdminDeleteOrder(request, env, id);
       }
 
       // ---------- Proxy asset R2 (GIF/gambar NFT) ----------
