@@ -1,57 +1,50 @@
-import { PhotonImage, watermark, resize, SamplingFilter } from "@cf-wasm/photon/workerd";
-
-let cachedLogo = null;
+import { PhotonImage, draw_text, resize, SamplingFilter } from "@cf-wasm/photon/workerd";
 
 // Batas dimensi maksimum untuk preview watermark. Gambar preview memang
 // tidak perlu resolusi penuh, dan ini penting untuk menjaga proses tiling
 // tetap ringan agar tidak melebihi batas CPU time Cloudflare Workers.
 const MAX_PREVIEW_DIM = 800;
 
-async function getWatermarkImage(env) {
-  if (cachedLogo) return cachedLogo;
-  const obj = await env.NFT_R2.get("_assets/watermark-logo.png");
-  if (!obj) {
-    throw new Error("Watermark logo tidak ditemukan di R2 (_assets/watermark-logo.png)");
-  }
-  const bytes = new Uint8Array(await obj.arrayBuffer());
-  cachedLogo = PhotonImage.new_from_byteslice(bytes);
-  return cachedLogo;
-}
+// Teks watermark yang di-tile berulang. Tidak butuh file logo eksternal
+// sama sekali -> tidak ada dependency ke R2 asset yang bisa gagal/hilang.
+const WATERMARK_TEXT = "TELEHUB PREVIEW";
 
-// Menempelkan watermark berulang (tiled) di seluruh permukaan gambar, dengan
-// pola offset baris supaya membentuk grid diagonal/staggered. Ini jauh lebih
-// sulit dihilangkan lewat crop atau clone-stamp dibanding satu logo di
-// pojok, karena watermark menutupi semua bagian gambar secara merata dan
-// polanya tidak lurus.
-function tileWatermark(workingImage, logo) {
+// Menempelkan teks watermark berulang (tiled) di seluruh permukaan gambar,
+// dengan pola offset baris supaya membentuk grid diagonal/staggered. Ini
+// jauh lebih sulit dihilangkan lewat crop atau clone-stamp dibanding satu
+// watermark di pojok, karena menutupi semua bagian gambar secara merata
+// dan polanya tidak lurus.
+function tileWatermarkText(workingImage) {
   const imgW = workingImage.get_width();
   const imgH = workingImage.get_height();
-  const logoW = logo.get_width();
-  const logoH = logo.get_height();
 
-  // Jarak antar tile. Dibuat < ukuran logo supaya ada sedikit overlap,
-  // memastikan tidak ada celah kosong tanpa watermark di gambar.
-  const stepX = Math.max(Math.floor(logoW * 0.85), 1);
-  const stepY = Math.max(Math.floor(logoH * 0.85), 1);
+  // Perkiraan lebar & tinggi blok teks pada ukuran font default photon,
+  // dipakai untuk menentukan jarak antar tile.
+  const approxTextW = WATERMARK_TEXT.length * 14;
+  const approxTextH = 40;
 
-  // Batas pengaman jumlah tile maksimum, supaya untuk kasus logo sangat
-  // kecil relatif ke gambar, proses tetap tidak meledak jumlah panggilan
-  // watermark()-nya dan berisiko kena limit CPU time Worker.
-  const MAX_TILES = 400;
+  const stepX = Math.max(approxTextW + 20, 40);
+  const stepY = Math.max(approxTextH + 30, 40);
+
+  // Batas pengaman jumlah tile maksimum, supaya proses tidak meledak
+  // jumlah panggilan draw_text()-nya dan berisiko kena limit CPU time.
+  const MAX_TILES = 200;
   let tileCount = 0;
 
   let rowIndex = 0;
   outer:
-  for (let y = -logoH; y < imgH + logoH; y += stepY) {
+  for (let y = 0; y < imgH; y += stepY) {
     // Offset horizontal berselang-seling per baris supaya polanya membentuk
     // grid diagonal/staggered, bukan grid lurus yang gampang "dibaca"
     // polanya dan di-clone-stamp hilang.
     const rowOffset = rowIndex % 2 === 0 ? 0 : Math.floor(stepX / 2);
     rowIndex++;
 
-    for (let x = -logoW + rowOffset; x < imgW + logoW; x += stepX) {
+    for (let x = -approxTextW + rowOffset; x < imgW; x += stepX) {
       if (tileCount >= MAX_TILES) break outer;
-      watermark(workingImage, logo, BigInt(x), BigInt(y));
+      const drawX = Math.max(0, Math.min(x, imgW - 1));
+      const drawY = Math.max(0, Math.min(y, imgH - 1));
+      draw_text(workingImage, WATERMARK_TEXT, drawX, drawY);
       tileCount++;
     }
   }
@@ -82,8 +75,7 @@ export async function renderWatermarked(imageBody, ext, env) {
       workingImage = resized;
     }
 
-    const logo = await getWatermarkImage(env);
-    tileWatermark(workingImage, logo);
+    tileWatermarkText(workingImage);
 
     const outBytes =
       ext === "png" ? workingImage.get_bytes() : workingImage.get_bytes_jpeg(80);
@@ -120,8 +112,7 @@ export async function renderGifPreview(imageBody, env) {
       workingImage = resized;
     }
 
-    const logo = await getWatermarkImage(env);
-    tileWatermark(workingImage, logo);
+    tileWatermarkText(workingImage);
 
     return workingImage.get_bytes(); // selalu PNG
   } finally {
