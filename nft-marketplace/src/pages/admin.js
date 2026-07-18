@@ -52,6 +52,11 @@ function orderRow(order) {
     <td>${escapeHtml(order.telegram)}</td>
     <td>${escapeHtml(order.whatsapp)}</td>
     <td>${escapeHtml(order.payment)}</td>
+    <td>${
+      order.proofFilename
+        ? `<a href="/nft/api/admin/orders/${escapeHtml(order.id)}/proof" target="_blank"><img src="/nft/api/admin/orders/${escapeHtml(order.id)}/proof" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid var(--border);" /></a>`
+        : `<span style="color:var(--text-muted);font-size:12px;">-</span>`
+    }</td>
     <td style="color:var(--text-muted);font-size:12px;">${escapeHtml(date)}</td>
     <td class="order-status">${statusBadge(status)}</td>
     <td class="row-actions">
@@ -68,7 +73,7 @@ export function renderAdminPage({ nfts, orders, availableFiles = [] }) {
 
   const orderRows = orders.length
     ? orders.map(orderRow).join("\n")
-    : `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);">Belum ada pengajuan pembelian.</td></tr>`;
+    : `<tr><td colspan="9" style="text-align:center;color:var(--text-muted);">Belum ada pengajuan pembelian.</td></tr>`;
 
   const fileOptions = availableFiles.length
     ? availableFiles.map((f) => `<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`).join("\n")
@@ -164,7 +169,7 @@ export function renderAdminPage({ nfts, orders, availableFiles = [] }) {
       <table>
         <thead>
           <tr>
-            <th>NFT</th><th>Akun</th><th>Telegram</th><th>WhatsApp</th><th>Metode</th>
+            <th>NFT</th><th>Akun</th><th>Telegram</th><th>WhatsApp</th><th>Metode</th><th>Bukti</th>
             <th>Waktu</th><th>Status</th><th>Aksi</th>
           </tr>
         </thead>
