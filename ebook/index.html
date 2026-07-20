@@ -188,10 +188,25 @@
     display:none;
   }
   @media (max-width:900px){
-    .hero-photo-wrap{ width:52%; opacity:0.5; }
+    .hero-photo-wrap{ width:58%; }
   }
+  /* On phones the photo is now shown bigger and centered, full opacity,
+     instead of being shrunk, faded (opacity:0.5), or hidden entirely like
+     it was before. The left-side fade mask is dropped here too since a
+     centered photo doesn't need it — only the soft bottom fade remains. */
   @media (max-width:600px){
-    .hero-photo-wrap{ display:none; }
+    .hero-photo-wrap{
+      width:82%;
+      height:60%;
+      right:50%;
+      transform:translateX(50%);
+    }
+    .hero-photo{
+      -webkit-mask-image:linear-gradient(to bottom, black 0%, black 78%, transparent 97%);
+      mask-image:linear-gradient(to bottom, black 0%, black 78%, transparent 97%);
+      -webkit-mask-composite:source-over;
+      mask-composite:add;
+    }
   }
 
   .hero-content{
