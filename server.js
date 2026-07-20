@@ -3,7 +3,6 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { readFileSync } from 'fs';
 import rateLimit from 'express-rate-limit';
-import ebookBooksApi from './api/ebook-books.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -41,10 +40,6 @@ const limiter = rateLimit({
   message: 'Terlalu banyak request, coba lagi sebentar lagi.',
 });
 app.use(limiter);
-
-// API untuk halaman admin ebook (/ebook/admin) — CRUD data buku, disimpan
-// di Cloudflare Workers KV lewat REST API (lihat api/ebook-books.js).
-app.use('/api/ebook', ebookBooksApi);
 
 // Baca index.html sekali saat server start (bukan setiap request — lebih cepat).
 // Kalau lo sering edit index.html dan pakai `npm run dev` tanpa restart,
@@ -94,15 +89,6 @@ app.get(['/ebook', '/ebook/'], (req, res) => {
   res.set('Content-Type', 'text/html');
   res.set('Cache-Control', 'no-cache');
   res.sendFile(path.join(__dirname, 'ebook', 'index.html'));
-});
-
-// Panel admin ebook — sama polanya kayak /ebook di atas, dilayani apa
-// adanya dari ebook/admin/index.html. Juga harus di atas static middleware
-// & catch-all '*' biar tidak ketiban index.html landing page utama.
-app.get(['/ebook/admin', '/ebook/admin/'], (req, res) => {
-  res.set('Content-Type', 'text/html');
-  res.set('Cache-Control', 'no-cache');
-  res.sendFile(path.join(__dirname, 'ebook', 'admin', 'index.html'));
 });
 
 // static assets disajikan langsung (JS, CSS, gambar, dll) dengan cache header
