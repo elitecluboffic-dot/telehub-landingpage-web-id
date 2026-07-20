@@ -1,0 +1,17 @@
+name = "telehub-ebook"
+main = "src/worker.js"
+compatibility_date = "2024-09-23"
+
+# The whole repo root is served as static files (your existing index.html,
+# about.html, ebook/index.html, ebook/admin/index.html, images, etc).
+# The Worker only intercepts /api/* — everything else is served as-is.
+# Files listed in .assetsignore (wrangler.toml, src/, README.md) are excluded.
+[assets]
+directory = "."
+binding = "ASSETS"
+
+# Create this with: wrangler kv namespace create EBOOK_KV
+# Then paste the id it gives you below.
+[[kv_namespaces]]
+binding = "EBOOK_KV"
+id = "62650483e32448c89ce98cae38ee7c3e"
