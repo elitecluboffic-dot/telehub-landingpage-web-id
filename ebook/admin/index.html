@@ -285,7 +285,7 @@
     loginError.textContent = '';
     loginBtn.disabled = true;
     try {
-      const res = await fetch('/api/login', {
+      const res = await fetch('/ebook/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password })
@@ -325,7 +325,7 @@
     const token = getToken();
     if (!token) return;
     try {
-      const res = await fetch('/api/login', {
+      const res = await fetch('/ebook/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: token })
@@ -366,7 +366,7 @@
   async function loadBooks(){
     bookList.innerHTML = '<p class="empty-state">Memuat&hellip;</p>';
     try {
-      const res = await fetch('/api/books');
+      const res = await fetch('/ebook/api/books');
       const data = await res.json();
       const books = (data.books || []).slice().sort((a,b) => (a.order ?? 0) - (b.order ?? 0));
       renderList(books);
@@ -402,7 +402,7 @@
   async function deleteBook(book){
     if (!confirm(`Hapus "${book.title}"? Ini tidak bisa dibatalkan.`)) return;
     try {
-      const res = await fetch('/api/books/' + encodeURIComponent(book.id), {
+      const res = await fetch('/ebook/api/books/' + encodeURIComponent(book.id), {
         method: 'DELETE',
         headers: authHeaders()
       });
@@ -440,7 +440,7 @@
     }
 
     try {
-      const res = await fetch('/api/books', {
+      const res = await fetch('/ebook/api/books', {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify(payload)
