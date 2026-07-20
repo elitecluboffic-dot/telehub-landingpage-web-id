@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Ebook — Telehub</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#120b19;
+    --card:#1c1327;
+    --card-line:#3a2b42;
+    --cream:#f6ead9;
+    --gold:#e7c26a;
+    --muted:#b9a8b8;
+    --danger:#e0654f;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0;
+    min-height:100vh;
+    background:var(--ink);
+    color:var(--cream);
+    font-family:'Manrope', sans-serif;
+  }
+  h1,h2,h3{ font-family:'Fraunces', serif; font-weight:600; margin:0; }
+  .wrap{ max-width:920px; margin:0 auto; padding:48px 24px 100px; }
+
+  /* login */
+  .login-screen{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .login-card{
+    width:100%;
+    max-width:380px;
+    background:var(--card);
+    border:1px solid var(--card-line);
+    border-radius:16px;
+    padding:36px;
+    text-align:center;
+  }
+  .login-card h1{ font-size:1.5rem; margin-bottom:8px; }
+  .login-card p{ color:var(--muted); font-size:0.9rem; margin:0 0 24px; }
+
+  input, textarea, select{
+    width:100%;
+    background:#241733;
+    border:1px solid var(--card-line);
+    border-radius:10px;
+    padding:12px 14px;
+    color:var(--cream);
+    font-family:inherit;
+    font-size:0.95rem;
+  }
+  input:focus, textarea:focus, select:focus{ outline:2px solid var(--gold); outline-offset:1px; }
+  textarea{ resize:vertical; min-height:80px; }
+
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    padding:12px 22px;
+    border-radius:999px;
+    font-size:0.92rem;
+    font-weight:600;
+    border:none;
+    cursor:pointer;
+    transition:transform 0.15s ease;
+  }
+  .btn:hover{ transform:translateY(-1px); }
+  .btn-primary{ background:var(--gold); color:#241708; }
+  .btn-ghost{ background:transparent; border:1px solid var(--card-line); color:var(--cream); }
+  .btn-danger{ background:transparent; border:1px solid rgba(224,101,79,0.5); color:var(--danger); }
+  .btn-block{ width:100%; }
+
+  .error-msg{
+    color:var(--danger);
+    font-size:0.85rem;
+    margin-top:10px;
+    min-height:1.2em;
+  }
+
+  /* dashboard */
+  .topbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:36px;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+  .topbar h1{ font-size:1.6rem; }
+  .topbar .sub{ color:var(--muted); font-size:0.88rem; margin-top:4px; }
+
+  .panel{
+    background:var(--card);
+    border:1px solid var(--card-line);
+    border-radius:16px;
+    padding:26px;
+    margin-bottom:24px;
+  }
+  .panel h2{ font-size:1.15rem; margin-bottom:18px; }
+
+  .field{ margin-bottom:16px; }
+  .field label{
+    display:block;
+    font-size:0.8rem;
+    color:var(--muted);
+    margin-bottom:6px;
+    letter-spacing:0.02em;
+  }
+  .field-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+  }
+  @media (max-width:600px){
+    .field-row{ grid-template-columns:1fr; }
+  }
+
+  .book-item{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:16px;
+    padding:16px 0;
+    border-bottom:1px solid var(--card-line);
+    flex-wrap:wrap;
+  }
+  .book-item:last-child{ border-bottom:none; }
+  .book-item .meta h3{ font-size:1.02rem; margin-bottom:4px; }
+  .book-item .meta p{ margin:0; color:var(--muted); font-size:0.85rem; }
+  .book-item .actions{ display:flex; gap:8px; flex-shrink:0; }
+
+  .empty-state{ color:var(--muted); font-size:0.9rem; padding:12px 0; }
+
+  .toast{
+    position:fixed;
+    bottom:24px; left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:var(--gold);
+    color:#241708;
+    padding:12px 22px;
+    border-radius:999px;
+    font-size:0.88rem;
+    font-weight:600;
+    opacity:0;
+    transition:opacity 0.25s ease, transform 0.25s ease;
+    pointer-events:none;
+    z-index:100;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  .toast.error{ background:var(--danger); color:#fff; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <h1>Admin Ebook</h1>
+    <p>Masuk untuk mengatur rak buku BIMXR.</p>
+    <div class="field">
+      <input type="password" id="passwordInput" placeholder="Password admin" autocomplete="current-password">
+    </div>
+    <button class="btn btn-primary btn-block" id="loginBtn">Masuk</button>
+    <div class="error-msg" id="loginError"></div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="wrap" id="dashboard" style="display:none;">
+  <div class="topbar">
+    <div>
+      <h1>Rak Buku</h1>
+      <div class="sub">Kelola konten yang tampil di halaman /ebook</div>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <a href="../index.html" target="_blank" class="btn btn-ghost">Lihat Halaman</a>
+      <button class="btn btn-ghost" id="logoutBtn">Keluar</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2 id="formTitle">Tambah Buku Baru</h2>
+    <form id="bookForm">
+      <input type="hidden" id="bookId">
+      <div class="field-row">
+        <div class="field">
+          <label for="fTitle">Judul Buku</label>
+          <input type="text" id="fTitle" required>
+        </div>
+        <div class="field">
+          <label for="fAuthor">Penulis</label>
+          <input type="text" id="fAuthor" value="BIMXR">
+        </div>
+      </div>
+      <div class="field">
+        <label for="fTagline">Tagline Sampul (kalimat pendek di cover)</label>
+        <input type="text" id="fTagline" placeholder="Contoh: Belajar hidup tenang dari...">
+      </div>
+      <div class="field">
+        <label for="fDescription">Deskripsi Singkat</label>
+        <textarea id="fDescription" placeholder="Ringkasan isi buku, 1-2 kalimat."></textarea>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="fPrice">Label Format/Harga</label>
+          <input type="text" id="fPrice" value="Ebook · PDF">
+        </div>
+        <div class="field">
+          <label for="fCover">Gaya Sampul</label>
+          <select id="fCover">
+            <option value="twilight">Twilight (ungu-oranye, dengan bulan &amp; kucing)</option>
+            <option value="dawn">Dawn (biru-emas)</option>
+            <option value="moss">Moss (hijau tenang)</option>
+            <option value="ash">Ash (abu netral)</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="fWaNumber">Nomor WhatsApp (format 62xxxx)</label>
+          <input type="text" id="fWaNumber" placeholder="6285746866023">
+        </div>
+        <div class="field">
+          <label for="fWaMessage">Pesan WhatsApp Otomatis</label>
+          <input type="text" id="fWaMessage" placeholder="Halo, saya mau pesan ebook ...">
+        </div>
+      </div>
+      <div style="display:flex; gap:10px; margin-top:8px;">
+        <button type="submit" class="btn btn-primary" id="saveBtn">Simpan Buku</button>
+        <button type="button" class="btn btn-ghost" id="cancelEditBtn" style="display:none;">Batal Edit</button>
+      </div>
+      <div class="error-msg" id="formError"></div>
+    </form>
+  </div>
+
+  <div class="panel">
+    <h2>Daftar Buku</h2>
+    <div id="bookList"><p class="empty-state">Memuat&hellip;</p></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const loginScreen = document.getElementById('loginScreen');
+  const dashboard = document.getElementById('dashboard');
+  const passwordInput = document.getElementById('passwordInput');
+  const loginBtn = document.getElementById('loginBtn');
+  const loginError = document.getElementById('loginError');
+  const logoutBtn = document.getElementById('logoutBtn');
+
+  const bookForm = document.getElementById('bookForm');
+  const bookList = document.getElementById('bookList');
+  const formTitle = document.getElementById('formTitle');
+  const formError = document.getElementById('formError');
+  const cancelEditBtn = document.getElementById('cancelEditBtn');
+  const toast = document.getElementById('toast');
+
+  const SESSION_KEY = 'telehub_ebook_admin_token';
+
+  function showToast(msg, isError = false){
+    toast.textContent = msg;
+    toast.className = 'toast show' + (isError ? ' error' : '');
+    setTimeout(() => toast.classList.remove('show'), 2400);
+  }
+
+  function getToken(){ return sessionStorage.getItem(SESSION_KEY) || ''; }
+
+  function authHeaders(){
+    return { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' };
+  }
+
+  async function tryLogin(password){
+    loginError.textContent = '';
+    loginBtn.disabled = true;
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        sessionStorage.setItem(SESSION_KEY, password);
+        enterDashboard();
+      } else {
+        loginError.textContent = 'Password salah. Coba lagi.';
+      }
+    } catch (e) {
+      loginError.textContent = 'Tidak bisa menghubungi server. Cek koneksi.';
+    } finally {
+      loginBtn.disabled = false;
+    }
+  }
+
+  loginBtn.addEventListener('click', () => tryLogin(passwordInput.value));
+  passwordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') tryLogin(passwordInput.value); });
+
+  logoutBtn.addEventListener('click', () => {
+    sessionStorage.removeItem(SESSION_KEY);
+    dashboard.style.display = 'none';
+    loginScreen.style.display = 'flex';
+    passwordInput.value = '';
+  });
+
+  function enterDashboard(){
+    loginScreen.style.display = 'none';
+    dashboard.style.display = 'block';
+    loadBooks();
+  }
+
+  // if a token from an earlier session exists, verify it silently
+  (async function autoLogin(){
+    const token = getToken();
+    if (!token) return;
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: token })
+      });
+      const data = await res.json();
+      if (data.ok) enterDashboard();
+      else sessionStorage.removeItem(SESSION_KEY);
+    } catch (e) { /* stay on login screen */ }
+  })();
+
+  function resetForm(){
+    document.getElementById('bookId').value = '';
+    bookForm.reset();
+    document.getElementById('fAuthor').value = 'BIMXR';
+    document.getElementById('fPrice').value = 'Ebook · PDF';
+    formTitle.textContent = 'Tambah Buku Baru';
+    cancelEditBtn.style.display = 'none';
+    formError.textContent = '';
+  }
+
+  cancelEditBtn.addEventListener('click', resetForm);
+
+  function fillForm(book){
+    document.getElementById('bookId').value = book.id;
+    document.getElementById('fTitle').value = book.title || '';
+    document.getElementById('fAuthor').value = book.author || 'BIMXR';
+    document.getElementById('fTagline').value = book.tagline || '';
+    document.getElementById('fDescription').value = book.description || '';
+    document.getElementById('fPrice').value = book.priceLabel || 'Ebook · PDF';
+    document.getElementById('fCover').value = book.cover || 'twilight';
+    document.getElementById('fWaNumber').value = book.waNumber || '';
+    document.getElementById('fWaMessage').value = book.waMessage || '';
+    formTitle.textContent = 'Edit: ' + book.title;
+    cancelEditBtn.style.display = 'inline-flex';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  async function loadBooks(){
+    bookList.innerHTML = '<p class="empty-state">Memuat&hellip;</p>';
+    try {
+      const res = await fetch('/api/books');
+      const data = await res.json();
+      const books = (data.books || []).slice().sort((a,b) => (a.order ?? 0) - (b.order ?? 0));
+      renderList(books);
+    } catch (e) {
+      bookList.innerHTML = '<p class="empty-state">Gagal memuat daftar buku.</p>';
+    }
+  }
+
+  function renderList(books){
+    if (!books.length){
+      bookList.innerHTML = '<p class="empty-state">Belum ada buku. Tambahkan lewat form di atas.</p>';
+      return;
+    }
+    bookList.innerHTML = '';
+    books.forEach(book => {
+      const row = document.createElement('div');
+      row.className = 'book-item';
+      row.innerHTML = `
+        <div class="meta">
+          <h3>${escapeHtml(book.title)}</h3>
+          <p>${escapeHtml(book.tagline || book.description || '')}</p>
+        </div>
+        <div class="actions">
+          <button class="btn btn-ghost" data-action="edit">Edit</button>
+          <button class="btn btn-danger" data-action="delete">Hapus</button>
+        </div>`;
+      row.querySelector('[data-action="edit"]').addEventListener('click', () => fillForm(book));
+      row.querySelector('[data-action="delete"]').addEventListener('click', () => deleteBook(book));
+      bookList.appendChild(row);
+    });
+  }
+
+  async function deleteBook(book){
+    if (!confirm(`Hapus "${book.title}"? Ini tidak bisa dibatalkan.`)) return;
+    try {
+      const res = await fetch('/api/books/' + encodeURIComponent(book.id), {
+        method: 'DELETE',
+        headers: authHeaders()
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        showToast('Buku dihapus');
+        loadBooks();
+      } else {
+        showToast(data.error || 'Gagal menghapus', true);
+      }
+    } catch (e) {
+      showToast('Tidak bisa menghubungi server', true);
+    }
+  }
+
+  bookForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    formError.textContent = '';
+
+    const payload = {
+      id: document.getElementById('bookId').value || undefined,
+      title: document.getElementById('fTitle').value.trim(),
+      author: document.getElementById('fAuthor').value.trim(),
+      tagline: document.getElementById('fTagline').value.trim(),
+      description: document.getElementById('fDescription').value.trim(),
+      priceLabel: document.getElementById('fPrice').value.trim(),
+      cover: document.getElementById('fCover').value,
+      waNumber: document.getElementById('fWaNumber').value.trim(),
+      waMessage: document.getElementById('fWaMessage').value.trim(),
+    };
+
+    if (!payload.title){
+      formError.textContent = 'Judul buku wajib diisi.';
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/books', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        showToast('Buku tersimpan');
+        resetForm();
+        loadBooks();
+      } else {
+        formError.textContent = data.error || 'Gagal menyimpan buku.';
+      }
+    } catch (e) {
+      formError.textContent = 'Tidak bisa menghubungi server.';
+    }
+  });
+
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+  }
+</script>
+
+</body>
+</html>
