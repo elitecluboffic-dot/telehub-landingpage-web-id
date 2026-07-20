@@ -187,17 +187,22 @@
   .hero-photo[data-missing="true"]{
     display:none;
   }
+
+  /* Graduated breakpoints instead of a single 600px cutoff — phones vary
+     a lot in effective CSS width (390–430 for most, but some run wider),
+     so the photo now scales up progressively as the screen narrows,
+     rather than jumping from "small desktop-style" straight to "big
+     centered mobile-style" at one exact pixel value. This means devices
+     that fall between the old breakpoints (e.g. ~650–760px effective
+     width) still get a reasonably large, centered photo instead of the
+     small right-aligned desktop version. */
   @media (max-width:900px){
     .hero-photo-wrap{ width:58%; }
   }
-  /* On phones the photo is now shown bigger and centered, full opacity,
-     instead of being shrunk, faded (opacity:0.5), or hidden entirely like
-     it was before. The left-side fade mask is dropped here too since a
-     centered photo doesn't need it — only the soft bottom fade remains. */
-  @media (max-width:600px){
+  @media (max-width:760px){
     .hero-photo-wrap{
-      width:82%;
-      height:60%;
+      width:70%;
+      height:58%;
       right:50%;
       transform:translateX(50%);
     }
@@ -206,6 +211,18 @@
       mask-image:linear-gradient(to bottom, black 0%, black 78%, transparent 97%);
       -webkit-mask-composite:source-over;
       mask-composite:add;
+    }
+  }
+  @media (max-width:600px){
+    .hero-photo-wrap{
+      width:84%;
+      height:60%;
+    }
+  }
+  @media (max-width:420px){
+    .hero-photo-wrap{
+      width:94%;
+      height:56%;
     }
   }
 
