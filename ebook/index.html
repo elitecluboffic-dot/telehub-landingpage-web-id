@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ebook Telehub</title>
+<title>Ebook BIMXR &mdash; Telehub</title>
 <meta name="description" content="Kumpulan buku renungan tentang ketenangan, kebiasaan, dan hidup yang tidak terburu-buru, ditulis oleh BIMXR.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -96,33 +96,22 @@
     overflow:hidden;
   }
 
-  .stars{
-    position:absolute; inset:0;
-    width:100%; height:100%;
-  }
-  .star{
+  .hero-photo{
     position:absolute;
-    width:2px; height:2px;
-    background:#fff;
-    border-radius:50%;
-    animation:twinkle 4.5s ease-in-out infinite;
+    right:2%;
+    bottom:0;
+    height:88%;
+    max-width:48%;
+    object-fit:contain;
+    object-position:bottom;
+    z-index:2;
+    filter:drop-shadow(0 25px 45px rgba(0,0,0,0.5));
   }
-  @keyframes twinkle{
-    0%,100%{ opacity:0.25; }
-    50%{ opacity:1; }
+  @media (max-width:900px){
+    .hero-photo{ max-width:60%; opacity:0.55; }
   }
-
-  .moon{
-    position:absolute;
-    top:12%; right:10%;
-    width:170px; height:170px;
-    border-radius:50%;
-    background:url('bimxr.png') center/cover no-repeat, radial-gradient(circle at 38% 35%, #fff8e6, #f6e2a8 55%, #e9cf8d 100%);
-    box-shadow:0 0 70px 25px rgba(247,229,168,0.35);
-    border:3px solid rgba(246,234,217,0.55);
-  }
-  @media (max-width:720px){
-    .moon{ width:112px; height:112px; top:8%; right:8%; }
+  @media (max-width:620px){
+    .hero-photo{ max-width:78%; height:60%; opacity:0.35; }
   }
 
   .hero-content{
@@ -185,27 +174,6 @@
     color:var(--cream);
   }
   .btn-ghost:hover{ border-color:var(--cream); }
-
-  /* cat silhouette sitting on the roofline */
-  .roofline{
-    position:absolute;
-    left:0; right:0; bottom:0;
-    height:14vh;
-    min-height:110px;
-    background:var(--ink);
-    z-index:1;
-  }
-  .cat-silhouette{
-    position:absolute;
-    right:8%;
-    bottom:14vh;
-    width:150px;
-    z-index:2;
-    filter:drop-shadow(0 12px 18px rgba(0,0,0,0.4));
-  }
-  @media (max-width:720px){
-    .cat-silhouette{ width:100px; right:6%; }
-  }
 
   .scroll-cue{
     position:absolute;
@@ -501,8 +469,7 @@
 </header>
 
 <section class="hero">
-  <div class="stars" id="stars"></div>
-  <div class="moon"></div>
+  <img src="bimxr.png" alt="BIMXR" class="hero-photo">
 
   <div class="hero-content wrap">
     <span class="eyebrow">Karya Tulis BIMXR</span>
@@ -513,15 +480,6 @@
       <a href="#tentang" class="btn btn-ghost">Tentang Penulis</a>
     </div>
   </div>
-
-  <svg class="cat-silhouette" viewBox="0 0 200 170" fill="#120b19">
-    <path d="M60 170 L60 120 Q60 60 100 60 Q140 60 140 120 L140 170 Z"/>
-    <circle cx="100" cy="45" r="30"/>
-    <path d="M78 24 L70 2 L92 20 Z"/>
-    <path d="M122 24 L130 2 L108 20 Z"/>
-    <path d="M140 130 Q170 130 165 100 Q160 115 140 118 Z"/>
-  </svg>
-  <div class="roofline"></div>
 
   <div class="scroll-cue"><span class="line"></span> Gulir untuk membaca</div>
 </section>
@@ -624,19 +582,6 @@
 </footer>
 
 <script>
-  // scatter background stars in the hero
-  function scatterStars(container, count){
-    for(let i=0;i<count;i++){
-      const s = document.createElement('div');
-      s.className = 'star';
-      s.style.left = Math.random()*100 + '%';
-      s.style.top = Math.random()*70 + '%';
-      s.style.animationDelay = (Math.random()*4) + 's';
-      container.appendChild(s);
-    }
-  }
-  scatterStars(document.getElementById('stars'), 70);
-
   function scatterMiniStars(container, count){
     for(let i=0;i<count;i++){
       const s = document.createElement('span');
