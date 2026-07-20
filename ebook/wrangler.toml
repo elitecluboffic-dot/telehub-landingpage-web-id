@@ -1,15 +1,20 @@
 name = "telehub-ebook"
 main = "src/worker.js"
 compatibility_date = "2024-09-23"
-
 # This wrangler.toml lives inside ebook/, so "." here means "everything
 # inside the ebook/ folder" — it never touches your root index.html/about.html.
 [assets]
 directory = "."
 binding = "ASSETS"
-
 # Create this once with: wrangler kv namespace create EBOOK_KV
 # Then paste the id it gives you below.
 [[kv_namespaces]]
 binding = "EBOOK_KV"
 id = "62650483e32448c89ce98cae38ee7c3e"
+
+# R2 bucket for cover image uploads (bucket already exists: photos-telehub,
+# public access enabled via api.telehub.web.id). Files are stored under the
+# "ebook/covers/" prefix.
+[[r2_buckets]]
+binding = "COVERS_BUCKET"
+bucket_name = "photos-telehub"
