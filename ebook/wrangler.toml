@@ -12,4 +12,4 @@ binding = "ASSETS"
 # Then paste the id it gives you below.
 [[kv_namespaces]]
 binding = "EBOOK_KV"
-id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+id = "62650483e32448c89ce98cae38ee7c3e"
