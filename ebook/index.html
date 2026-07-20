@@ -712,7 +712,7 @@
     let covers = FALLBACK_COVERS;
 
     try {
-      const res = await fetch('/api/books');
+      const res = await fetch('/ebook/api/books');
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.books) && data.books.length) books = data.books;
