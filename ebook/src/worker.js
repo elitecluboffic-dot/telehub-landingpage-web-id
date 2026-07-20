@@ -17,6 +17,8 @@
  *   POST   /api/login        -> checks a password against env.ADMIN_PASSWORD
  *   POST   /api/upload       -> admin only, upload a cover image to R2,
  *                                returns its public URL
+ *   GET    /covers/:filename -> public, serves the uploaded cover image
+ *                                straight from the R2 bucket
  *   anything else            -> served from static files in this folder
  */
 
@@ -206,6 +208,29 @@ export default {
         });
 
         return json({ ok: true, url: `${COVERS_PUBLIC_BASE}/${key}` });
+      }
+
+      // Serve cover images directly from R2 (photos-telehub bucket).
+      // Uploaded files live under the "ebook/covers/" key prefix, and by
+      // this point `pathname` has already had the "/ebook" prefix
+      // stripped off (see top of fetch()), so a request for
+      //   https://api.telehub.web.id/ebook/covers/167xxxxx-ab12cd.jpg
+      // arrives here as pathname === "/covers/167xxxxx-ab12cd.jpg".
+      // Re-add "ebook" to rebuild the exact R2 key used at upload time.
+      if (pathname.startsWith("/covers/") && request.method === "GET") {
+        const key = "ebook" + pathname; // -> "ebook/covers/167xxxxx-ab12cd.jpg"
+        const object = await env.COVERS_BUCKET.get(key);
+
+        if (!object) {
+          return new Response("Not found", { status: 404 });
+        }
+
+        const headers = new Headers();
+        object.writeHttpMetadata(headers);
+        headers.set("etag", object.httpEtag);
+        headers.set("cache-control", "public, max-age=31536000, immutable");
+
+        return new Response(object.body, { headers });
       }
 
       // Not an API route -> serve static files (index.html, admin/index.html, images)
