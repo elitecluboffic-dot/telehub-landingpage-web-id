@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ebook Telehub/title>
+<meta name="description" content="Kumpulan buku renungan tentang ketenangan, kebiasaan, dan hidup yang tidak terburu-buru, ditulis oleh BIMXR.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sky-top:#181025;
+    --sky-mid:#4a1f3d;
+    --sky-bottom:#d9642f;
+    --cream:#f6ead9;
+    --gold:#e7c26a;
+    --ink:#120b19;
+    --card:#1c1327;
+    --card-line:#3a2b42;
+    --muted:#b9a8b8;
+  }
+
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+  body{
+    margin:0;
+    background:var(--ink);
+    color:var(--cream);
+    font-family:'Manrope', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+
+  h1,h2,h3, .display{
+    font-family:'Fraunces', serif;
+    font-weight:500;
+    letter-spacing:-0.01em;
+    margin:0;
+  }
+
+  a{ color:inherit; text-decoration:none; }
+  img{ max-width:100%; display:block; }
+
+  .wrap{
+    max-width:1180px;
+    margin:0 auto;
+    padding:0 32px;
+  }
+
+  /* ---------- NAV ---------- */
+  header.nav{
+    position:fixed;
+    top:0; left:0; right:0;
+    z-index:50;
+    padding:22px 0;
+    background:linear-gradient(to bottom, rgba(18,11,25,0.9), rgba(18,11,25,0));
+    backdrop-filter:blur(2px);
+  }
+  .nav-inner{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-family:'Fraunces', serif;
+    font-size:1.15rem;
+    font-weight:600;
+    letter-spacing:0.01em;
+  }
+  .brand .paw{
+    width:20px; height:20px;
+    color:var(--gold);
+  }
+  nav.links{
+    display:flex;
+    gap:34px;
+    font-size:0.92rem;
+    color:var(--muted);
+  }
+  nav.links a:hover{ color:var(--cream); }
+  @media (max-width:720px){
+    nav.links{ display:none; }
+  }
+
+  /* ---------- HERO ---------- */
+  .hero{
+    position:relative;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    background:linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 55%, var(--sky-bottom) 100%);
+    overflow:hidden;
+  }
+
+  .stars{
+    position:absolute; inset:0;
+    width:100%; height:100%;
+  }
+  .star{
+    position:absolute;
+    width:2px; height:2px;
+    background:#fff;
+    border-radius:50%;
+    animation:twinkle 4.5s ease-in-out infinite;
+  }
+  @keyframes twinkle{
+    0%,100%{ opacity:0.25; }
+    50%{ opacity:1; }
+  }
+
+  .moon{
+    position:absolute;
+    top:12%; right:10%;
+    width:170px; height:170px;
+    border-radius:50%;
+    background:url('bimxr.png') center/cover no-repeat, radial-gradient(circle at 38% 35%, #fff8e6, #f6e2a8 55%, #e9cf8d 100%);
+    box-shadow:0 0 70px 25px rgba(247,229,168,0.35);
+    border:3px solid rgba(246,234,217,0.55);
+  }
+  @media (max-width:720px){
+    .moon{ width:112px; height:112px; top:8%; right:8%; }
+  }
+
+  .hero-content{
+    position:relative;
+    z-index:2;
+    width:100%;
+    padding-bottom:14vh;
+  }
+  .eyebrow{
+    display:inline-block;
+    font-size:0.78rem;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:var(--gold);
+    border:1px solid rgba(231,194,106,0.4);
+    padding:6px 14px;
+    border-radius:999px;
+    margin-bottom:22px;
+  }
+  .hero h1{
+    font-size:clamp(2.6rem, 6vw, 4.6rem);
+    line-height:1.05;
+    max-width:14ch;
+    color:var(--cream);
+  }
+  .hero h1 em{
+    font-style:italic;
+    color:var(--gold);
+  }
+  .hero p.sub{
+    margin-top:22px;
+    max-width:44ch;
+    font-size:1.08rem;
+    line-height:1.7;
+    color:#e9dccb;
+  }
+  .hero-cta{
+    display:flex;
+    gap:16px;
+    margin-top:36px;
+    flex-wrap:wrap;
+  }
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:14px 26px;
+    border-radius:999px;
+    font-size:0.95rem;
+    font-weight:600;
+    transition:transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .btn-primary{
+    background:var(--gold);
+    color:#241708;
+  }
+  .btn-primary:hover{ transform:translateY(-2px); box-shadow:0 10px 24px rgba(231,194,106,0.3); }
+  .btn-ghost{
+    border:1px solid rgba(246,234,217,0.35);
+    color:var(--cream);
+  }
+  .btn-ghost:hover{ border-color:var(--cream); }
+
+  /* cat silhouette sitting on the roofline */
+  .roofline{
+    position:absolute;
+    left:0; right:0; bottom:0;
+    height:14vh;
+    min-height:110px;
+    background:var(--ink);
+    z-index:1;
+  }
+  .cat-silhouette{
+    position:absolute;
+    right:8%;
+    bottom:14vh;
+    width:150px;
+    z-index:2;
+    filter:drop-shadow(0 12px 18px rgba(0,0,0,0.4));
+  }
+  @media (max-width:720px){
+    .cat-silhouette{ width:100px; right:6%; }
+  }
+
+  .scroll-cue{
+    position:absolute;
+    left:32px; bottom:24px;
+    z-index:2;
+    font-size:0.78rem;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--muted);
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .scroll-cue .line{
+    width:28px; height:1px;
+    background:var(--muted);
+  }
+  @media (max-width:720px){ .scroll-cue{ display:none; } }
+
+  /* ---------- ABOUT STRIP ---------- */
+  section.about{
+    padding:120px 0 100px;
+    background:var(--ink);
+  }
+  .about-grid{
+    display:grid;
+    grid-template-columns:0.85fr 1.15fr;
+    gap:64px;
+    align-items:start;
+  }
+  @media (max-width:860px){
+    .about-grid{ grid-template-columns:1fr; gap:32px; }
+  }
+  .about h2{
+    font-size:clamp(1.8rem, 3.4vw, 2.6rem);
+    color:var(--cream);
+    max-width:12ch;
+  }
+  .about .kicker{
+    font-size:0.78rem;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:var(--gold);
+    margin-bottom:16px;
+    display:block;
+  }
+  .about p{
+    color:#cfc0cf;
+    line-height:1.85;
+    font-size:1.02rem;
+    margin:0 0 18px;
+  }
+  .about p:last-child{ margin-bottom:0; }
+
+  /* ---------- KARYA / BOOKSHELF ---------- */
+  section.karya{
+    padding:20px 0 130px;
+    background:var(--ink);
+  }
+  .section-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:24px;
+    margin-bottom:56px;
+    flex-wrap:wrap;
+  }
+  .section-head h2{
+    font-size:clamp(1.8rem, 3.4vw, 2.4rem);
+  }
+  .section-head p{
+    color:var(--muted);
+    max-width:38ch;
+    line-height:1.6;
+    font-size:0.96rem;
+  }
+
+  .shelf{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:28px;
+  }
+  @media (max-width:920px){
+    .shelf{ grid-template-columns:repeat(2, 1fr); }
+  }
+  @media (max-width:620px){
+    .shelf{ grid-template-columns:1fr; }
+  }
+
+  .book-card{
+    background:var(--card);
+    border:1px solid var(--card-line);
+    border-radius:18px;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    opacity:0;
+    transform:translateY(24px);
+    transition:opacity 0.7s ease, transform 0.7s ease;
+  }
+  .book-card.visible{ opacity:1; transform:translateY(0); }
+
+  .book-cover{
+    position:relative;
+    aspect-ratio:3/4;
+    background:linear-gradient(180deg, #241633 0%, #6b2a49 55%, #d9722f 100%);
+    overflow:hidden;
+  }
+  .book-cover .mini-stars span{
+    position:absolute;
+    width:2px; height:2px;
+    background:#fff;
+    border-radius:50%;
+    opacity:0.7;
+  }
+  .book-cover .mini-moon{
+    position:absolute;
+    top:10%; right:14%;
+    width:34px; height:34px;
+    border-radius:50%;
+    background:#f7ecc9;
+    box-shadow:0 0 20px 8px rgba(247,236,201,0.35);
+  }
+  .book-cover .mini-cat{
+    position:absolute;
+    bottom:0; left:0; right:0;
+    height:38%;
+  }
+  .book-cover .cover-title{
+    position:absolute;
+    top:38%;
+    left:14px; right:14px;
+    color:#fbf3e4;
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:1.5rem;
+    line-height:1.1;
+  }
+  .book-cover .cover-tag{
+    position:absolute;
+    top:38%;
+    margin-top:64px;
+    left:14px; right:14px;
+    color:#f0dcc6;
+    font-size:0.72rem;
+    font-style:italic;
+    line-height:1.4;
+  }
+
+  .book-info{
+    padding:22px 22px 26px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    flex:1;
+  }
+  .book-info .author{
+    font-size:0.72rem;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--gold);
+  }
+  .book-info h3{
+    font-size:1.15rem;
+    color:var(--cream);
+  }
+  .book-info p{
+    font-size:0.88rem;
+    color:var(--muted);
+    line-height:1.6;
+    margin:0;
+    flex:1;
+  }
+  .book-info .row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-top:8px;
+  }
+  .book-info .price{
+    font-weight:700;
+    color:var(--cream);
+    font-size:0.98rem;
+  }
+  .buy-btn{
+    font-size:0.82rem;
+    font-weight:600;
+    padding:9px 16px;
+    border-radius:999px;
+    background:var(--gold);
+    color:#241708;
+    transition:transform 0.2s ease;
+  }
+  .buy-btn:hover{ transform:translateY(-2px); }
+
+  /* coming soon placeholders */
+  .book-card.placeholder{
+    background:transparent;
+    border:1px dashed var(--card-line);
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    min-height:100%;
+  }
+  .book-card.placeholder .book-cover{
+    background:none;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-bottom:1px dashed var(--card-line);
+  }
+  .placeholder-icon{
+    width:44px; height:44px;
+    opacity:0.5;
+  }
+  .book-card.placeholder .book-info{
+    align-items:center;
+  }
+  .book-card.placeholder h3{
+    font-size:1rem;
+    color:var(--muted);
+  }
+  .book-card.placeholder p{
+    text-align:center;
+    color:#7d6f7e;
+  }
+
+  /* ---------- FOOTER / CTA ---------- */
+  footer{
+    background:linear-gradient(180deg, var(--ink), #08050c);
+    padding:90px 0 40px;
+    border-top:1px solid var(--card-line);
+  }
+  .footer-cta{
+    text-align:center;
+    padding-bottom:70px;
+    border-bottom:1px solid var(--card-line);
+    margin-bottom:40px;
+  }
+  .footer-cta h2{
+    font-size:clamp(1.6rem, 4vw, 2.4rem);
+    max-width:20ch;
+    margin:0 auto 18px;
+  }
+  .footer-cta p{
+    color:var(--muted);
+    max-width:42ch;
+    margin:0 auto 30px;
+    line-height:1.7;
+  }
+  .footer-bottom{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:16px;
+    color:var(--muted);
+    font-size:0.85rem;
+  }
+  .footer-bottom .socials{
+    display:flex;
+    gap:20px;
+  }
+  .footer-bottom .socials a:hover{ color:var(--cream); }
+
+  @media (prefers-reduced-motion: reduce){
+    .star{ animation:none; opacity:0.6; }
+    .book-card{ transition:none; }
+    html{ scroll-behavior:auto; }
+  }
+
+  :focus-visible{
+    outline:2px solid var(--gold);
+    outline-offset:3px;
+  }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a href="../index.html" class="brand">
+      <svg class="paw" viewBox="0 0 24 24" fill="currentColor"><circle cx="7" cy="6" r="2"/><circle cx="12" cy="4.5" r="2"/><circle cx="17" cy="6" r="2"/><path d="M12 10c-3.3 0-6 2.2-6 5.2 0 2.3 2 3.8 4.3 3.8.9 0 1.2-.4 1.7-.4s.8.4 1.7.4c2.3 0 4.3-1.5 4.3-3.8C18 12.2 15.3 10 12 10z"/></svg>
+      BIMXR · Ebook
+    </a>
+    <nav class="links">
+      <a href="#tentang">Tentang</a>
+      <a href="#karya">Karya</a>
+      <a href="../index.html">Telehub</a>
+      <a href="#kontak">Kontak</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="stars" id="stars"></div>
+  <div class="moon"></div>
+
+  <div class="hero-content wrap">
+    <span class="eyebrow">Karya Tulis BIMXR</span>
+    <h1>Ebook <em>BIMXR</em></h1>
+    <p class="sub">Rak digital berisi buku-buku renungan karya BIMXR, mulai dari Filosofi Kucing hingga judul-judul berikutnya yang sedang ditulis. Pilih satu, baca perlahan sesuai ritme sendiri.</p>
+    <div class="hero-cta">
+      <a href="#karya" class="btn btn-primary">Lihat Semua Karya</a>
+      <a href="#tentang" class="btn btn-ghost">Tentang Penulis</a>
+    </div>
+  </div>
+
+  <svg class="cat-silhouette" viewBox="0 0 200 170" fill="#120b19">
+    <path d="M60 170 L60 120 Q60 60 100 60 Q140 60 140 120 L140 170 Z"/>
+    <circle cx="100" cy="45" r="30"/>
+    <path d="M78 24 L70 2 L92 20 Z"/>
+    <path d="M122 24 L130 2 L108 20 Z"/>
+    <path d="M140 130 Q170 130 165 100 Q160 115 140 118 Z"/>
+  </svg>
+  <div class="roofline"></div>
+
+  <div class="scroll-cue"><span class="line"></span> Gulir untuk membaca</div>
+</section>
+
+<section class="about" id="tentang">
+  <div class="wrap about-grid">
+    <div>
+      <span class="kicker">Tentang Penulis</span>
+      <h2>Menulis dari hal-hal kecil yang jarang diperhatikan.</h2>
+    </div>
+    <div>
+      <p>BIMXR menulis dari kebiasaan mengamati hal-hal sederhana yang sering luput dari perhatian orang lain — termasuk cara seekor kucing menjalani harinya tanpa terburu-buru. Ketertarikan pada kesederhanaan hidup dan ketenangan menjadi benang merah di setiap tulisan.</p>
+      <p>Setiap buku di rak ini lahir dari catatan-catatan kecil yang diulang bertahun-tahun: duduk diam, memperhatikan, lalu menuliskannya kembali menjadi renungan yang bisa dibaca berulang di hari-hari yang terasa terlalu cepat berlalu.</p>
+      <p>Halaman ini akan terus terisi seiring karya-karya baru rampung ditulis — jadi simpan tempat ini, dan sesekali mampir kembali.</p>
+    </div>
+  </div>
+</section>
+
+<section class="karya" id="karya">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Rak Buku</h2>
+      <p>Karya yang sudah terbit, dan tempat kosong untuk yang sedang ditulis.</p>
+    </div>
+
+    <div class="shelf">
+
+      <!-- BOOK 1: Filosofi Kucing -->
+      <article class="book-card">
+        <div class="book-cover">
+          <div class="mini-stars" id="miniStars1"></div>
+          <div class="mini-moon"></div>
+          <svg class="mini-cat" viewBox="0 0 300 120" preserveAspectRatio="none">
+            <rect width="300" height="120" fill="#120b19"/>
+            <path d="M175 60 Q175 20 210 20 Q245 20 245 60 L245 0 L300 0 L300 120 L175 120 Z" fill="#120b19"/>
+          </svg>
+          <div class="cover-title">Filosofi<br>Kucing</div>
+          <div class="cover-tag">Belajar hidup tenang dari makhluk yang tak pernah terburu-buru</div>
+        </div>
+        <div class="book-info">
+          <span class="author">BIMXR</span>
+          <h3>Filosofi Kucing</h3>
+          <p>15 bab renungan tentang istirahat, batas diri, kehilangan, dan ketenangan — dipinjam dari kebiasaan seekor kucing.</p>
+          <div class="row">
+            <span class="price">Ebook · PDF</span>
+            <a href="https://wa.me/6285746866023?text=Halo%2C%20saya%20mau%20pesan%20ebook%20Filosofi%20Kucing" class="buy-btn" target="_blank" rel="noopener">Pesan via WhatsApp</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- PLACEHOLDER 2 -->
+      <article class="book-card placeholder">
+        <div class="book-cover">
+          <svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="#7d6f7e" stroke-width="1.4">
+            <path d="M4 4h11a2 2 0 0 1 2 2v14H6a2 2 0 0 1-2-2V4z"/>
+            <path d="M17 4v16"/>
+          </svg>
+        </div>
+        <div class="book-info">
+          <span class="author">BIMXR</span>
+          <h3>Segera Hadir</h3>
+          <p>Karya berikutnya sedang ditulis. Tempat ini menunggu.</p>
+        </div>
+      </article>
+
+      <!-- PLACEHOLDER 3 -->
+      <article class="book-card placeholder">
+        <div class="book-cover">
+          <svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="#7d6f7e" stroke-width="1.4">
+            <path d="M4 4h11a2 2 0 0 1 2 2v14H6a2 2 0 0 1-2-2V4z"/>
+            <path d="M17 4v16"/>
+          </svg>
+        </div>
+        <div class="book-info">
+          <span class="author">BIMXR</span>
+          <h3>Segera Hadir</h3>
+          <p>Rak ini akan terisi seiring waktu — tanpa terburu-buru.</p>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<footer id="kontak">
+  <div class="wrap">
+    <div class="footer-cta">
+      <h2>Ingin tahu saat karya baru terbit?</h2>
+      <p>Chat langsung untuk pemesanan, tanya-tanya, atau notifikasi saat karya baru terbit.</p>
+      <a href="https://wa.me/6285746866023?text=Halo%2C%20saya%20mau%20tanya%20soal%20ebook%20BIMXR" class="btn btn-primary" target="_blank" rel="noopener">Chat via WhatsApp</a>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 BIMXR — dipublikasikan lewat Telehub</span>
+      <div class="socials">
+        <a href="../index.html">Beranda Telehub</a>
+        <a href="../about.html">Tentang Telehub</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // scatter background stars in the hero
+  function scatterStars(container, count){
+    for(let i=0;i<count;i++){
+      const s = document.createElement('div');
+      s.className = 'star';
+      s.style.left = Math.random()*100 + '%';
+      s.style.top = Math.random()*70 + '%';
+      s.style.animationDelay = (Math.random()*4) + 's';
+      container.appendChild(s);
+    }
+  }
+  scatterStars(document.getElementById('stars'), 70);
+
+  function scatterMiniStars(container, count){
+    for(let i=0;i<count;i++){
+      const s = document.createElement('span');
+      s.style.left = Math.random()*100 + '%';
+      s.style.top = (Math.random()*45) + '%';
+      container.appendChild(s);
+    }
+  }
+  scatterMiniStars(document.getElementById('miniStars1'), 18);
+
+  // reveal book cards on scroll
+  const cards = document.querySelectorAll('.book-card');
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        e.target.classList.add('visible');
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.15 });
+  cards.forEach(c=>io.observe(c));
+</script>
+
+</body>
+</html>
