@@ -403,6 +403,28 @@
     line-height:1.4;
   }
 
+  /* Uploaded-image cover: photo as background instead of gradient, with a
+     dark overlay at the bottom so the title/tagline stay readable. Title
+     and tagline are pinned to the bottom of the image here instead of the
+     36%-from-top position used for gradient covers. */
+  .book-cover.book-cover-image{
+    background-size:cover;
+    background-position:center;
+  }
+  .book-cover.book-cover-image .cover-image-overlay{
+    position:absolute;
+    inset:0;
+    background:linear-gradient(180deg, rgba(18,11,25,0) 0%, rgba(18,11,25,0.15) 40%, rgba(18,11,25,0.9) 100%);
+  }
+  .book-cover.book-cover-image .cover-title{
+    top:auto;
+    bottom:44px;
+  }
+  .book-cover.book-cover-image .cover-tag{
+    top:auto;
+    bottom:16px;
+  }
+
   .book-info{
     padding:22px 22px 26px;
     display:flex;
@@ -655,16 +677,47 @@
     ash: ['#17171a', '#3a3a3f', '#c9c1b8']
   };
 
+  const KNOWN_COVER_PRESETS = ['twilight', 'dawn', 'moss', 'ash'];
+
   function coverGradient(stops){
     return `linear-gradient(180deg, ${stops[0]} 0%, ${stops[1]} 55%, ${stops[2]} 100%)`;
   }
 
+  function isImageCover(cover){
+    return typeof cover === 'string' && cover.trim() && !KNOWN_COVER_PRESETS.includes(cover);
+  }
+
   function renderBookCard(book, covers){
-    const stops = covers[book.cover] || covers.twilight;
     const waLink = book.waNumber
       ? `https://wa.me/${book.waNumber}?text=${encodeURIComponent(book.waMessage || ('Halo, saya mau pesan ebook ' + book.title))}`
       : '#';
 
+    const article = document.createElement('article');
+    article.className = 'book-card';
+
+    if (isImageCover(book.cover)) {
+      // Uploaded image cover — show the photo itself, with a dark gradient
+      // overlay at the bottom so the title/tagline text stays readable.
+      article.innerHTML = `
+        <div class="book-cover book-cover-image" style="background-image:url('${escapeHtml(book.cover)}')">
+          <div class="cover-image-overlay"></div>
+          <div class="cover-title">${escapeHtml(book.title)}</div>
+          ${book.tagline ? `<div class="cover-tag">${escapeHtml(book.tagline)}</div>` : ''}
+        </div>
+        <div class="book-info">
+          <span class="author">${escapeHtml(book.author || 'BIMXR')}</span>
+          <h3>${escapeHtml(book.title)}</h3>
+          <p>${escapeHtml(book.description || '')}</p>
+          <div class="row">
+            <span class="price">${escapeHtml(book.priceLabel || 'Ebook · PDF')}</span>
+            <a href="${waLink}" class="buy-btn" target="_blank" rel="noopener">Pesan via WhatsApp</a>
+          </div>
+        </div>`;
+      return article;
+    }
+
+    // Preset gradient cover (legacy / no image uploaded)
+    const stops = covers[book.cover] || covers.twilight;
     const isTwilight = book.cover === 'twilight' || !book.cover;
     const decor = isTwilight
       ? `<div class="mini-stars"></div><div class="mini-moon"></div>
@@ -673,8 +726,6 @@
          </svg>`
       : '';
 
-    const article = document.createElement('article');
-    article.className = 'book-card';
     article.innerHTML = `
       <div class="book-cover" style="background:${coverGradient(stops)}">
         ${decor}
