@@ -82,6 +82,15 @@ app.get('/indexing', (req, res) => {
   res.sendFile(path.join(__dirname, 'indexing', 'index.html'));
 });
 
+// Halaman "Ebook BIMXR" — dilayani apa adanya dari folder ebook/index.html,
+// sama seperti /indexing di atas, supaya tidak "ketiban" index.html landing
+// page utama oleh catch-all '*' di bawah.
+app.get(['/ebook', '/ebook/'], (req, res) => {
+  res.set('Content-Type', 'text/html');
+  res.set('Cache-Control', 'no-cache');
+  res.sendFile(path.join(__dirname, 'ebook', 'index.html'));
+});
+
 // static assets disajikan langsung (JS, CSS, gambar, dll) dengan cache header
 // biar CDN/browser bisa nyimpen file yang jarang berubah lebih lama
 app.use(express.static(__dirname, {
