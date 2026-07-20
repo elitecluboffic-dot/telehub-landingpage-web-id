@@ -15,10 +15,20 @@
  *   POST   /api/books        -> admin only, create/update a book
  *   DELETE /api/books/:id    -> admin only, remove a book
  *   POST   /api/login        -> checks a password against env.ADMIN_PASSWORD
+ *   POST   /api/upload       -> admin only, upload a cover image to R2,
+ *                                returns its public URL
  *   anything else            -> served from static files in this folder
  */
 
 const BASE_PATH = "/ebook";
+
+// Public base URL for the R2 bucket "photos-telehub" (custom domain).
+// Files are uploaded under the "ebook/covers/" prefix inside that bucket,
+// so the final public URL looks like:
+//   https://api.telehub.web.id/ebook/covers/167xxxxx-ab12cd.jpg
+const COVERS_PUBLIC_BASE = "https://api.telehub.web.id";
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const MAX_UPLOAD_SIZE = 5 * 1024 * 1024; // 5MB
 
 const SEED_BOOKS = [
   {
@@ -36,6 +46,9 @@ const SEED_BOOKS = [
   },
 ];
 
+// Legacy gradient presets — kept for backward-compat with books that were
+// created before image upload existed. New books can instead set `cover`
+// to a full image URL returned by POST /api/upload.
 const COVER_PRESETS = {
   twilight: ["#241633", "#6b2a49", "#d9722f"],
   dawn: ["#1c2438", "#3d4f7a", "#e0a45c"],
@@ -82,6 +95,19 @@ function slugify(text) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
   return base || `buku-${Date.now()}`;
+}
+
+// A cover value is either a legacy preset key ("twilight", "dawn", ...)
+// or a full image URL (from an upload). Anything that isn't a known
+// preset is treated as an image URL/path and passed through as-is.
+function normalizeCover(rawCover) {
+  if (typeof rawCover !== "string" || !rawCover.trim()) {
+    return "twilight";
+  }
+  const value = rawCover.trim();
+  if (COVER_PRESETS[value]) return value;
+  // Treat anything else (http(s) URL or /ebook/covers/... path) as an image.
+  return value;
 }
 
 export default {
@@ -132,7 +158,7 @@ export default {
           priceLabel: (body.priceLabel || "Ebook · PDF").trim(),
           waNumber: (body.waNumber || "").replace(/[^0-9]/g, ""),
           waMessage: (body.waMessage || `Halo, saya mau pesan ebook ${body.title}`).trim(),
-          cover: COVER_PRESETS[body.cover] ? body.cover : "twilight",
+          cover: normalizeCover(body.cover),
           order: typeof body.order === "number" ? body.order : existingIndex >= 0 ? books[existingIndex].order : books.length + 1,
         };
 
@@ -152,6 +178,34 @@ export default {
         const next = books.filter((b) => b.id !== id);
         await saveBooks(env, next);
         return json({ ok: true });
+      }
+
+      // Upload a cover image -> stored in R2 bucket "photos-telehub" under
+      // "ebook/covers/", returns the public URL so the admin panel can save
+      // it straight into a book's `cover` field.
+      if (pathname === "/api/upload" && request.method === "POST") {
+        if (!requireAuth(request, env)) return unauthorized();
+
+        const formData = await request.formData().catch(() => null);
+        const file = formData ? formData.get("file") : null;
+        if (!file || typeof file === "string") {
+          return json({ error: "File tidak ditemukan. Pastikan field bernama 'file'." }, 400);
+        }
+        if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+          return json({ error: "Format harus JPG, PNG, WEBP, atau GIF" }, 400);
+        }
+        if (file.size > MAX_UPLOAD_SIZE) {
+          return json({ error: "Ukuran file maksimal 5MB" }, 400);
+        }
+
+        const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+        const key = `ebook/covers/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+        await env.COVERS_BUCKET.put(key, await file.arrayBuffer(), {
+          httpMetadata: { contentType: file.type },
+        });
+
+        return json({ ok: true, url: `${COVERS_PUBLIC_BASE}/${key}` });
       }
 
       // Not an API route -> serve static files (index.html, admin/index.html, images)
