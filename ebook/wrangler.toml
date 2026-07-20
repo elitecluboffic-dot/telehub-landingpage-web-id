@@ -1,0 +1,15 @@
+name = "telehub-ebook"
+main = "src/worker.js"
+compatibility_date = "2024-09-23"
+
+# This wrangler.toml lives inside ebook/, so "." here means "everything
+# inside the ebook/ folder" — it never touches your root index.html/about.html.
+[assets]
+directory = "."
+binding = "ASSETS"
+
+# Create this once with: wrangler kv namespace create EBOOK_KV
+# Then paste the id it gives you below.
+[[kv_namespaces]]
+binding = "EBOOK_KV"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
