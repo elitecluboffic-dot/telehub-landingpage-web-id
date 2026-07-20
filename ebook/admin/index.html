@@ -76,6 +76,7 @@
     transition:transform 0.15s ease;
   }
   .btn:hover{ transform:translateY(-1px); }
+  .btn:disabled{ opacity:0.6; cursor:not-allowed; transform:none; }
   .btn-primary{ background:var(--gold); color:#241708; }
   .btn-ghost{ background:transparent; border:1px solid var(--card-line); color:var(--cream); }
   .btn-danger{ background:transparent; border:1px solid rgba(224,101,79,0.5); color:var(--danger); }
@@ -126,6 +127,43 @@
     .field-row{ grid-template-columns:1fr; }
   }
 
+  /* cover upload */
+  .cover-upload{
+    display:flex;
+    gap:14px;
+    align-items:center;
+  }
+  .cover-preview{
+    width:64px;
+    height:64px;
+    border-radius:10px;
+    border:1px solid var(--card-line);
+    background:#241733 center/cover no-repeat;
+    flex-shrink:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:0.7rem;
+    color:var(--muted);
+    text-align:center;
+    overflow:hidden;
+  }
+  .cover-upload-controls{ flex:1; min-width:0; }
+  .cover-upload-controls input[type="file"]{
+    padding:8px 10px;
+    font-size:0.85rem;
+  }
+  .cover-hint{ font-size:0.75rem; color:var(--muted); margin-top:6px; }
+  .cover-remove{
+    font-size:0.78rem;
+    color:var(--danger);
+    background:none;
+    border:none;
+    cursor:pointer;
+    padding:4px 0;
+    text-decoration:underline;
+  }
+
   .book-item{
     display:flex;
     justify-content:space-between;
@@ -136,6 +174,15 @@
     flex-wrap:wrap;
   }
   .book-item:last-child{ border-bottom:none; }
+  .book-item .meta{ display:flex; gap:14px; align-items:flex-start; flex:1; min-width:0; }
+  .book-item .thumb{
+    width:44px;
+    height:44px;
+    border-radius:8px;
+    border:1px solid var(--card-line);
+    background:#241733 center/cover no-repeat;
+    flex-shrink:0;
+  }
   .book-item .meta h3{ font-size:1.02rem; margin-bottom:4px; }
   .book-item .meta p{ margin:0; color:var(--muted); font-size:0.85rem; }
   .book-item .actions{ display:flex; gap:8px; flex-shrink:0; }
@@ -193,6 +240,7 @@
     <h2 id="formTitle">Tambah Buku Baru</h2>
     <form id="bookForm">
       <input type="hidden" id="bookId">
+      <input type="hidden" id="fCoverUrl">
       <div class="field-row">
         <div class="field">
           <label for="fTitle">Judul Buku</label>
@@ -217,13 +265,24 @@
           <input type="text" id="fPrice" value="Ebook · PDF">
         </div>
         <div class="field">
-          <label for="fCover">Gaya Sampul</label>
+          <label for="fCover">Gaya Sampul (preset warna)</label>
           <select id="fCover">
             <option value="twilight">Twilight (ungu-oranye, dengan bulan &amp; kucing)</option>
             <option value="dawn">Dawn (biru-emas)</option>
             <option value="moss">Moss (hijau tenang)</option>
             <option value="ash">Ash (abu netral)</option>
           </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Atau Upload Gambar Sampul (opsional, menggantikan preset di atas)</label>
+        <div class="cover-upload">
+          <div class="cover-preview" id="coverPreview">Belum ada gambar</div>
+          <div class="cover-upload-controls">
+            <input type="file" id="fCoverFile" accept="image/jpeg,image/png,image/webp,image/gif">
+            <div class="cover-hint" id="coverHint">JPG, PNG, WEBP, atau GIF. Maks 5MB.</div>
+            <button type="button" class="cover-remove" id="coverRemoveBtn" style="display:none;">Hapus gambar, pakai preset lagi</button>
+          </div>
         </div>
       </div>
       <div class="field-row">
@@ -267,6 +326,15 @@
   const cancelEditBtn = document.getElementById('cancelEditBtn');
   const toast = document.getElementById('toast');
 
+  const fCoverSelect = document.getElementById('fCover');
+  const fCoverFile = document.getElementById('fCoverFile');
+  const fCoverUrl = document.getElementById('fCoverUrl');
+  const coverPreview = document.getElementById('coverPreview');
+  const coverHint = document.getElementById('coverHint');
+  const coverRemoveBtn = document.getElementById('coverRemoveBtn');
+
+  const KNOWN_PRESETS = ['twilight', 'dawn', 'moss', 'ash'];
+
   const SESSION_KEY = 'telehub_ebook_admin_token';
 
   function showToast(msg, isError = false){
@@ -279,6 +347,10 @@
 
   function authHeaders(){
     return { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' };
+  }
+
+  function authHeadersNoContentType(){
+    return { 'Authorization': 'Bearer ' + getToken() };
   }
 
   async function tryLogin(password){
@@ -336,6 +408,58 @@
     } catch (e) { /* stay on login screen */ }
   })();
 
+  function setCoverPreview(url){
+    if (url){
+      coverPreview.style.backgroundImage = `url("${url}")`;
+      coverPreview.textContent = '';
+    } else {
+      coverPreview.style.backgroundImage = 'none';
+      coverPreview.textContent = 'Belum ada gambar';
+    }
+  }
+
+  function clearCoverUpload(){
+    fCoverUrl.value = '';
+    fCoverFile.value = '';
+    setCoverPreview('');
+    coverRemoveBtn.style.display = 'none';
+    fCoverSelect.disabled = false;
+    coverHint.textContent = 'JPG, PNG, WEBP, atau GIF. Maks 5MB.';
+  }
+
+  coverRemoveBtn.addEventListener('click', clearCoverUpload);
+
+  fCoverFile.addEventListener('change', async () => {
+    const file = fCoverFile.files[0];
+    if (!file) return;
+
+    coverHint.textContent = 'Mengunggah...';
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/ebook/api/upload', {
+        method: 'POST',
+        headers: authHeadersNoContentType(),
+        body: formData
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        fCoverUrl.value = data.url;
+        setCoverPreview(data.url);
+        fCoverSelect.disabled = true;
+        coverRemoveBtn.style.display = 'inline-block';
+        coverHint.textContent = 'Gambar berhasil diunggah.';
+      } else {
+        coverHint.textContent = data.error || 'Gagal mengunggah gambar.';
+        fCoverFile.value = '';
+      }
+    } catch (e) {
+      coverHint.textContent = 'Tidak bisa menghubungi server saat mengunggah.';
+      fCoverFile.value = '';
+    }
+  });
+
   function resetForm(){
     document.getElementById('bookId').value = '';
     bookForm.reset();
@@ -344,6 +468,7 @@
     formTitle.textContent = 'Tambah Buku Baru';
     cancelEditBtn.style.display = 'none';
     formError.textContent = '';
+    clearCoverUpload();
   }
 
   cancelEditBtn.addEventListener('click', resetForm);
@@ -355,9 +480,23 @@
     document.getElementById('fTagline').value = book.tagline || '';
     document.getElementById('fDescription').value = book.description || '';
     document.getElementById('fPrice').value = book.priceLabel || 'Ebook · PDF';
-    document.getElementById('fCover').value = book.cover || 'twilight';
     document.getElementById('fWaNumber').value = book.waNumber || '';
     document.getElementById('fWaMessage').value = book.waMessage || '';
+
+    const cover = book.cover || 'twilight';
+    if (KNOWN_PRESETS.includes(cover)) {
+      fCoverSelect.value = cover;
+      clearCoverUpload();
+    } else {
+      // it's an uploaded image URL
+      fCoverSelect.value = 'twilight';
+      fCoverUrl.value = cover;
+      setCoverPreview(cover);
+      fCoverSelect.disabled = true;
+      coverRemoveBtn.style.display = 'inline-block';
+      coverHint.textContent = 'Gambar sampul saat ini. Pilih file baru untuk mengganti.';
+    }
+
     formTitle.textContent = 'Edit: ' + book.title;
     cancelEditBtn.style.display = 'inline-flex';
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -384,10 +523,15 @@
     books.forEach(book => {
       const row = document.createElement('div');
       row.className = 'book-item';
+      const isImageCover = book.cover && !KNOWN_PRESETS.includes(book.cover);
+      const thumbStyle = isImageCover ? ` style="background-image:url('${escapeHtml(book.cover)}')"` : '';
       row.innerHTML = `
         <div class="meta">
-          <h3>${escapeHtml(book.title)}</h3>
-          <p>${escapeHtml(book.tagline || book.description || '')}</p>
+          <div class="thumb"${thumbStyle}></div>
+          <div>
+            <h3>${escapeHtml(book.title)}</h3>
+            <p>${escapeHtml(book.tagline || book.description || '')}</p>
+          </div>
         </div>
         <div class="actions">
           <button class="btn btn-ghost" data-action="edit">Edit</button>
@@ -429,7 +573,7 @@
       tagline: document.getElementById('fTagline').value.trim(),
       description: document.getElementById('fDescription').value.trim(),
       priceLabel: document.getElementById('fPrice').value.trim(),
-      cover: document.getElementById('fCover').value,
+      cover: fCoverUrl.value || fCoverSelect.value,
       waNumber: document.getElementById('fWaNumber').value.trim(),
       waMessage: document.getElementById('fWaMessage').value.trim(),
     };
