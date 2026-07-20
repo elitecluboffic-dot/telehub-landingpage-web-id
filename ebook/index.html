@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ebook Telehub</title>
-<meta name="description" content="Kumpulan buku renungan tentang ketenangan, kebiasaan, dan hidup yang tidak terburu-buru, ditulis oleh BIMXR.">
+<meta name="description" content="Kumpulan buku digital renungan tentang ketenangan, kebiasaan, dan hidup yang tidak terburu-buru, ditulis oleh BIMXR.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -41,11 +41,15 @@
 
   a{ color:inherit; text-decoration:none; }
   img{ max-width:100%; display:block; }
+  button{ font-family:inherit; }
 
   .wrap{
     max-width:1180px;
     margin:0 auto;
     padding:0 32px;
+  }
+  @media (max-width:640px){
+    .wrap{ padding:0 20px; }
   }
 
   /* ---------- NAV ---------- */
@@ -53,8 +57,8 @@
     position:fixed;
     top:0; left:0; right:0;
     z-index:50;
-    padding:22px 0;
-    background:linear-gradient(to bottom, rgba(18,11,25,0.9), rgba(18,11,25,0));
+    padding:20px 0;
+    background:linear-gradient(to bottom, rgba(18,11,25,0.92), rgba(18,11,25,0));
     backdrop-filter:blur(2px);
   }
   .nav-inner{
@@ -67,13 +71,15 @@
     align-items:center;
     gap:10px;
     font-family:'Fraunces', serif;
-    font-size:1.15rem;
+    font-size:1.1rem;
     font-weight:600;
     letter-spacing:0.01em;
+    white-space:nowrap;
   }
   .brand .paw{
     width:20px; height:20px;
     color:var(--gold);
+    flex-shrink:0;
   }
   nav.links{
     display:flex;
@@ -81,48 +87,122 @@
     font-size:0.92rem;
     color:var(--muted);
   }
+  nav.links a{ transition:color 0.2s ease; }
   nav.links a:hover{ color:var(--cream); }
-  @media (max-width:720px){
-    nav.links{ display:none; }
+
+  .menu-btn{
+    display:none;
+    background:none;
+    border:1px solid rgba(246,234,217,0.3);
+    border-radius:10px;
+    width:40px; height:40px;
+    color:var(--cream);
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
   }
+  .menu-btn svg{ width:18px; height:18px; }
+
+  @media (max-width:760px){
+    nav.links{ display:none; }
+    .menu-btn{ display:flex; }
+  }
+
+  .mobile-menu{
+    display:none;
+    flex-direction:column;
+    gap:2px;
+    background:#1a1122;
+    border:1px solid var(--card-line);
+    border-radius:14px;
+    margin-top:14px;
+    overflow:hidden;
+  }
+  .mobile-menu.open{ display:flex; }
+  .mobile-menu a{
+    padding:14px 18px;
+    font-size:0.95rem;
+    color:var(--cream);
+    border-bottom:1px solid var(--card-line);
+  }
+  .mobile-menu a:last-child{ border-bottom:none; }
 
   /* ---------- HERO ---------- */
   .hero{
     position:relative;
-    min-height:100vh;
+    min-height:100svh;
     display:flex;
     align-items:center;
     background:linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 55%, var(--sky-bottom) 100%);
     overflow:hidden;
+    padding-top:90px;
   }
 
-  .hero-photo{
+  .hero-stars{ position:absolute; inset:0; z-index:1; }
+  .hero-stars span{
     position:absolute;
-    right:2%;
+    width:2px; height:2px;
+    background:#fff;
+    border-radius:50%;
+  }
+
+  .hero-moon{
+    position:absolute;
+    top:14%; right:8%;
+    width:70px; height:70px;
+    border-radius:50%;
+    background:#f7ecc9;
+    box-shadow:0 0 60px 18px rgba(247,236,201,0.28);
+    z-index:1;
+  }
+  @media (max-width:760px){
+    .hero-moon{ width:46px; height:46px; top:10%; right:6%; }
+  }
+
+  .hero-photo-wrap{
+    position:absolute;
+    right:0;
     bottom:0;
-    height:88%;
-    max-width:48%;
-    object-fit:contain;
-    object-position:bottom;
+    height:92%;
+    width:46%;
     z-index:2;
-    filter:drop-shadow(0 25px 45px rgba(0,0,0,0.5));
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    pointer-events:none;
+  }
+  .hero-photo{
+    height:100%;
+    width:100%;
+    object-fit:contain;
+    object-position:bottom center;
+    -webkit-mask-image:linear-gradient(to bottom, black 0%, black 78%, transparent 97%),
+                        linear-gradient(to right, transparent 0%, black 12%, black 100%);
+    -webkit-mask-composite:source-in;
+    mask-image:linear-gradient(to bottom, black 0%, black 78%, transparent 97%),
+                linear-gradient(to right, transparent 0%, black 12%, black 100%);
+    mask-composite:intersect;
+    filter:drop-shadow(0 25px 40px rgba(0,0,0,0.45));
+  }
+  .hero-photo[data-missing="true"]{
+    display:none;
   }
   @media (max-width:900px){
-    .hero-photo{ max-width:60%; opacity:0.55; }
+    .hero-photo-wrap{ width:52%; opacity:0.5; }
   }
-  @media (max-width:620px){
-    .hero-photo{ max-width:78%; height:60%; opacity:0.35; }
+  @media (max-width:600px){
+    .hero-photo-wrap{ display:none; }
   }
 
   .hero-content{
     position:relative;
-    z-index:2;
+    z-index:3;
     width:100%;
-    padding-bottom:14vh;
+    padding-bottom:12vh;
   }
   .eyebrow{
     display:inline-block;
-    font-size:0.78rem;
+    font-size:0.76rem;
     letter-spacing:0.18em;
     text-transform:uppercase;
     color:var(--gold);
@@ -132,9 +212,9 @@
     margin-bottom:22px;
   }
   .hero h1{
-    font-size:clamp(2.6rem, 6vw, 4.6rem);
-    line-height:1.05;
-    max-width:14ch;
+    font-size:clamp(2.4rem, 7vw, 4.6rem);
+    line-height:1.06;
+    max-width:15ch;
     color:var(--cream);
   }
   .hero h1 em{
@@ -143,8 +223,8 @@
   }
   .hero p.sub{
     margin-top:22px;
-    max-width:44ch;
-    font-size:1.08rem;
+    max-width:46ch;
+    font-size:clamp(0.95rem, 2vw, 1.08rem);
     line-height:1.7;
     color:#e9dccb;
   }
@@ -163,6 +243,8 @@
     font-size:0.95rem;
     font-weight:600;
     transition:transform 0.2s ease, box-shadow 0.2s ease;
+    border:none;
+    cursor:pointer;
   }
   .btn-primary{
     background:var(--gold);
@@ -172,13 +254,14 @@
   .btn-ghost{
     border:1px solid rgba(246,234,217,0.35);
     color:var(--cream);
+    background:transparent;
   }
   .btn-ghost:hover{ border-color:var(--cream); }
 
   .scroll-cue{
     position:absolute;
     left:32px; bottom:24px;
-    z-index:2;
+    z-index:3;
     font-size:0.78rem;
     letter-spacing:0.14em;
     text-transform:uppercase;
@@ -187,17 +270,11 @@
     align-items:center;
     gap:10px;
   }
-  .scroll-cue .line{
-    width:28px; height:1px;
-    background:var(--muted);
-  }
-  @media (max-width:720px){ .scroll-cue{ display:none; } }
+  .scroll-cue .line{ width:28px; height:1px; background:var(--muted); }
+  @media (max-width:760px){ .scroll-cue{ display:none; } }
 
-  /* ---------- ABOUT STRIP ---------- */
-  section.about{
-    padding:120px 0 100px;
-    background:var(--ink);
-  }
+  /* ---------- ABOUT ---------- */
+  section.about{ padding:110px 0 90px; background:var(--ink); }
   .about-grid{
     display:grid;
     grid-template-columns:0.85fr 1.15fr;
@@ -205,15 +282,15 @@
     align-items:start;
   }
   @media (max-width:860px){
-    .about-grid{ grid-template-columns:1fr; gap:32px; }
+    .about-grid{ grid-template-columns:1fr; gap:28px; }
   }
   .about h2{
-    font-size:clamp(1.8rem, 3.4vw, 2.6rem);
+    font-size:clamp(1.7rem, 4.4vw, 2.6rem);
     color:var(--cream);
-    max-width:12ch;
+    max-width:13ch;
   }
   .about .kicker{
-    font-size:0.78rem;
+    font-size:0.76rem;
     letter-spacing:0.18em;
     text-transform:uppercase;
     color:var(--gold);
@@ -228,22 +305,17 @@
   }
   .about p:last-child{ margin-bottom:0; }
 
-  /* ---------- KARYA / BOOKSHELF ---------- */
-  section.karya{
-    padding:20px 0 130px;
-    background:var(--ink);
-  }
+  /* ---------- SHELF ---------- */
+  section.karya{ padding:10px 0 120px; background:var(--ink); }
   .section-head{
     display:flex;
     justify-content:space-between;
     align-items:flex-end;
     gap:24px;
-    margin-bottom:56px;
+    margin-bottom:48px;
     flex-wrap:wrap;
   }
-  .section-head h2{
-    font-size:clamp(1.8rem, 3.4vw, 2.4rem);
-  }
+  .section-head h2{ font-size:clamp(1.7rem, 4.4vw, 2.4rem); }
   .section-head p{
     color:var(--muted);
     max-width:38ch;
@@ -254,14 +326,10 @@
   .shelf{
     display:grid;
     grid-template-columns:repeat(3, 1fr);
-    gap:28px;
+    gap:24px;
   }
-  @media (max-width:920px){
-    .shelf{ grid-template-columns:repeat(2, 1fr); }
-  }
-  @media (max-width:620px){
-    .shelf{ grid-template-columns:1fr; }
-  }
+  @media (max-width:920px){ .shelf{ grid-template-columns:repeat(2, 1fr); } }
+  @media (max-width:600px){ .shelf{ grid-template-columns:1fr; gap:18px; } }
 
   .book-card{
     background:var(--card);
@@ -272,14 +340,13 @@
     flex-direction:column;
     opacity:0;
     transform:translateY(24px);
-    transition:opacity 0.7s ease, transform 0.7s ease;
+    transition:opacity 0.6s ease, transform 0.6s ease;
   }
   .book-card.visible{ opacity:1; transform:translateY(0); }
 
   .book-cover{
     position:relative;
     aspect-ratio:3/4;
-    background:linear-gradient(180deg, #241633 0%, #6b2a49 55%, #d9722f 100%);
     overflow:hidden;
   }
   .book-cover .mini-stars span{
@@ -304,19 +371,18 @@
   }
   .book-cover .cover-title{
     position:absolute;
-    top:38%;
-    left:14px; right:14px;
+    top:36%;
+    left:16px; right:16px;
     color:#fbf3e4;
     font-family:'Fraunces', serif;
     font-weight:600;
-    font-size:1.5rem;
-    line-height:1.1;
+    font-size:clamp(1.2rem, 3vw, 1.5rem);
+    line-height:1.15;
   }
   .book-cover .cover-tag{
     position:absolute;
-    top:38%;
-    margin-top:64px;
-    left:14px; right:14px;
+    left:16px; right:16px;
+    top:calc(36% + 56px);
     color:#f0dcc6;
     font-size:0.72rem;
     font-style:italic;
@@ -336,10 +402,7 @@
     text-transform:uppercase;
     color:var(--gold);
   }
-  .book-info h3{
-    font-size:1.15rem;
-    color:var(--cream);
-  }
+  .book-info h3{ font-size:1.15rem; color:var(--cream); }
   .book-info p{
     font-size:0.88rem;
     color:var(--muted);
@@ -351,13 +414,11 @@
     display:flex;
     align-items:center;
     justify-content:space-between;
+    gap:12px;
     margin-top:8px;
+    flex-wrap:wrap;
   }
-  .book-info .price{
-    font-weight:700;
-    color:var(--cream);
-    font-size:0.98rem;
-  }
+  .book-info .price{ font-weight:700; color:var(--cream); font-size:0.94rem; }
   .buy-btn{
     font-size:0.82rem;
     font-weight:600;
@@ -366,17 +427,13 @@
     background:var(--gold);
     color:#241708;
     transition:transform 0.2s ease;
+    white-space:nowrap;
   }
   .buy-btn:hover{ transform:translateY(-2px); }
 
-  /* coming soon placeholders */
   .book-card.placeholder{
     background:transparent;
     border:1px dashed var(--card-line);
-    align-items:center;
-    justify-content:center;
-    text-align:center;
-    min-height:100%;
   }
   .book-card.placeholder .book-cover{
     background:none;
@@ -385,23 +442,18 @@
     justify-content:center;
     border-bottom:1px dashed var(--card-line);
   }
-  .placeholder-icon{
-    width:44px; height:44px;
-    opacity:0.5;
-  }
-  .book-card.placeholder .book-info{
-    align-items:center;
-  }
-  .book-card.placeholder h3{
-    font-size:1rem;
+  .placeholder-icon{ width:44px; height:44px; opacity:0.5; }
+  .book-card.placeholder .book-info{ align-items:center; text-align:center; }
+  .book-card.placeholder h3{ font-size:1rem; color:var(--muted); }
+  .book-card.placeholder p{ color:#7d6f7e; }
+
+  .shelf-status{
     color:var(--muted);
-  }
-  .book-card.placeholder p{
-    text-align:center;
-    color:#7d6f7e;
+    font-size:0.92rem;
+    padding:20px 0;
   }
 
-  /* ---------- FOOTER / CTA ---------- */
+  /* ---------- FOOTER ---------- */
   footer{
     background:linear-gradient(180deg, var(--ink), #08050c);
     padding:90px 0 40px;
@@ -409,12 +461,12 @@
   }
   .footer-cta{
     text-align:center;
-    padding-bottom:70px;
+    padding-bottom:60px;
     border-bottom:1px solid var(--card-line);
-    margin-bottom:40px;
+    margin-bottom:36px;
   }
   .footer-cta h2{
-    font-size:clamp(1.6rem, 4vw, 2.4rem);
+    font-size:clamp(1.5rem, 5vw, 2.4rem);
     max-width:20ch;
     margin:0 auto 18px;
   }
@@ -432,44 +484,53 @@
     gap:16px;
     color:var(--muted);
     font-size:0.85rem;
+    text-align:center;
   }
-  .footer-bottom .socials{
-    display:flex;
-    gap:20px;
-  }
+  .footer-bottom .socials{ display:flex; gap:20px; }
   .footer-bottom .socials a:hover{ color:var(--cream); }
 
   @media (prefers-reduced-motion: reduce){
-    .star{ animation:none; opacity:0.6; }
-    .book-card{ transition:none; }
+    .book-card{ transition:none; opacity:1; transform:none; }
     html{ scroll-behavior:auto; }
   }
 
-  :focus-visible{
-    outline:2px solid var(--gold);
-    outline-offset:3px;
-  }
+  :focus-visible{ outline:2px solid var(--gold); outline-offset:3px; }
 </style>
 </head>
 <body>
 
 <header class="nav">
-  <div class="wrap nav-inner">
-    <a href="../index.html" class="brand">
-      <svg class="paw" viewBox="0 0 24 24" fill="currentColor"><circle cx="7" cy="6" r="2"/><circle cx="12" cy="4.5" r="2"/><circle cx="17" cy="6" r="2"/><path d="M12 10c-3.3 0-6 2.2-6 5.2 0 2.3 2 3.8 4.3 3.8.9 0 1.2-.4 1.7-.4s.8.4 1.7.4c2.3 0 4.3-1.5 4.3-3.8C18 12.2 15.3 10 12 10z"/></svg>
-      BIMXR &middot; Ebook
-    </a>
-    <nav class="links">
+  <div class="wrap">
+    <div class="nav-inner">
+      <a href="../index.html" class="brand">
+        <svg class="paw" viewBox="0 0 24 24" fill="currentColor"><circle cx="7" cy="6" r="2"/><circle cx="12" cy="4.5" r="2"/><circle cx="17" cy="6" r="2"/><path d="M12 10c-3.3 0-6 2.2-6 5.2 0 2.3 2 3.8 4.3 3.8.9 0 1.2-.4 1.7-.4s.8.4 1.7.4c2.3 0 4.3-1.5 4.3-3.8C18 12.2 15.3 10 12 10z"/></svg>
+        BIMXR &middot; Ebook
+      </a>
+      <nav class="links">
+        <a href="#tentang">Tentang</a>
+        <a href="#karya">Karya</a>
+        <a href="../index.html">Telehub</a>
+        <a href="#kontak">Kontak</a>
+      </nav>
+      <button class="menu-btn" id="menuBtn" aria-label="Buka menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+    </div>
+    <div class="mobile-menu" id="mobileMenu">
       <a href="#tentang">Tentang</a>
       <a href="#karya">Karya</a>
       <a href="../index.html">Telehub</a>
       <a href="#kontak">Kontak</a>
-    </nav>
+    </div>
   </div>
 </header>
 
 <section class="hero">
-  <img src="bimxr.png" alt="BIMXR" class="hero-photo">
+  <div class="hero-stars" id="heroStars"></div>
+  <div class="hero-moon"></div>
+  <div class="hero-photo-wrap">
+    <img src="bimxr.png" alt="BIMXR" class="hero-photo" id="heroPhoto">
+  </div>
 
   <div class="hero-content wrap">
     <span class="eyebrow">Karya Tulis BIMXR</span>
@@ -504,62 +565,8 @@
       <h2>Rak Buku</h2>
       <p>Karya yang sudah terbit, dan tempat kosong untuk yang sedang ditulis.</p>
     </div>
-
-    <div class="shelf">
-
-      <!-- BOOK 1: Filosofi Kucing -->
-      <article class="book-card">
-        <div class="book-cover">
-          <div class="mini-stars" id="miniStars1"></div>
-          <div class="mini-moon"></div>
-          <svg class="mini-cat" viewBox="0 0 300 120" preserveAspectRatio="none">
-            <rect width="300" height="120" fill="#120b19"/>
-            <path d="M175 60 Q175 20 210 20 Q245 20 245 60 L245 0 L300 0 L300 120 L175 120 Z" fill="#120b19"/>
-          </svg>
-          <div class="cover-title">Filosofi<br>Kucing</div>
-          <div class="cover-tag">Belajar hidup tenang dari makhluk yang tak pernah terburu-buru</div>
-        </div>
-        <div class="book-info">
-          <span class="author">BIMXR</span>
-          <h3>Filosofi Kucing</h3>
-          <p>15 bab renungan tentang istirahat, batas diri, kehilangan, dan ketenangan &mdash; dipinjam dari kebiasaan seekor kucing.</p>
-          <div class="row">
-            <span class="price">Ebook &middot; PDF</span>
-            <a href="https://wa.me/6285746866023?text=Halo%2C%20saya%20mau%20pesan%20ebook%20Filosofi%20Kucing" class="buy-btn" target="_blank" rel="noopener">Pesan via WhatsApp</a>
-          </div>
-        </div>
-      </article>
-
-      <!-- PLACEHOLDER 2 -->
-      <article class="book-card placeholder">
-        <div class="book-cover">
-          <svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="#7d6f7e" stroke-width="1.4">
-            <path d="M4 4h11a2 2 0 0 1 2 2v14H6a2 2 0 0 1-2-2V4z"/>
-            <path d="M17 4v16"/>
-          </svg>
-        </div>
-        <div class="book-info">
-          <span class="author">BIMXR</span>
-          <h3>Segera Hadir</h3>
-          <p>Karya berikutnya sedang ditulis. Tempat ini menunggu.</p>
-        </div>
-      </article>
-
-      <!-- PLACEHOLDER 3 -->
-      <article class="book-card placeholder">
-        <div class="book-cover">
-          <svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="#7d6f7e" stroke-width="1.4">
-            <path d="M4 4h11a2 2 0 0 1 2 2v14H6a2 2 0 0 1-2-2V4z"/>
-            <path d="M17 4v16"/>
-          </svg>
-        </div>
-        <div class="book-info">
-          <span class="author">BIMXR</span>
-          <h3>Segera Hadir</h3>
-          <p>Rak ini akan terisi seiring waktu &mdash; tanpa terburu-buru.</p>
-        </div>
-      </article>
-
+    <div class="shelf" id="shelf">
+      <p class="shelf-status">Memuat rak buku&hellip;</p>
     </div>
   </div>
 </section>
@@ -582,27 +589,160 @@
 </footer>
 
 <script>
-  function scatterMiniStars(container, count){
+  // hide the hero photo gracefully if bimxr.png hasn't been uploaded yet
+  const heroPhoto = document.getElementById('heroPhoto');
+  heroPhoto.addEventListener('error', () => heroPhoto.setAttribute('data-missing', 'true'));
+
+  // mobile menu
+  const menuBtn = document.getElementById('menuBtn');
+  const mobileMenu = document.getElementById('mobileMenu');
+  menuBtn.addEventListener('click', () => {
+    const open = mobileMenu.classList.toggle('open');
+    menuBtn.setAttribute('aria-expanded', String(open));
+  });
+  mobileMenu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+    mobileMenu.classList.remove('open');
+    menuBtn.setAttribute('aria-expanded', 'false');
+  }));
+
+  // scatter stars in hero
+  function scatterStars(container, count, area = 60){
+    const frag = document.createDocumentFragment();
     for(let i=0;i<count;i++){
       const s = document.createElement('span');
       s.style.left = Math.random()*100 + '%';
-      s.style.top = (Math.random()*45) + '%';
-      container.appendChild(s);
+      s.style.top = (Math.random()*area) + '%';
+      s.style.opacity = (0.3 + Math.random()*0.7).toFixed(2);
+      frag.appendChild(s);
     }
+    container.appendChild(frag);
   }
-  scatterMiniStars(document.getElementById('miniStars1'), 18);
+  scatterStars(document.getElementById('heroStars'), 40, 55);
 
-  // reveal book cards on scroll
-  const cards = document.querySelectorAll('.book-card');
-  const io = new IntersectionObserver((entries)=>{
-    entries.forEach(e=>{
-      if(e.isIntersecting){
-        e.target.classList.add('visible');
-        io.unobserve(e.target);
+  // fallback data if the API isn't reachable yet (e.g. previewing without the Worker deployed)
+  const FALLBACK_BOOKS = [
+    {
+      id: 'filosofi-kucing',
+      title: 'Filosofi Kucing',
+      tagline: 'Belajar hidup tenang dari makhluk yang tak pernah terburu-buru',
+      author: 'BIMXR',
+      description: '15 bab renungan tentang istirahat, batas diri, kehilangan, dan ketenangan — dipinjam dari kebiasaan seekor kucing.',
+      priceLabel: 'Ebook · PDF',
+      waNumber: '6285746866023',
+      waMessage: 'Halo, saya mau pesan ebook Filosofi Kucing',
+      cover: 'twilight'
+    }
+  ];
+  const FALLBACK_COVERS = {
+    twilight: ['#241633', '#6b2a49', '#d9722f'],
+    dawn: ['#1c2438', '#3d4f7a', '#e0a45c'],
+    moss: ['#122019', '#264d3b', '#9fc98a'],
+    ash: ['#17171a', '#3a3a3f', '#c9c1b8']
+  };
+
+  function coverGradient(stops){
+    return `linear-gradient(180deg, ${stops[0]} 0%, ${stops[1]} 55%, ${stops[2]} 100%)`;
+  }
+
+  function renderBookCard(book, covers){
+    const stops = covers[book.cover] || covers.twilight;
+    const waLink = book.waNumber
+      ? `https://wa.me/${book.waNumber}?text=${encodeURIComponent(book.waMessage || ('Halo, saya mau pesan ebook ' + book.title))}`
+      : '#';
+
+    const isTwilight = book.cover === 'twilight' || !book.cover;
+    const decor = isTwilight
+      ? `<div class="mini-stars"></div><div class="mini-moon"></div>
+         <svg class="mini-cat" viewBox="0 0 300 120" preserveAspectRatio="none">
+           <path d="M175 60 Q175 20 210 20 Q245 20 245 60 L245 0 L300 0 L300 120 L175 120 Z" fill="rgba(18,11,25,0.55)"/>
+         </svg>`
+      : '';
+
+    const article = document.createElement('article');
+    article.className = 'book-card';
+    article.innerHTML = `
+      <div class="book-cover" style="background:${coverGradient(stops)}">
+        ${decor}
+        <div class="cover-title">${escapeHtml(book.title)}</div>
+        ${book.tagline ? `<div class="cover-tag">${escapeHtml(book.tagline)}</div>` : ''}
+      </div>
+      <div class="book-info">
+        <span class="author">${escapeHtml(book.author || 'BIMXR')}</span>
+        <h3>${escapeHtml(book.title)}</h3>
+        <p>${escapeHtml(book.description || '')}</p>
+        <div class="row">
+          <span class="price">${escapeHtml(book.priceLabel || 'Ebook · PDF')}</span>
+          <a href="${waLink}" class="buy-btn" target="_blank" rel="noopener">Pesan via WhatsApp</a>
+        </div>
+      </div>`;
+
+    const starsEl = article.querySelector('.mini-stars');
+    if (starsEl) scatterStars(starsEl, 14, 45);
+
+    return article;
+  }
+
+  function renderPlaceholder(){
+    const article = document.createElement('article');
+    article.className = 'book-card placeholder';
+    article.innerHTML = `
+      <div class="book-cover">
+        <svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="#7d6f7e" stroke-width="1.4">
+          <path d="M4 4h11a2 2 0 0 1 2 2v14H6a2 2 0 0 1-2-2V4z"/>
+          <path d="M17 4v16"/>
+        </svg>
+      </div>
+      <div class="book-info">
+        <span class="author">BIMXR</span>
+        <h3>Segera Hadir</h3>
+        <p>Karya berikutnya sedang ditulis. Tempat ini menunggu.</p>
+      </div>`;
+    return article;
+  }
+
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  async function loadShelf(){
+    const shelf = document.getElementById('shelf');
+    let books = FALLBACK_BOOKS;
+    let covers = FALLBACK_COVERS;
+
+    try {
+      const res = await fetch('/api/books');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.books) && data.books.length) books = data.books;
+        if (data.covers) covers = data.covers;
       }
-    });
-  }, { threshold: 0.15 });
-  cards.forEach(c=>io.observe(c));
+    } catch (e) {
+      // offline / worker not deployed yet — fallback data above is used
+    }
+
+    shelf.innerHTML = '';
+    books.forEach(book => shelf.appendChild(renderBookCard(book, covers)));
+
+    const minSlots = 3;
+    for (let i = books.length; i < minSlots; i++){
+      shelf.appendChild(renderPlaceholder());
+    }
+
+    const cards = shelf.querySelectorAll('.book-card');
+    const io = new IntersectionObserver((entries)=>{
+      entries.forEach(e=>{
+        if(e.isIntersecting){
+          e.target.classList.add('visible');
+          io.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.15 });
+    cards.forEach(c=>io.observe(c));
+  }
+
+  loadShelf();
 </script>
 
 </body>
