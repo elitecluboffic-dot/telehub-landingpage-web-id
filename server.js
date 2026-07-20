@@ -91,6 +91,17 @@ app.get(['/ebook', '/ebook/'], (req, res) => {
   res.sendFile(path.join(__dirname, 'ebook', 'index.html'));
 });
 
+// Halaman "Ebook Admin" — dilayani apa adanya dari folder ebook/admin/index.html,
+// sama seperti /ebook & /indexing di atas. Route ini WAJIB ada dan HARUS
+// ditaruh sebelum static middleware & catch-all '*' di bawah, supaya request
+// ke '/ebook/admin/' tidak "ketiban" index.html landing page utama (yang
+// sebelumnya kejadian karena route ini belum ada).
+app.get(['/ebook/admin', '/ebook/admin/'], (req, res) => {
+  res.set('Content-Type', 'text/html');
+  res.set('Cache-Control', 'no-cache');
+  res.sendFile(path.join(__dirname, 'ebook', 'admin', 'index.html'));
+});
+
 // static assets disajikan langsung (JS, CSS, gambar, dll) dengan cache header
 // biar CDN/browser bisa nyimpen file yang jarang berubah lebih lama
 app.use(express.static(__dirname, {
