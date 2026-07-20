@@ -213,7 +213,33 @@ export default {
       const assetUrl = new URL(request.url);
       assetUrl.pathname = pathname;
       const assetRequest = new Request(assetUrl.toString(), request);
-      return env.ASSETS.fetch(assetRequest);
+      const assetResponse = await env.ASSETS.fetch(assetRequest);
+
+      // Workers Assets issues its own redirects for directory paths (e.g.
+      // "/admin" -> "/admin/" so it can resolve "admin/index.html"). That
+      // redirect is built from the prefix-stripped path, so it would send
+      // the browser to "telehub.web.id/admin/" instead of
+      // "telehub.web.id/ebook/admin/" — landing on the wrong server
+      // entirely. Re-add the "/ebook" prefix to any such redirect so it
+      // stays correctly scoped under this Route.
+      if (assetResponse.status >= 300 && assetResponse.status < 400) {
+        const location = assetResponse.headers.get("location");
+        if (location) {
+          const locUrl = new URL(location, request.url);
+          if (locUrl.pathname !== BASE_PATH && !locUrl.pathname.startsWith(BASE_PATH + "/")) {
+            locUrl.pathname = BASE_PATH + (locUrl.pathname === "/" ? "/" : locUrl.pathname);
+          }
+          const fixedHeaders = new Headers(assetResponse.headers);
+          fixedHeaders.set("location", locUrl.toString());
+          return new Response(assetResponse.body, {
+            status: assetResponse.status,
+            statusText: assetResponse.statusText,
+            headers: fixedHeaders,
+          });
+        }
+      }
+
+      return assetResponse;
     } catch (err) {
       return json({ error: "Server error", detail: String(err) }, 500);
     }
