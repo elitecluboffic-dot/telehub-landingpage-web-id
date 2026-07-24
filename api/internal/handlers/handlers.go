@@ -152,24 +152,41 @@ func (a *API) processURL(rec *store.IndexRecord) {
 	rec.Error = ""
 	_ = a.Store.Put(rec)
 
-	// --- 2. Submit ke IndexNow: otomatis untuk domain apapun, selama
-	// domain tersebut memang diarahkan ke backend ini (key file-nya
-	// otomatis ikut ke-serve di domain itu juga). Kalau IndexNow menolak
-	// (misal domain belum diarahkan ke backend ini sama sekali), itu
-	// dicatat sebagai gagal submit, bukan sukses diam-diam.
-	if err := a.IndexNow.SubmitOne(rec.URL); err != nil {
+	// --- 2. Submit ke IndexNow: dikirim ke BEBERAPA endpoint secara
+	// terpisah (api.indexnow.org, Bing, Yandex). Hasil tiap endpoint
+	// dicatat apa adanya -- SubmittedTo hanya berisi endpoint yang
+	// BENERAN mengonfirmasi sukses, bukan daftar tebakan. Kalau semua
+	// endpoint gagal, record ditandai StatusFailed; kalau sebagian
+	// gagal, tetap StatusSubmitted tapi Error mencatat mana yang gagal.
+	results := a.IndexNow.SubmitOne(rec.URL)
+
+	var submitted []string
+	var failedMsgs []string
+	for _, res := range results {
+		if res.Success {
+			submitted = append(submitted, res.Endpoint)
+		} else {
+			failedMsgs = append(failedMsgs, fmt.Sprintf("%s: %s", res.Endpoint, res.Error))
+		}
+	}
+
+	if len(submitted) == 0 {
 		rec.Status = store.StatusFailed
-		rec.Error = "crawl sukses, tapi submit indexing gagal: " + err.Error()
+		rec.Error = "crawl sukses, tapi semua endpoint indexing gagal: " + strings.Join(failedMsgs, "; ")
 		_ = a.Store.Put(rec)
-		log.Printf("indexnow submit gagal untuk %s: %v", rec.URL, err)
+		log.Printf("indexnow submit gagal total untuk %s: %v", rec.URL, failedMsgs)
 		return
 	}
 
 	rec.Status = store.StatusSubmitted
-	rec.SubmittedTo = []string{"indexnow:bing", "indexnow:yandex", "indexnow:seznam", "indexnow:naver"}
-	rec.Error = ""
+	rec.SubmittedTo = submitted
+	if len(failedMsgs) > 0 {
+		rec.Error = "sebagian endpoint gagal: " + strings.Join(failedMsgs, "; ")
+	} else {
+		rec.Error = ""
+	}
 	_ = a.Store.Put(rec)
-	log.Printf("berhasil submit indexing untuk %s", rec.URL)
+	log.Printf("submit untuk %s -> sukses: %v, gagal: %v", rec.URL, submitted, failedMsgs)
 }
 
 func dedupe(in []string) []string {
