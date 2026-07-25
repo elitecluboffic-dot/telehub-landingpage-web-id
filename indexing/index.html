@@ -25,15 +25,15 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="robots" content="index, follow">
-<title>Telehub — Top Indexing Tool</title>
-<meta name="description" content="Submit multiple URLs to search engines simultaneously using our free Telehub Signal Indexing service. Perform mass pings for your websites, backlinks, sitemaps, and RSS feeds—no registration required." />
+<title>Telehub: Top Indexing Tool | Real-Time IndexNow Submission</title>
+<meta name="description" content="Submit multiple URLs to search engines in real time using the IndexNow push protocol, not just passive crawling. Free mass indexing for Bing, Yandex, and the IndexNow network, no registration required." />
 
 <!-- ============ OPEN GRAPH ============ -->
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://telehub.web.id/indexing" />
 <meta property="og:site_name" content="Telehub" />
-<meta property="og:title" content="Telehub — Top Indexing Tool" />
-<meta property="og:description" content="Submit multiple URLs to search engines simultaneously using our free Telehub Signal Indexing service. Perform mass pings for your websites, backlinks, sitemaps, and RSS feeds—no registration required." />
+<meta property="og:title" content="Telehub: Top Indexing Tool | Real-Time IndexNow Submission" />
+<meta property="og:description" content="Submit multiple URLs to search engines in real time using the IndexNow push protocol, not just passive crawling. Free mass indexing for Bing, Yandex, and the IndexNow network, no registration required." />
 <meta property="og:image" content="https://telehub.web.id/Indexing-Crawler-Telehub.jpg" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
@@ -43,8 +43,8 @@
 <!-- ============ TWITTER CARD ============ -->
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:url" content="https://telehub.web.id/indexing" />
-<meta name="twitter:title" content="Telehub — Top Indexing Tool" />
-<meta name="twitter:description" content="Submit multiple URLs to search engines simultaneously using our free Telehub Signal Indexing service. Perform mass pings for your websites, backlinks, sitemaps, and RSS feeds—no registration required." />
+<meta name="twitter:title" content="Telehub: Top Indexing Tool | Real-Time IndexNow Submission" />
+<meta name="twitter:description" content="Submit multiple URLs to search engines in real time using the IndexNow push protocol, not just passive crawling. Free mass indexing for Bing, Yandex, and the IndexNow network, no registration required." />
 <meta name="twitter:image" content="https://telehub.web.id/Indexing-Crawler-Telehub.jpg" />
 <meta name="twitter:image:alt" content="Telehub Signal Indexing Tool" />
 
@@ -52,6 +52,57 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- ============ STRUCTURED DATA (FAQPage) ============ -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Apakah proses pengajuan URL ini benar-benar real-time?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Ya. Begitu URL diajukan, notifikasi push dikirim ke server Bing dan Yandex melalui API call pada saat itu juga. Proses ini tidak dijadwalkan atau diantrekan untuk crawl di kemudian hari."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Apa perbedaan IndexNow dengan mekanisme indexing konvensional?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Indexing konvensional bersifat pull, di mana mesin pencari yang menentukan kapan sebuah situs dikunjungi sesuai crawl budget yang dialokasikan. IndexNow bersifat push, di mana situs pengaju yang mengirim sinyal terlebih dahulu, sehingga proses penemuan URL berlangsung lebih cepat."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Apakah layanan ini turut mendukung indexing di Google?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Tidak. Google belum mengadopsi protokol IndexNow. Telehub berfokus mengirim notifikasi real-time ke Bing, Yandex, dan jaringan IndexNow lainnya. Untuk Google, pengajuan indexing tetap perlu dilakukan melalui Google Search Console."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Apakah layanan ini dikenakan biaya?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Tidak. Layanan Telehub Signal Indexing dapat digunakan secara gratis dan tidak memerlukan pendaftaran akun."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Mengapa status pengajuan masih menunjukkan Menunggu atau Sedang di-crawl?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Proses crawling dan pengiriman notifikasi berjalan secara asinkron di sisi server, sehingga tampilan riwayat yang sedang terbuka tidak otomatis memperbarui dirinya sendiri secara berkelanjutan. Saat proses di server masih berlangsung, status yang ditampilkan memang Menunggu atau Sedang di-crawl. Setelah proses tersebut selesai di sisi server, tekan tombol Refresh pada bagian Riwayat Pengajuan untuk mengambil data status terbaru, dan status akan langsung berubah menjadi Berhasil diindex begitu data terbaru dimuat."
+      }
+    }
+  ]
+}
+</script>
+
 <style>
   :root{
     --bg-0:#060911;
@@ -346,47 +397,7 @@
   .tw-msg[data-kind="ok"]{ color:var(--ok); }
   .tw-msg[data-kind="err"]{ color:var(--err); }
 
-  /* ---------- ad box lama (Social Bar / banner disturbknockedcaterpillar) —
-       HANYA desktop/PC, disembunyikan total di mobile. Dibiarkan apa
-       adanya, tidak diubah, supaya tidak bentrok dengan AdSense. ---------- */
-  .tw-ad-box{
-    margin-top:20px;
-    border-top:1px solid var(--border);
-    padding-top:20px;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    gap:10px;
-  }
-  .tw-ad-box-label{
-    font-family:var(--font-mono);
-    font-size:10px;
-    letter-spacing:.12em;
-    text-transform:uppercase;
-    color:var(--muted);
-    margin:0;
-  }
-  .tw-ad-box-slot{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    min-width:160px;
-    min-height:300px;
-    background:rgba(6,9,17,.4);
-    border:1px dashed var(--border);
-    border-radius:10px;
-    overflow:hidden;
-  }
-
-  /* Jaring pengaman CSS: di layar sempit (mobile/tablet kecil) kotak iklan
-     LAMA selalu disembunyikan, apa pun status JS-nya. Kontrol utama tetap
-     di JS (deteksi device), ini hanya lapisan cadangan. */
-  @media (max-width: 768px){
-    .tw-ad-box{ display:none !important; }
-  }
-
-  /* ---------- kotak AdSense BARU — terpisah dari ad box lama, tampil di
-       SEMUA device (HP & PC), full responsif ---------- */
+  /* ---------- kotak AdSense — tampil di SEMUA device (HP & PC), full responsif ---------- */
   .tw-adsense-box{
     margin-top:20px;
     border-top:1px solid var(--border);
@@ -415,9 +426,6 @@
     overflow:hidden;
     border-radius:10px;
   }
-  /* adsbygoogle mengisi lebar penuh slot-nya secara responsif berkat
-     data-full-width-responsive="true"; kita bantu supaya tidak overflow
-     di layar sempit. */
   .tw-adsense-slot .adsbygoogle{
     display:block;
     width:100%;
@@ -598,6 +606,137 @@
     text-align:center;
   }
 
+  /* ---------- info / explainer sections ---------- */
+  .tw-info{
+    margin-top:44px;
+  }
+  .tw-info h2{
+    font-family:var(--font-display);
+    font-weight:700;
+    font-size:1.4rem;
+    letter-spacing:-.01em;
+    margin:0 0 14px;
+    color:var(--text);
+  }
+  .tw-info p{
+    font-size:.96rem;
+    line-height:1.75;
+    color:var(--muted);
+    margin:0 0 14px;
+  }
+  .tw-info strong{ color:var(--text); }
+
+  .tw-compare{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+    margin:22px 0 6px;
+  }
+  @media (max-width:640px){
+    .tw-compare{ grid-template-columns:1fr; }
+  }
+  .tw-compare-card{
+    background:rgba(6,9,17,.5);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:18px 20px;
+  }
+  .tw-compare-card h3{
+    font-family:var(--font-mono);
+    font-size:.78rem;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    margin:0 0 10px;
+  }
+  .tw-compare-card.tw-compare-old h3{ color:var(--warn); }
+  .tw-compare-card.tw-compare-new h3{ color:var(--ok); }
+  .tw-compare-card ul{
+    margin:0;
+    padding-left:18px;
+    color:var(--muted);
+    font-size:.86rem;
+    line-height:1.7;
+  }
+  .tw-compare-card li::marker{ color:var(--text); }
+
+  .tw-steps{
+    counter-reset:tw-step;
+    margin:22px 0 6px;
+    padding:0;
+    list-style:none;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+  .tw-steps li{
+    display:flex;
+    gap:14px;
+    align-items:flex-start;
+  }
+  .tw-steps li::before{
+    counter-increment:tw-step;
+    content:counter(tw-step);
+    flex-shrink:0;
+    width:28px; height:28px;
+    border-radius:50%;
+    background:rgba(0,229,255,.12);
+    color:var(--cyan);
+    font-family:var(--font-mono);
+    font-size:.85rem;
+    font-weight:700;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .tw-steps li div{
+    font-size:.92rem;
+    line-height:1.65;
+    color:var(--muted);
+    padding-top:2px;
+  }
+  .tw-steps li div strong{ color:var(--text); }
+
+  .tw-faq{
+    margin-top:8px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .tw-faq details{
+    background:rgba(6,9,17,.5);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:14px 18px;
+  }
+  .tw-faq summary{
+    font-family:var(--font-body);
+    font-weight:600;
+    font-size:.95rem;
+    color:var(--text);
+    cursor:pointer;
+    list-style:none;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .tw-faq summary::-webkit-details-marker{ display:none; }
+  .tw-faq summary::after{
+    content:'+';
+    font-family:var(--font-mono);
+    color:var(--cyan);
+    font-size:1.1rem;
+    flex-shrink:0;
+    transition:transform .15s ease;
+  }
+  .tw-faq details[open] summary::after{ transform:rotate(45deg); }
+  .tw-faq p{
+    margin:12px 0 0;
+    font-size:.9rem;
+    line-height:1.7;
+    color:var(--muted);
+  }
+
   @media (max-width: 560px){
     .tw-hero{ padding-top:18vh; }
     .tw-panel{ padding:20px; border-radius:14px; }
@@ -622,14 +761,16 @@
     <header class="tw-hero">
       <p class="tw-eyebrow">Telehub · Top Indexing Tool</p>
       <h1>Kirim banyak URL sekaligus ke seluruh mesin pencari</h1>
-      <p>Layanan Telehub Signal Indexing gratis untuk siapa saja, tanpa perlu
-         daftar akun. Tempel banyak URL sekaligus — artikel, backlink,
-         sitemap.xml, atau RSS feed — dan Telehub akan mem-ping semuanya ke
-         Bing, Yandex, dan jaringan IndexNow dalam satu kali proses.</p>
+      <p>Layanan Telehub Signal Indexing tersedia gratis untuk siapa saja
+         tanpa perlu mendaftar akun. Ajukan banyak URL sekaligus, mulai dari
+         artikel, backlink, sitemap.xml, hingga RSS feed, dan sistem akan
+         mengirimkan notifikasi ke Bing, Yandex, dan jaringan IndexNow
+         <strong>secara real-time</strong>, bukan melalui mekanisme crawling
+         konvensional yang bersifat menunggu.</p>
 
       <div class="tw-hero-stats">
-        <div><span class="tw-stat-val" id="tw-stat-total">—</span><span class="tw-stat-lbl">Total diajukan</span></div>
-        <div><span class="tw-stat-val" id="tw-stat-ok">—</span><span class="tw-stat-lbl">Berhasil diindex</span></div>
+        <div><span class="tw-stat-val" id="tw-stat-total">0</span><span class="tw-stat-lbl">Total diajukan</span></div>
+        <div><span class="tw-stat-val" id="tw-stat-ok">0</span><span class="tw-stat-lbl">Berhasil diindex</span></div>
         <div><span class="tw-stat-val">3</span><span class="tw-stat-lbl">Jaringan aktif</span></div>
         <div><span class="tw-stat-val">Gratis</span><span class="tw-stat-lbl">Tanpa registrasi</span></div>
       </div>
@@ -655,19 +796,11 @@ https://situsmu.com/backlink-target"
           </svg>
         </a>
       </form>
-      <p class="tw-form-hint">Satu URL per baris — bisa dicampur: artikel, backlink, sitemap.xml, atau RSS feed. Gratis, tanpa perlu daftar akun.</p>
+      <p class="tw-form-hint">Satu URL per baris, dapat dicampur antara artikel, backlink, sitemap.xml, dan RSS feed. Tersedia gratis tanpa perlu mendaftar akun. Setiap URL yang diajukan akan langsung dikirim melalui push API ke jaringan IndexNow pada saat itu juga.</p>
       <p id="tw-idx-msg" class="tw-msg" role="status"></p>
 
-      <!-- Kotak iklan LAMA (Social Bar / banner disturbknockedcaterpillar):
-           HANYA dirender di desktop/PC. Di mobile, div ini tetap kosong
-           dan disembunyikan total lewat JS + CSS. Dibiarkan tidak berubah. -->
-      <div class="tw-ad-box" id="tw-ad-box">
-        <p class="tw-ad-box-label">Iklan</p>
-        <div class="tw-ad-box-slot" id="tw-ad-slot"></div>
-      </div>
-
-      <!-- Kotak AdSense BARU — terpisah, tampil di HP maupun PC, full
-           responsif berkat data-full-width-responsive="true". -->
+      <!-- Kotak AdSense — tampil di HP maupun PC, full responsif berkat
+           data-full-width-responsive="true". -->
       <div class="tw-adsense-box" id="tw-adsense-box">
         <p class="tw-adsense-box-label">Iklan</p>
         <div class="tw-adsense-slot" id="tw-adsense-slot">
@@ -703,79 +836,85 @@ https://situsmu.com/backlink-target"
       </div>
     </section>
 
+    <!-- ============ PENJELASAN: REAL-TIME vs INDEXING BIASA ============ -->
+    <section class="tw-info">
+      <h2>Mekanisme Pengiriman: Real-Time Push, Bukan Crawling Pasif</h2>
+      <p>Terdapat perbedaan mendasar antara "mengajukan URL untuk diindeks"
+         dengan cara konvensional dan mekanisme yang digunakan Telehub.
+         Telehub menggunakan <strong>protokol IndexNow</strong>, yaitu
+         standar terbuka yang dikembangkan bersama oleh Microsoft Bing dan
+         Yandex. Protokol ini bekerja dengan cara <strong>mendorong (push)
+         notifikasi</strong> langsung ke server mesin pencari pada saat
+         URL diajukan, alih-alih menunggu robot crawler menemukan halaman
+         tersebut secara mandiri di kemudian hari.</p>
+
+      <div class="tw-compare">
+        <div class="tw-compare-card tw-compare-old">
+          <h3>Indexing Konvensional</h3>
+          <ul>
+            <li>Situs menunggu crawler datang sesuai jadwalnya sendiri</li>
+            <li>Dapat memakan waktu beberapa hari hingga beberapa minggu</li>
+            <li>Bergantung pada crawl budget yang dialokasikan ke domain</li>
+            <li>Tidak ada kepastian waktu kunjungan crawler</li>
+          </ul>
+        </div>
+        <div class="tw-compare-card tw-compare-new">
+          <h3>IndexNow (Real-Time Push)</h3>
+          <ul>
+            <li>Notifikasi dikirim ke server mesin pencari secara instan</li>
+            <li>Umumnya diproses dalam hitungan menit hingga beberapa jam</li>
+            <li>Crawler diberi tahu secara langsung, bukan menemukan sendiri</li>
+            <li>Status pengajuan dapat dipantau langsung melalui riwayat</li>
+          </ul>
+        </div>
+      </div>
+
+      <p>Setiap kali formulir pengajuan dikirim, sistem Telehub secara
+         otomatis melakukan panggilan API ke backend, yang selanjutnya
+         meneruskan notifikasi ke endpoint resmi IndexNow milik Bing dan
+         Yandex secara paralel. Proses ini berjalan seketika, bukan
+         dijadwalkan untuk diproses pada waktu berikutnya.</p>
+
+      <h2>Alur Proses Pengajuan Indexing</h2>
+      <ol class="tw-steps">
+        <li><div><strong>Validasi URL.</strong> Sistem memastikan format URL sesuai standar (diawali <code>http://</code> atau <code>https://</code>) sebelum diproses lebih lanjut.</div></li>
+        <li><div><strong>Crawling internal.</strong> Sistem Telehub mengakses URL yang diajukan untuk mengambil metadata halaman, meliputi judul, deskripsi, dan status respons.</div></li>
+        <li><div><strong>Pengiriman notifikasi push.</strong> Setelah proses crawling selesai, notifikasi dikirim secara real-time ke beberapa endpoint IndexNow, termasuk Bing dan Yandex, secara bersamaan.</div></li>
+        <li><div><strong>Pencatatan status.</strong> Setiap respons dari masing-masing mesin pencari dicatat sesuai hasil aktual, dan dapat dipantau langsung melalui riwayat pengajuan di atas.</div></li>
+      </ol>
+
+      <h2>Pertanyaan yang Sering Diajukan</h2>
+      <div class="tw-faq">
+        <details>
+          <summary>Apakah proses pengajuan URL ini benar-benar real-time?</summary>
+          <p>Ya. Begitu URL diajukan, notifikasi push dikirim ke server Bing dan Yandex melalui API call pada saat itu juga. Proses ini tidak dijadwalkan atau diantrekan untuk crawl di kemudian hari.</p>
+        </details>
+        <details>
+          <summary>Apa perbedaan IndexNow dengan mekanisme indexing konvensional?</summary>
+          <p>Indexing konvensional bersifat pull, di mana mesin pencari yang menentukan kapan sebuah situs dikunjungi sesuai crawl budget yang dialokasikan. IndexNow bersifat push, di mana situs pengaju yang mengirim sinyal terlebih dahulu, sehingga proses penemuan URL berlangsung lebih cepat.</p>
+        </details>
+        <details>
+          <summary>Apakah layanan ini turut mendukung indexing di Google?</summary>
+          <p>Tidak. Google belum mengadopsi protokol IndexNow. Telehub berfokus mengirim notifikasi real-time ke Bing, Yandex, dan jaringan IndexNow lainnya. Untuk Google, pengajuan indexing tetap perlu dilakukan melalui Google Search Console.</p>
+        </details>
+        <details>
+          <summary>Apakah layanan ini dikenakan biaya?</summary>
+          <p>Tidak. Layanan Telehub Signal Indexing dapat digunakan secara gratis dan tidak memerlukan pendaftaran akun.</p>
+        </details>
+        <details>
+          <summary>Mengapa status pengajuan masih menunjukkan "Menunggu" atau "Sedang di-crawl"?</summary>
+          <p>Proses crawling dan pengiriman notifikasi berjalan secara asinkron di sisi server, sehingga tampilan riwayat yang sedang terbuka tidak otomatis memperbarui dirinya sendiri secara berkelanjutan. Saat proses di server masih berlangsung, status yang tercatat dan ditampilkan memang "Menunggu" atau "Sedang di-crawl". Setelah proses tersebut selesai di sisi server, tekan tombol "Refresh" pada bagian Riwayat Pengajuan untuk mengambil data status terbaru, dan status akan langsung berubah menjadi "Berhasil diindex" begitu data terbaru dimuat.</p>
+        </details>
+      </div>
+    </section>
+
   </div>
 </div>
-
-<!-- CATATAN: script iklan "Social Bar" (overlay) SUDAH TIDAK dimuat langsung
-     di sini. Script ini sekarang hanya di-inject lewat JS di bawah, dan HANYA
-     jika perangkat terdeteksi sebagai desktop/PC. Di mobile, script ini tidak
-     pernah dimuat sama sekali. AdSense di atas TIDAK terpengaruh oleh
-     deteksi ini — selalu tampil di semua device. -->
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (function () {
   "use strict";
-
-  /* ============================================================
-     DETEKSI DESKTOP vs MOBILE — mengontrol iklan LAMA (Social Bar /
-     banner disturbknockedcaterpillar) saja. Iklan (kotak iklan lama
-     di dalam panel form + social bar overlay) HANYA akan dimuat/
-     ditampilkan jika perangkat terdeteksi sebagai desktop/PC. Di
-     mobile, kotak iklan lama disembunyikan total dan tidak ada
-     script iklan yang dimuat. Kotak AdSense yang baru TIDAK diatur
-     oleh fungsi ini — dia selalu tampil di semua device.
-  ============================================================ */
-
-  function isMobileDevice() {
-    var uaMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(navigator.userAgent);
-    var narrowViewport = window.innerWidth <= 768;
-    var coarsePointer = false;
-    try {
-      coarsePointer = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-    } catch (e) { /* abaikan */ }
-    return uaMobile || (narrowViewport && coarsePointer) || narrowViewport;
-  }
-
-  function initAdsIfDesktop() {
-    var adBox = document.getElementById('tw-ad-box');
-
-    if (isMobileDevice()) {
-      // Mobile/tablet kecil: sembunyikan total kotak iklan lama, jangan
-      // muat script iklan apa pun (baik banner maupun social bar overlay).
-      if (adBox) adBox.style.display = 'none';
-      return;
-    }
-
-    // Desktop/PC: tampilkan kotak iklan lama dan muat script-script iklan.
-    if (adBox) adBox.style.display = '';
-
-    var slot = document.getElementById('tw-ad-slot');
-    if (slot) {
-      var optScript = document.createElement('script');
-      optScript.type = 'text/javascript';
-      optScript.text =
-        "atOptions = {" +
-        "'key':'670c3dfdfa30ce76064083d0d8dde152'," +
-        "'format':'iframe'," +
-        "'height':300," +
-        "'width':160," +
-        "'params':{}" +
-        "};";
-      slot.appendChild(optScript);
-
-      var invokeScript = document.createElement('script');
-      invokeScript.src = 'https://disturbknockedcaterpillar.com/670c3dfdfa30ce76064083d0d8dde152/invoke.js';
-      slot.appendChild(invokeScript);
-    }
-
-    // Social bar (overlay ad network) — hanya di-inject di desktop.
-    var socialScript = document.createElement('script');
-    socialScript.src = 'https://disturbknockedcaterpillar.com/23/ca/82/23ca828838893778d760b727c9a62f7a.js';
-    document.body.appendChild(socialScript);
-  }
-
-  initAdsIfDesktop();
 
   /* ============================================================
      3D SIGNAL HUB
@@ -1211,7 +1350,7 @@ https://situsmu.com/backlink-target"
     var invalidCount = items.length - toSend.length;
 
     if (!toSend.length) {
-      setMsg("Semua URL tidak valid — cek kembali formatnya.", "err");
+      setMsg("Semua URL tidak valid, cek kembali formatnya.", "err");
       return;
     }
 
@@ -1255,4 +1394,4 @@ https://situsmu.com/backlink-target"
 </script>
 
 </body>
-  </html>
+</html>
