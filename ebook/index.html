@@ -498,6 +498,12 @@
     flex-wrap:wrap;
   }
   .book-info .price{ font-weight:700; color:var(--cream); font-size:0.94rem; }
+  .book-info .row-actions{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+  }
   .buy-btn{
     font-size:0.82rem;
     font-weight:600;
@@ -509,6 +515,19 @@
     white-space:nowrap;
   }
   .buy-btn:hover{ transform:translateY(-2px); }
+
+  .read-btn{
+    font-size:0.82rem;
+    font-weight:600;
+    padding:9px 16px;
+    border-radius:999px;
+    border:1px solid rgba(246,234,217,0.35);
+    color:var(--cream);
+    background:transparent;
+    transition:border-color 0.2s ease, transform 0.2s ease;
+    white-space:nowrap;
+  }
+  .read-btn:hover{ border-color:var(--cream); transform:translateY(-2px); }
 
   .book-card.placeholder{
     background:transparent;
@@ -719,7 +738,8 @@
       priceLabel: 'Ebook · PDF',
       waNumber: '6285746866023',
       waMessage: 'Halo, saya mau pesan ebook Filosofi Kucing',
-      cover: 'twilight'
+      cover: 'twilight',
+      chapters: []
     }
   ];
   const FALLBACK_COVERS = {
@@ -737,6 +757,12 @@
 
   function isImageCover(cover){
     return typeof cover === 'string' && cover.trim() && !KNOWN_COVER_PRESETS.includes(cover);
+  }
+
+  function readOnlineButton(book){
+    const hasChapters = Array.isArray(book.chapters) && book.chapters.length > 0;
+    if (!hasChapters) return '';
+    return `<a href="/ebook/read/${encodeURIComponent(book.id)}" class="read-btn">Baca Online</a>`;
   }
 
   function renderBookCard(book, covers){
@@ -762,7 +788,10 @@
           <p>${escapeHtml(book.description || '')}</p>
           <div class="row">
             <span class="price">${escapeHtml(book.priceLabel || 'Ebook · PDF')}</span>
-            <a href="${waLink}" class="buy-btn" target="_blank" rel="noopener">Pesan via WhatsApp</a>
+            <div class="row-actions">
+              ${readOnlineButton(book)}
+              <a href="${waLink}" class="buy-btn" target="_blank" rel="noopener">Pesan via WhatsApp</a>
+            </div>
           </div>
         </div>`;
       return article;
@@ -790,7 +819,10 @@
         <p>${escapeHtml(book.description || '')}</p>
         <div class="row">
           <span class="price">${escapeHtml(book.priceLabel || 'Ebook · PDF')}</span>
-          <a href="${waLink}" class="buy-btn" target="_blank" rel="noopener">Pesan via WhatsApp</a>
+          <div class="row-actions">
+            ${readOnlineButton(book)}
+            <a href="${waLink}" class="buy-btn" target="_blank" rel="noopener">Pesan via WhatsApp</a>
+          </div>
         </div>
       </div>`;
 
