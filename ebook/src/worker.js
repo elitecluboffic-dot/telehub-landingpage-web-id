@@ -122,15 +122,18 @@ function normalizeCover(rawCover) {
   return value;
 }
 
-// Chapters are plain { title, content } objects filled in from the admin
-// panel. Keep only well-formed entries, and trim whitespace so empty
-// rows left in the admin form don't get persisted.
+// Chapters are plain { title, content, image } objects filled in from the
+// admin panel. `image` is optional — a public URL returned by the same
+// /api/upload endpoint used for cover images. Keep only well-formed
+// entries, and trim whitespace so empty rows left in the admin form don't
+// get persisted.
 function normalizeChapters(rawChapters) {
   if (!Array.isArray(rawChapters)) return [];
   return rawChapters
     .map((c) => ({
       title: typeof c?.title === "string" ? c.title.trim() : "",
       content: typeof c?.content === "string" ? c.content.trim() : "",
+      image: typeof c?.image === "string" ? c.image.trim() : "",
     }))
     .filter((c) => c.title);
 }
@@ -182,6 +185,7 @@ function renderReaderPage(book, baseUrl) {
       (c, i) => `
       <section class="chapter" id="bab-${i}">
         <h2>${escapeHtml(c.title)}</h2>
+        ${c.image ? `<img class="chapter-image" src="${escapeHtml(c.image)}" alt="${escapeHtml(c.title)}">` : ""}
         ${contentToHtml(c.content) || "<p><em>Isi bab ini belum ditulis.</em></p>"}
       </section>`
     )
@@ -329,6 +333,14 @@ function renderReaderPage(book, baseUrl) {
     margin-bottom:0;
   }
   .content h2{ font-size:1.5rem; }
+  .content .chapter-image{
+    width:100%;
+    max-height:420px;
+    object-fit:cover;
+    border-radius:14px;
+    margin:18px 0 26px;
+    border:1px solid var(--card-line);
+  }
   .content p{
     font-size:1.04rem;
     line-height:1.85;
