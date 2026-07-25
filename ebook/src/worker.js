@@ -401,7 +401,6 @@ function renderReaderPage(book, baseUrl) {
     <h2 class="book-title">${escapeHtml(book.title)}</h2>
     <span class="book-author">${escapeHtml(book.author || "BIMXR")}</span>
     ${chapters.length ? `<nav>${tocItems}</nav>` : ""}
-    <a class="cta-btn" href="${waLink}" target="_blank" rel="noopener">Pesan Versi Lengkap</a>
   </aside>
 
   <main class="content">
