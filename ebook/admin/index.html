@@ -81,6 +81,7 @@
   .btn-ghost{ background:transparent; border:1px solid var(--card-line); color:var(--cream); }
   .btn-danger{ background:transparent; border:1px solid rgba(224,101,79,0.5); color:var(--danger); }
   .btn-block{ width:100%; }
+  .btn-sm{ padding:8px 16px; font-size:0.82rem; }
 
   .error-msg{
     color:var(--danger);
@@ -109,6 +110,12 @@
     margin-bottom:24px;
   }
   .panel h2{ font-size:1.15rem; margin-bottom:18px; }
+  .panel .panel-hint{
+    color:var(--muted);
+    font-size:0.85rem;
+    margin:-10px 0 18px;
+    line-height:1.6;
+  }
 
   .field{ margin-bottom:16px; }
   .field label{
@@ -164,6 +171,59 @@
     text-decoration:underline;
   }
 
+  /* chapters (isi bab / baca online) */
+  .chapters-container{
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    margin-bottom:16px;
+  }
+  .chapter-block{
+    background:#1a1122;
+    border:1px solid var(--card-line);
+    border-radius:12px;
+    padding:16px;
+  }
+  .chapter-block-head{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    margin-bottom:10px;
+  }
+  .chapter-block-head .chapter-index{
+    flex-shrink:0;
+    width:26px;
+    height:26px;
+    border-radius:50%;
+    background:rgba(231,194,106,0.15);
+    color:var(--gold);
+    font-size:0.78rem;
+    font-weight:700;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .chapter-block-head input.chapter-title{ flex:1; }
+  .chapter-remove{
+    flex-shrink:0;
+    width:34px;
+    height:34px;
+    border-radius:8px;
+    border:1px solid rgba(224,101,79,0.4);
+    background:transparent;
+    color:var(--danger);
+    font-size:1.1rem;
+    line-height:1;
+    cursor:pointer;
+  }
+  .chapter-remove:hover{ background:rgba(224,101,79,0.1); }
+  textarea.chapter-content{ min-height:110px; }
+  .chapters-empty{
+    color:var(--muted);
+    font-size:0.85rem;
+    padding:8px 0 4px;
+  }
+
   .book-item{
     display:flex;
     justify-content:space-between;
@@ -185,6 +245,15 @@
   }
   .book-item .meta h3{ font-size:1.02rem; margin-bottom:4px; }
   .book-item .meta p{ margin:0; color:var(--muted); font-size:0.85rem; }
+  .book-item .meta .chapter-count{
+    display:inline-block;
+    margin-top:6px;
+    font-size:0.74rem;
+    color:var(--gold);
+    background:rgba(231,194,106,0.12);
+    padding:3px 9px;
+    border-radius:999px;
+  }
   .book-item .actions{ display:flex; gap:8px; flex-shrink:0; }
 
   .empty-state{ color:var(--muted); font-size:0.9rem; padding:12px 0; }
@@ -295,6 +364,19 @@
           <input type="text" id="fWaMessage" placeholder="Halo, saya mau pesan ebook ...">
         </div>
       </div>
+
+      <div class="field">
+        <label>Isi Bab (untuk tombol "Baca Online")</label>
+        <div class="panel-hint">
+          Bab-bab di sini bisa dibaca langsung di web tanpa file PDF — cocok buat cuplikan gratis
+          biar pengunjung yakin isi bukunya nyata sebelum pesan. Kosongkan semua bab kalau belum
+          mau menampilkan tombol "Baca Online" untuk buku ini.
+        </div>
+        <div class="chapters-container" id="chaptersContainer"></div>
+        <div class="chapters-empty" id="chaptersEmpty" style="display:none;">Belum ada bab. Klik "+ Tambah Bab" untuk mulai menulis.</div>
+        <button type="button" class="btn btn-ghost btn-sm" id="addChapterBtn">+ Tambah Bab</button>
+      </div>
+
       <div style="display:flex; gap:10px; margin-top:8px;">
         <button type="submit" class="btn btn-primary" id="saveBtn">Simpan Buku</button>
         <button type="button" class="btn btn-ghost" id="cancelEditBtn" style="display:none;">Batal Edit</button>
@@ -332,6 +414,10 @@
   const coverPreview = document.getElementById('coverPreview');
   const coverHint = document.getElementById('coverHint');
   const coverRemoveBtn = document.getElementById('coverRemoveBtn');
+
+  const chaptersContainer = document.getElementById('chaptersContainer');
+  const chaptersEmpty = document.getElementById('chaptersEmpty');
+  const addChapterBtn = document.getElementById('addChapterBtn');
 
   const KNOWN_PRESETS = ['twilight', 'dawn', 'moss', 'ash'];
 
@@ -460,6 +546,66 @@
     }
   });
 
+  /* ---------------- chapters (isi bab / baca online) ---------------- */
+
+  function updateChapterIndexes(){
+    const blocks = chaptersContainer.querySelectorAll('.chapter-block');
+    blocks.forEach((block, i) => {
+      const badge = block.querySelector('.chapter-index');
+      if (badge) badge.textContent = i + 1;
+    });
+    chaptersEmpty.style.display = blocks.length ? 'none' : 'block';
+  }
+
+  function addChapterBlock(chapter){
+    chapter = chapter || { title: '', content: '' };
+    const div = document.createElement('div');
+    div.className = 'chapter-block';
+    div.innerHTML = `
+      <div class="chapter-block-head">
+        <span class="chapter-index">1</span>
+        <input type="text" class="chapter-title" placeholder="Judul bab, misal: Bab 1 — Istirahat">
+        <button type="button" class="chapter-remove" title="Hapus bab">&times;</button>
+      </div>
+      <textarea class="chapter-content" placeholder="Isi bab. Pisahkan paragraf dengan baris kosong."></textarea>
+    `;
+    div.querySelector('.chapter-title').value = chapter.title || '';
+    div.querySelector('.chapter-content').value = chapter.content || '';
+    div.querySelector('.chapter-remove').addEventListener('click', () => {
+      div.remove();
+      updateChapterIndexes();
+    });
+    chaptersContainer.appendChild(div);
+    updateChapterIndexes();
+    return div;
+  }
+
+  addChapterBtn.addEventListener('click', () => {
+    const div = addChapterBlock();
+    div.querySelector('.chapter-title').focus();
+  });
+
+  function clearChapters(){
+    chaptersContainer.innerHTML = '';
+    updateChapterIndexes();
+  }
+
+  function fillChapters(chapters){
+    clearChapters();
+    (chapters || []).forEach(c => addChapterBlock(c));
+  }
+
+  function collectChapters(){
+    return Array.from(chaptersContainer.querySelectorAll('.chapter-block'))
+      .map(block => ({
+        title: block.querySelector('.chapter-title').value.trim(),
+        content: block.querySelector('.chapter-content').value.trim(),
+      }))
+      .filter(c => c.title);
+  }
+
+  /* -------------------------------------------------------------------- */
+
   function resetForm(){
     document.getElementById('bookId').value = '';
     bookForm.reset();
@@ -469,6 +615,7 @@
     cancelEditBtn.style.display = 'none';
     formError.textContent = '';
     clearCoverUpload();
+    clearChapters();
   }
 
   cancelEditBtn.addEventListener('click', resetForm);
@@ -496,6 +643,8 @@
       coverRemoveBtn.style.display = 'inline-block';
       coverHint.textContent = 'Gambar sampul saat ini. Pilih file baru untuk mengganti.';
     }
+
+    fillChapters(book.chapters);
 
     formTitle.textContent = 'Edit: ' + book.title;
     cancelEditBtn.style.display = 'inline-flex';
@@ -525,15 +674,18 @@
       row.className = 'book-item';
       const isImageCover = book.cover && !KNOWN_PRESETS.includes(book.cover);
       const thumbStyle = isImageCover ? ` style="background-image:url('${escapeHtml(book.cover)}')"` : '';
+      const chapterCount = Array.isArray(book.chapters) ? book.chapters.length : 0;
       row.innerHTML = `
         <div class="meta">
           <div class="thumb"${thumbStyle}></div>
           <div>
             <h3>${escapeHtml(book.title)}</h3>
             <p>${escapeHtml(book.tagline || book.description || '')}</p>
+            <span class="chapter-count">${chapterCount ? chapterCount + ' bab bisa dibaca online' : 'Belum ada bab baca online'}</span>
           </div>
         </div>
         <div class="actions">
+          ${chapterCount ? `<a class="btn btn-ghost" href="/ebook/read/${encodeURIComponent(book.id)}" target="_blank">Lihat Baca Online</a>` : ''}
           <button class="btn btn-ghost" data-action="edit">Edit</button>
           <button class="btn btn-danger" data-action="delete">Hapus</button>
         </div>`;
@@ -576,6 +728,7 @@
       cover: fCoverUrl.value || fCoverSelect.value,
       waNumber: document.getElementById('fWaNumber').value.trim(),
       waMessage: document.getElementById('fWaMessage').value.trim(),
+      chapters: collectChapters(),
     };
 
     if (!payload.title){
@@ -607,6 +760,8 @@
     div.textContent = str || '';
     return div.innerHTML;
   }
+
+  updateChapterIndexes();
 </script>
 
 </body>
