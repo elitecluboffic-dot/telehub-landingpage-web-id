@@ -218,6 +218,43 @@
   }
   .chapter-remove:hover{ background:rgba(224,101,79,0.1); }
   textarea.chapter-content{ min-height:110px; }
+
+  .chapter-image-upload{
+    display:flex;
+    gap:12px;
+    align-items:center;
+    margin-bottom:10px;
+  }
+  .chapter-image-preview{
+    width:52px;
+    height:52px;
+    border-radius:8px;
+    border:1px solid var(--card-line);
+    background:#241733 center/cover no-repeat;
+    flex-shrink:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:0.6rem;
+    color:var(--muted);
+    text-align:center;
+    overflow:hidden;
+  }
+  .chapter-image-controls{ flex:1; min-width:0; }
+  .chapter-image-controls input[type="file"]{
+    padding:6px 8px;
+    font-size:0.8rem;
+  }
+  .chapter-image-hint{ font-size:0.72rem; color:var(--muted); margin-top:4px; }
+  .chapter-image-remove{
+    font-size:0.74rem;
+    color:var(--danger);
+    background:none;
+    border:none;
+    cursor:pointer;
+    padding:2px 0;
+    text-decoration:underline;
+  }
   .chapters-empty{
     color:var(--muted);
     font-size:0.85rem;
@@ -557,8 +594,22 @@
     chaptersEmpty.style.display = blocks.length ? 'none' : 'block';
   }
 
+  function setChapterImagePreview(block, url){
+    const preview = block.querySelector('.chapter-image-preview');
+    const removeBtn = block.querySelector('.chapter-image-remove');
+    if (url){
+      preview.style.backgroundImage = `url("${url}")`;
+      preview.textContent = '';
+      removeBtn.style.display = 'inline-block';
+    } else {
+      preview.style.backgroundImage = 'none';
+      preview.textContent = 'Belum ada foto';
+      removeBtn.style.display = 'none';
+    }
+  }
+
   function addChapterBlock(chapter){
-    chapter = chapter || { title: '', content: '' };
+    chapter = chapter || { title: '', content: '', image: '' };
     const div = document.createElement('div');
     div.className = 'chapter-block';
     div.innerHTML = `
@@ -567,14 +618,63 @@
         <input type="text" class="chapter-title" placeholder="Judul bab, misal: Bab 1 — Istirahat">
         <button type="button" class="chapter-remove" title="Hapus bab">&times;</button>
       </div>
+      <div class="chapter-image-upload">
+        <div class="chapter-image-preview">Belum ada foto</div>
+        <div class="chapter-image-controls">
+          <input type="file" class="chapter-image-file" accept="image/jpeg,image/png,image/webp,image/gif">
+          <div class="chapter-image-hint">Foto ilustrasi bab ini (opsional). JPG/PNG/WEBP/GIF, maks 5MB.</div>
+          <button type="button" class="chapter-image-remove" style="display:none;">Hapus foto</button>
+        </div>
+      </div>
+      <input type="hidden" class="chapter-image-url">
       <textarea class="chapter-content" placeholder="Isi bab. Pisahkan paragraf dengan baris kosong."></textarea>
     `;
     div.querySelector('.chapter-title').value = chapter.title || '';
     div.querySelector('.chapter-content').value = chapter.content || '';
+    div.querySelector('.chapter-image-url').value = chapter.image || '';
+    setChapterImagePreview(div, chapter.image || '');
+
     div.querySelector('.chapter-remove').addEventListener('click', () => {
       div.remove();
       updateChapterIndexes();
     });
+
+    const fileInput = div.querySelector('.chapter-image-file');
+    const hint = div.querySelector('.chapter-image-hint');
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+      hint.textContent = 'Mengunggah...';
+      const formData = new FormData();
+      formData.append('file', file);
+      try {
+        const res = await fetch('/ebook/api/upload', {
+          method: 'POST',
+          headers: authHeadersNoContentType(),
+          body: formData
+        });
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          div.querySelector('.chapter-image-url').value = data.url;
+          setChapterImagePreview(div, data.url);
+          hint.textContent = 'Foto berhasil diunggah.';
+        } else {
+          hint.textContent = data.error || 'Gagal mengunggah foto.';
+          fileInput.value = '';
+        }
+      } catch (e) {
+        hint.textContent = 'Tidak bisa menghubungi server saat mengunggah.';
+        fileInput.value = '';
+      }
+    });
+
+    div.querySelector('.chapter-image-remove').addEventListener('click', () => {
+      div.querySelector('.chapter-image-url').value = '';
+      fileInput.value = '';
+      setChapterImagePreview(div, '');
+      hint.textContent = 'Foto ilustrasi bab ini (opsional). JPG/PNG/WEBP/GIF, maks 5MB.';
+    });
+
     chaptersContainer.appendChild(div);
     updateChapterIndexes();
     return div;
@@ -600,6 +700,7 @@
       .map(block => ({
         title: block.querySelector('.chapter-title').value.trim(),
         content: block.querySelector('.chapter-content').value.trim(),
+        image: block.querySelector('.chapter-image-url').value.trim(),
       }))
       .filter(c => c.title);
   }
