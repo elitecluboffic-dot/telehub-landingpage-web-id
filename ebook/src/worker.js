@@ -411,7 +411,7 @@ function renderReaderPage(book, baseUrl) {
 ${
   chapters.length
     ? `<div class="reader-footer">
-        <a class="cta-btn" href="${waLink}" target="_blank" rel="noopener">Suka dengan bab-bab di atas? Pesan versi lengkapnya</a>
+        <a class="cta-btn" href="${baseUrl}/">Lanjutkan jelajahi ebook lainnya</a>
       </div>`
     : ""
 }
