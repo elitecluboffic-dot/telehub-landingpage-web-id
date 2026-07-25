@@ -138,20 +138,28 @@ func (a *API) processURL(rec *store.IndexRecord) {
 	_ = a.Store.Put(rec)
 
 	// --- 1. Crawling: berlaku untuk URL dari domain manapun, tanpa batasan. ---
-	meta, err := a.Crawler.Fetch(rec.URL)
+	meta, crawlErr := a.Crawler.Fetch(rec.URL)
 	if meta != nil {
 		rec.Meta = meta
 	}
-	if err != nil {
-		rec.Status = store.StatusFailed
-		rec.Error = err.Error()
+
+	if crawlErr != nil {
+		// PENTING: kegagalan crawl (403/404/timeout/dll) TIDAK menghentikan
+		// proses di sini. IndexNow cuma butuh tahu URL-nya ada supaya bisa
+		// diberitahukan ke mesin pencari -- bukan butuh isi halaman berhasil
+		// dibaca dulu. Search engine yang nanti akan crawl URL itu sendiri
+		// secara terpisah. Jadi tetap lanjut ke tahap submit meski crawl
+		// internal gagal (misalnya situs target punya bot-protection yang
+		// menolak User-Agent crawler kita dengan 403).
+		rec.Status = store.StatusCrawled
+		rec.Error = "crawl gagal (" + crawlErr.Error() + "), tetap lanjut submit indexing"
 		_ = a.Store.Put(rec)
-		log.Printf("crawl gagal untuk %s: %v", rec.URL, err)
-		return
+		log.Printf("crawl gagal untuk %s: %v -- tetap lanjut submit indexnow", rec.URL, crawlErr)
+	} else {
+		rec.Status = store.StatusCrawled
+		rec.Error = ""
+		_ = a.Store.Put(rec)
 	}
-	rec.Status = store.StatusCrawled
-	rec.Error = ""
-	_ = a.Store.Put(rec)
 
 	// --- 2. Submit ke IndexNow: dikirim ke BEBERAPA endpoint secara
 	// terpisah (api.indexnow.org, Bing, Yandex). Hasil tiap endpoint
@@ -173,7 +181,11 @@ func (a *API) processURL(rec *store.IndexRecord) {
 
 	if len(submitted) == 0 {
 		rec.Status = store.StatusFailed
-		rec.Error = "crawl sukses, tapi semua endpoint indexing gagal: " + strings.Join(failedMsgs, "; ")
+		msg := "semua endpoint indexing gagal: " + strings.Join(failedMsgs, "; ")
+		if crawlErr != nil {
+			msg = "crawl gagal (" + crawlErr.Error() + "); " + msg
+		}
+		rec.Error = msg
 		_ = a.Store.Put(rec)
 		log.Printf("indexnow submit gagal total untuk %s: %v", rec.URL, failedMsgs)
 		return
@@ -181,13 +193,18 @@ func (a *API) processURL(rec *store.IndexRecord) {
 
 	rec.Status = store.StatusSubmitted
 	rec.SubmittedTo = submitted
-	if len(failedMsgs) > 0 {
-		rec.Error = "sebagian endpoint gagal: " + strings.Join(failedMsgs, "; ")
-	} else {
-		rec.Error = ""
+
+	var noteParts []string
+	if crawlErr != nil {
+		noteParts = append(noteParts, "crawl gagal: "+crawlErr.Error())
 	}
+	if len(failedMsgs) > 0 {
+		noteParts = append(noteParts, "sebagian endpoint gagal: "+strings.Join(failedMsgs, "; "))
+	}
+	rec.Error = strings.Join(noteParts, "; ")
+
 	_ = a.Store.Put(rec)
-	log.Printf("submit untuk %s -> sukses: %v, gagal: %v", rec.URL, submitted, failedMsgs)
+	log.Printf("submit untuk %s -> sukses: %v, gagal: %v (crawlErr: %v)", rec.URL, submitted, failedMsgs, crawlErr)
 }
 
 func dedupe(in []string) []string {
