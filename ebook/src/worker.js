@@ -21,6 +21,8 @@
  *                                straight from the R2 bucket
  *   GET    /read/:id         -> public, server-rendered "read online" page
  *                                built from a book's `chapters` field
+ *   GET    /sitemap.xml      -> public, auto-generated sitemap listing
+ *                                every book that has a "Baca Online" page
  *   anything else            -> served from static files in this folder
  */
 
@@ -72,6 +74,16 @@ function html(markup, status = 200) {
   return new Response(markup, {
     status,
     headers: { "content-type": "text/html; charset=utf-8" },
+  });
+}
+
+function xml(markup, status = 200) {
+  return new Response(markup, {
+    status,
+    headers: {
+      "content-type": "application/xml; charset=utf-8",
+      "cache-control": "public, max-age=3600",
+    },
   });
 }
 
@@ -151,6 +163,15 @@ function escapeHtml(str) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function escapeXml(str) {
+  return String(str ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
 }
 
 // Turn plain-text chapter content into paragraphs. Blank lines separate
@@ -442,6 +463,44 @@ function renderNotFoundPage(baseUrl) {
 </html>`;
 }
 
+/* ---------------------------------------------------------------------- *
+ * Sitemap — lists the root "/ebook/" shelf page plus every book's
+ * "/ebook/read/:id" page, but only for books that actually have chapters
+ * filled in (an empty reader page isn't worth indexing).
+ * ---------------------------------------------------------------------- */
+
+function renderSitemap(books, siteOrigin, baseUrl) {
+  const now = new Date().toISOString();
+
+  const readableBooks = books.filter(
+    (b) => Array.isArray(b.chapters) && b.chapters.length > 0
+  );
+
+  const shelfEntry = `  <url>
+    <loc>${escapeXml(siteOrigin + baseUrl + "/")}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8000</priority>
+  </url>`;
+
+  const bookEntries = readableBooks
+    .map(
+      (b) => `  <url>
+    <loc>${escapeXml(siteOrigin + baseUrl + "/read/" + encodeURIComponent(b.id))}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7000</priority>
+  </url>`
+    )
+    .join("\n");
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${shelfEntry}
+${bookEntries}
+</urlset>`;
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -576,6 +635,17 @@ export default {
           return html(renderNotFoundPage(baseUrl), 404);
         }
         return html(renderReaderPage(book, baseUrl));
+      }
+
+      // Sitemap — auto-generated from the current book list, so it always
+      // reflects whatever has been published from the admin panel without
+      // needing manual edits. Only books with at least one chapter get a
+      // /read/:id entry; books without chapters yet are left out since
+      // that page would just show the empty-preview state.
+      if (pathname === "/sitemap.xml" && request.method === "GET") {
+        const books = await getBooks(env);
+        const markup = renderSitemap(books, url.origin, BASE_PATH);
+        return xml(markup);
       }
 
       // Not an API route -> serve static files (index.html, admin/index.html, images)
