@@ -397,6 +397,45 @@
   .tw-msg[data-kind="ok"]{ color:var(--ok); }
   .tw-msg[data-kind="err"]{ color:var(--err); }
 
+  /* ---------- ad box lama (Social Bar / banner disturbknockedcaterpillar) —
+       HANYA desktop/PC, disembunyikan total di mobile. Dibiarkan apa
+       adanya, tidak diubah, supaya tidak bentrok dengan AdSense. ---------- */
+  .tw-ad-box{
+    margin-top:20px;
+    border-top:1px solid var(--border);
+    padding-top:20px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+  }
+  .tw-ad-box-label{
+    font-family:var(--font-mono);
+    font-size:10px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin:0;
+  }
+  .tw-ad-box-slot{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-width:160px;
+    min-height:300px;
+    background:rgba(6,9,17,.4);
+    border:1px dashed var(--border);
+    border-radius:10px;
+    overflow:hidden;
+  }
+
+  /* Jaring pengaman CSS: di layar sempit (mobile/tablet kecil) kotak iklan
+     LAMA selalu disembunyikan, apa pun status JS-nya. Kontrol utama tetap
+     di JS (deteksi device), ini hanya lapisan cadangan. */
+  @media (max-width: 768px){
+    .tw-ad-box{ display:none !important; }
+  }
+
   /* ---------- kotak AdSense — tampil di SEMUA device (HP & PC), full responsif ---------- */
   .tw-adsense-box{
     margin-top:20px;
@@ -799,6 +838,14 @@ https://situsmu.com/backlink-target"
       <p class="tw-form-hint">Satu URL per baris, dapat dicampur antara artikel, backlink, sitemap.xml, dan RSS feed. Tersedia gratis tanpa perlu mendaftar akun. Setiap URL yang diajukan akan langsung dikirim melalui push API ke jaringan IndexNow pada saat itu juga.</p>
       <p id="tw-idx-msg" class="tw-msg" role="status"></p>
 
+      <!-- Kotak iklan LAMA (Social Bar / banner disturbknockedcaterpillar):
+           HANYA dirender di desktop/PC. Di mobile, div ini tetap kosong
+           dan disembunyikan total lewat JS + CSS. Dibiarkan tidak berubah. -->
+      <div class="tw-ad-box" id="tw-ad-box">
+        <p class="tw-ad-box-label">Iklan</p>
+        <div class="tw-ad-box-slot" id="tw-ad-slot"></div>
+      </div>
+
       <!-- Kotak AdSense — tampil di HP maupun PC, full responsif berkat
            data-full-width-responsive="true". -->
       <div class="tw-adsense-box" id="tw-adsense-box">
@@ -911,10 +958,75 @@ https://situsmu.com/backlink-target"
   </div>
 </div>
 
+<!-- CATATAN: script iklan "Social Bar" (overlay) HANYA di-inject lewat JS
+     di bawah, dan HANYA jika perangkat terdeteksi sebagai desktop/PC. Di
+     mobile, script ini tidak pernah dimuat sama sekali. AdSense di atas
+     TIDAK terpengaruh oleh deteksi ini — selalu tampil di semua device. -->
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (function () {
   "use strict";
+
+  /* ============================================================
+     DETEKSI DESKTOP vs MOBILE — mengontrol iklan LAMA (Social Bar /
+     banner disturbknockedcaterpillar) saja. Iklan (kotak iklan lama
+     di dalam panel form + social bar overlay) HANYA akan dimuat/
+     ditampilkan jika perangkat terdeteksi sebagai desktop/PC. Di
+     mobile, kotak iklan lama disembunyikan total dan tidak ada
+     script iklan yang dimuat. Kotak AdSense TIDAK diatur oleh fungsi
+     ini — dia selalu tampil di semua device.
+  ============================================================ */
+
+  function isMobileDevice() {
+    var uaMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(navigator.userAgent);
+    var narrowViewport = window.innerWidth <= 768;
+    var coarsePointer = false;
+    try {
+      coarsePointer = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    } catch (e) { /* abaikan */ }
+    return uaMobile || (narrowViewport && coarsePointer) || narrowViewport;
+  }
+
+  function initAdsIfDesktop() {
+    var adBox = document.getElementById('tw-ad-box');
+
+    if (isMobileDevice()) {
+      // Mobile/tablet kecil: sembunyikan total kotak iklan lama, jangan
+      // muat script iklan apa pun (baik banner maupun social bar overlay).
+      if (adBox) adBox.style.display = 'none';
+      return;
+    }
+
+    // Desktop/PC: tampilkan kotak iklan lama dan muat script-script iklan.
+    if (adBox) adBox.style.display = '';
+
+    var slot = document.getElementById('tw-ad-slot');
+    if (slot) {
+      var optScript = document.createElement('script');
+      optScript.type = 'text/javascript';
+      optScript.text =
+        "atOptions = {" +
+        "'key':'670c3dfdfa30ce76064083d0d8dde152'," +
+        "'format':'iframe'," +
+        "'height':300," +
+        "'width':160," +
+        "'params':{}" +
+        "};";
+      slot.appendChild(optScript);
+
+      var invokeScript = document.createElement('script');
+      invokeScript.src = 'https://disturbknockedcaterpillar.com/670c3dfdfa30ce76064083d0d8dde152/invoke.js';
+      slot.appendChild(invokeScript);
+    }
+
+    // Social bar (overlay ad network) — hanya di-inject di desktop.
+    var socialScript = document.createElement('script');
+    socialScript.src = 'https://disturbknockedcaterpillar.com/23/ca/82/23ca828838893778d760b727c9a62f7a.js';
+    document.body.appendChild(socialScript);
+  }
+
+  initAdsIfDesktop();
 
   /* ============================================================
      3D SIGNAL HUB
