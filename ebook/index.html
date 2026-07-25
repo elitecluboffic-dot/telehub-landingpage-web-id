@@ -211,14 +211,6 @@
     display:none;
   }
 
-  /* Graduated breakpoints instead of a single 600px cutoff — phones vary
-     a lot in effective CSS width (390–430 for most, but some run wider),
-     so the photo now scales up progressively as the screen narrows,
-     rather than jumping from "small desktop-style" straight to "big
-     centered mobile-style" at one exact pixel value. This means devices
-     that fall between the old breakpoints (e.g. ~650–760px effective
-     width) still get a reasonably large, centered photo instead of the
-     small right-aligned desktop version. */
   @media (max-width:900px){
     .hero-photo-wrap{ width:66%; }
   }
@@ -443,10 +435,6 @@
     line-height:1.4;
   }
 
-  /* Uploaded-image cover: photo as background instead of gradient, with a
-     dark overlay at the bottom so the title/tagline stay readable. Title
-     and tagline are pinned to the bottom of the image here instead of the
-     36%-from-top position used for gradient covers. */
   .book-cover.book-cover-image{
     background-size:cover;
     background-position:center;
@@ -528,6 +516,17 @@
     white-space:nowrap;
   }
   .read-btn:hover{ border-color:var(--cream); transform:translateY(-2px); }
+
+  /* When a book only has the read-online action (no WhatsApp button next
+     to it, because it's free), let it take the gold "primary" treatment
+     instead of the outline style, so the row still has a clear default
+     action instead of looking like a secondary/ghost-only card. */
+  .read-btn.read-btn-solo{
+    background:var(--gold);
+    border-color:var(--gold);
+    color:#241708;
+  }
+  .read-btn.read-btn-solo:hover{ transform:translateY(-2px); }
 
   .book-card.placeholder{
     background:transparent;
@@ -759,16 +758,26 @@
     return typeof cover === 'string' && cover.trim() && !KNOWN_COVER_PRESETS.includes(cover);
   }
 
-  function readOnlineButton(book){
+  // A book counts as "free to read" once it has at least one chapter filled
+  // in from the admin panel. For those, only show "Baca Online" — showing
+  // "Pesan via WhatsApp" next to it implied the free preview also needed a
+  // transaction, which was confusing. Books without chapters yet still only
+  // get "Pesan via WhatsApp", since there's nothing free to read yet.
+  function bookActionsHtml(book, waLink){
     const hasChapters = Array.isArray(book.chapters) && book.chapters.length > 0;
-    if (!hasChapters) return '';
-    return `<a href="/ebook/read/${encodeURIComponent(book.id)}" class="read-btn">Baca Online</a>`;
+
+    if (hasChapters) {
+      return `<a href="/ebook/read/${encodeURIComponent(book.id)}" class="read-btn read-btn-solo">Baca Online</a>`;
+    }
+
+    return `<a href="${waLink}" class="buy-btn" target="_blank" rel="noopener">Pesan via WhatsApp</a>`;
   }
 
   function renderBookCard(book, covers){
     const waLink = book.waNumber
       ? `https://wa.me/${book.waNumber}?text=${encodeURIComponent(book.waMessage || ('Halo, saya mau pesan ebook ' + book.title))}`
       : '#';
+    const actionsHtml = bookActionsHtml(book, waLink);
 
     const article = document.createElement('article');
     article.className = 'book-card';
@@ -789,8 +798,7 @@
           <div class="row">
             <span class="price">${escapeHtml(book.priceLabel || 'Ebook · PDF')}</span>
             <div class="row-actions">
-              ${readOnlineButton(book)}
-              <a href="${waLink}" class="buy-btn" target="_blank" rel="noopener">Pesan via WhatsApp</a>
+              ${actionsHtml}
             </div>
           </div>
         </div>`;
@@ -820,8 +828,7 @@
         <div class="row">
           <span class="price">${escapeHtml(book.priceLabel || 'Ebook · PDF')}</span>
           <div class="row-actions">
-            ${readOnlineButton(book)}
-            <a href="${waLink}" class="buy-btn" target="_blank" rel="noopener">Pesan via WhatsApp</a>
+            ${actionsHtml}
           </div>
         </div>
       </div>`;
