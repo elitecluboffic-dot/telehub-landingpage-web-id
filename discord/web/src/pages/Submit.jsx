@@ -9,6 +9,7 @@ const initialForm = {
   icon_url: "",
   email: "",
   tagsInput: "",
+  paymentMethod: "",
 };
 
 export default function Submit() {
@@ -38,7 +39,7 @@ export default function Submit() {
         tags,
       });
       setStatus("redirecting");
-      const { paymentUrl } = await createPayment(id);
+      const { paymentUrl } = await createPayment(id, form.paymentMethod);
       // Lempar user ke halaman pembayaran Duitku
       window.location.href = paymentUrl;
     } catch (err) {
@@ -110,6 +111,26 @@ export default function Submit() {
             onChange={(e) => updateField("description", e.target.value)}
             placeholder="Ceritain server kamu di sini..."
           />
+        </label>
+        <label>
+          Metode pembayaran
+          <select
+            required
+            value={form.paymentMethod}
+            onChange={(e) => updateField("paymentMethod", e.target.value)}
+          >
+            <option value="">-- Pilih metode --</option>
+            <option value="BC">BCA Virtual Account</option>
+            <option value="M2">Mandiri Virtual Account</option>
+            <option value="VA">Maybank Virtual Account</option>
+            <option value="I1">BNI Virtual Account</option>
+            <option value="BT">Permata Bank Virtual Account</option>
+            <option value="OV">OVO (Support Void)</option>
+            <option value="DA">DANA</option>
+            <option value="IR">Indomaret</option>
+            <option value="DM">Danamon Virtual Account</option>
+            <option value="BV">BSI Virtual Account</option>
+          </select>
         </label>
         {errorMsg ? <p className="submit-form__error">{errorMsg}</p> : null}
         <button type="submit" disabled={status === "submitting" || status === "redirecting"}>
