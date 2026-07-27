@@ -4,21 +4,18 @@
   align-items: center;
   justify-content: center;
 }
-
 .admin-login form {
   display: flex;
   flex-direction: column;
   gap: 12px;
   width: 280px;
 }
-
 .admin-login h1 {
   font-family: var(--font-display);
   font-size: 22px;
   margin: 0 0 6px;
   text-align: center;
 }
-
 .admin-login input {
   padding: 12px 14px;
   border-radius: 10px;
@@ -26,7 +23,6 @@
   background: var(--surface);
   color: var(--text);
 }
-
 .admin-login button {
   padding: 12px;
   border-radius: 10px;
@@ -36,25 +32,41 @@
   font-weight: 600;
   cursor: pointer;
 }
-
 .admin-page {
   max-width: 900px;
   margin: 0 auto;
   padding: 48px 24px 80px;
 }
-
-.admin-page h1 {
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.admin-header h1 {
   font-family: var(--font-display);
   font-size: 26px;
-  margin: 0 0 20px;
+  margin: 0;
 }
-
+.btn-logout {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-logout:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
 .admin-tabs {
   display: flex;
   gap: 8px;
   margin-bottom: 24px;
 }
-
 .admin-tab {
   font-size: 13px;
   padding: 8px 16px;
@@ -64,19 +76,16 @@
   color: var(--text-muted);
   cursor: pointer;
 }
-
 .admin-tab--active {
   background: var(--brand);
   border-color: var(--brand);
   color: white;
 }
-
 .admin-list {
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
-
 .admin-row {
   display: flex;
   justify-content: space-between;
@@ -86,41 +95,34 @@
   border: 1px solid var(--border);
   border-radius: 14px;
 }
-
 .admin-row__info {
   min-width: 0;
 }
-
 .admin-row__title {
   display: flex;
   align-items: center;
   gap: 10px;
   margin-bottom: 4px;
 }
-
 .admin-row__title strong {
   font-family: var(--font-display);
   font-size: 15px;
 }
-
 .admin-row a {
   font-size: 12px;
   color: var(--brand);
   word-break: break-all;
 }
-
 .admin-row p {
   font-size: 13px;
   color: var(--text-muted);
   margin: 6px 0 0;
 }
-
 .admin-row__meta {
   font-family: var(--font-mono);
   font-size: 11px !important;
   margin-top: 8px !important;
 }
-
 .pay-status {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -130,19 +132,16 @@
   color: var(--pending);
   border: 1px solid var(--pending);
 }
-
 .pay-status--paid {
   color: var(--verified);
   border-color: var(--verified);
 }
-
 .admin-row__actions {
   display: flex;
   flex-direction: column;
   gap: 8px;
   flex-shrink: 0;
 }
-
 .btn-approve,
 .btn-reject {
   padding: 8px 16px;
@@ -152,24 +151,20 @@
   font-weight: 600;
   cursor: pointer;
 }
-
 .btn-approve {
   background: var(--verified);
   color: #06210f;
 }
-
 .btn-reject {
   background: transparent;
   border: 1px solid var(--danger);
   color: var(--danger);
 }
-
 .state-text {
   text-align: center;
   color: var(--text-muted);
   padding: 30px 0;
 }
-
 .state-text--error {
   color: var(--danger);
 }
