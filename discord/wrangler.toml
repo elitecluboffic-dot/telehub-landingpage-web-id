@@ -1,6 +1,7 @@
 name = "telehub-api"
 main = "src/index.js"
-compatibility_date = "2024-11-01"
+compatibility_date = "2026-07-27"
+workers_dev = false
 
 # Build otomatis: Cloudflare bakal jalanin perintah ini DULU sebelum deploy,
 # biar folder web/dist (hasil build React) selalu ada waktu wrangler deploy
@@ -13,6 +14,13 @@ command = "cd web && npm install && npm run build"
 [assets]
 directory = "./web/dist"
 binding = "ASSETS"
+
+# Route custom domain: biar Worker ini tetap ke-mapping ke telehub.web.id/discord
+# (kalau nggak ada ini, Cloudflare bakal hapus route ini setiap kali deploy
+# dan Worker cuma bisa diakses lewat *.workers.dev)
+[[routes]]
+pattern = "telehub.web.id/discord*"
+zone_name = "telehub.web.id"
 
 # Database D1 - buat dulu dengan: wrangler d1 create telehub-db
 # Terus copy "database_id" yang muncul ke sini
