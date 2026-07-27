@@ -40,12 +40,9 @@ export default function App() {
           <a href="#/submit">Promosikan Server</a>
         </div>
       </nav>
-
       <main>{page}</main>
-
       <footer className="footer">
         <span>Telehub — direktori server Discord Indonesia</span>
-        <a href="#/admin">Admin</a>
       </footer>
     </div>
   );
