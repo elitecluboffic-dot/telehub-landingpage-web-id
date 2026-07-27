@@ -1,0 +1,21 @@
+name = "telehub-api"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+# Database D1 - buat dulu dengan: wrangler d1 create telehub-db
+# Terus copy "database_id" yang muncul ke sini
+[[d1_databases]]
+binding = "DB"
+database_name = "telehub-db"
+database_id = "GANTI_DENGAN_DATABASE_ID_HASIL_WRANGLER_D1_CREATE"
+
+# Variabel non-rahasia (boleh langsung di sini)
+[vars]
+DUITKU_MERCHANT_CODE = "GANTI_DENGAN_MERCHANT_CODE_DUITKU"
+DUITKU_ENV = "sandbox"                     # ganti "production" kalau udah live
+DUITKU_CALLBACK_URL = "https://telehub.web.id/discord/callback"
+DUITKU_RETURN_URL = "https://<username>.github.io/telehub-landingpage-web-id/#/selesai"
+
+# Rahasia (JANGAN taruh di sini, set lewat CLI, lihat README):
+# - DUITKU_API_KEY
+# - ADMIN_KEY
