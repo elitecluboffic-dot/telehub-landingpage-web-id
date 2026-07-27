@@ -1,8 +1,10 @@
 // api.js
-// Base URL = domain custom lu. Cloudflare Worker di-route khusus buat
-// path "/discord/*" ke domain ini, jadi SEMUA path di bawah harus mulai
-// dengan "/discord/...".
-export const API_BASE = "https://telehub.web.id";
+// API_BASE dikosongin (path relatif) karena sekarang frontend dan backend
+// dilayani dari domain yang SAMA (telehub.web.id) lewat server Express yang
+// sama — bukan lagi Cloudflare Worker di domain/subdomain terpisah kayak
+// versi sebelumnya. Jadi fetch("/discord/servers") otomatis nembak ke
+// https://telehub.web.id/discord/servers, gak perlu ditulis domainnya.
+export const API_BASE = "";
 
 async function request(path, options = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
