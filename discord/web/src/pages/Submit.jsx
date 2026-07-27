@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { submitServer, createPayment } from "../api";
 import "./Submit.css";
 
@@ -12,6 +12,86 @@ const initialForm = {
   paymentMethod: "",
 };
 
+const PAYMENT_METHODS = [
+  { value: "BC", label: "BCA Virtual Account" },
+  { value: "M2", label: "Mandiri Virtual Account" },
+  { value: "VA", label: "Maybank Virtual Account" },
+  { value: "I1", label: "BNI Virtual Account" },
+  { value: "BT", label: "Permata Bank Virtual Account" },
+  { value: "OV", label: "OVO (Support Void)" },
+  { value: "DA", label: "DANA" },
+  { value: "IR", label: "Indomaret" },
+  { value: "DM", label: "Danamon Virtual Account" },
+  { value: "BV", label: "BSI Virtual Account" },
+];
+
+function PaymentMethodSelect({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const wrapperRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selected = PAYMENT_METHODS.find((m) => m.value === value);
+
+  return (
+    <div className="payment-select" ref={wrapperRef}>
+      <button
+        type="button"
+        className={`payment-select__trigger ${open ? "is-open" : ""}`}
+        onClick={() => setOpen((prev) => !prev)}
+      >
+        <span className={selected ? "" : "payment-select__placeholder"}>
+          {selected ? selected.label : "-- Pilih metode --"}
+        </span>
+        <svg
+          className="payment-select__arrow"
+          width="14"
+          height="8"
+          viewBox="0 0 14 8"
+          fill="none"
+        >
+          <path
+            d="M1 1L7 7L13 1"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+
+      {open && (
+        <ul className="payment-select__menu" role="listbox">
+          {PAYMENT_METHODS.map((method) => (
+            <li
+              key={method.value}
+              role="option"
+              aria-selected={method.value === value}
+              className={`payment-select__option ${
+                method.value === value ? "is-selected" : ""
+              }`}
+              onClick={() => {
+                onChange(method.value);
+                setOpen(false);
+              }}
+            >
+              {method.label}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export default function Submit() {
   const [form, setForm] = useState(initialForm);
   const [status, setStatus] = useState("idle"); // idle | submitting | redirecting | error
@@ -23,6 +103,13 @@ export default function Submit() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+
+    if (!form.paymentMethod) {
+      setStatus("error");
+      setErrorMsg("Pilih metode pembayaran dulu ya.");
+      return;
+    }
+
     setStatus("submitting");
     setErrorMsg("");
     try {
@@ -114,23 +201,10 @@ export default function Submit() {
         </label>
         <label>
           Metode pembayaran
-          <select
-            required
+          <PaymentMethodSelect
             value={form.paymentMethod}
-            onChange={(e) => updateField("paymentMethod", e.target.value)}
-          >
-            <option value="">-- Pilih metode --</option>
-            <option value="BC">BCA Virtual Account</option>
-            <option value="M2">Mandiri Virtual Account</option>
-            <option value="VA">Maybank Virtual Account</option>
-            <option value="I1">BNI Virtual Account</option>
-            <option value="BT">Permata Bank Virtual Account</option>
-            <option value="OV">OVO (Support Void)</option>
-            <option value="DA">DANA</option>
-            <option value="IR">Indomaret</option>
-            <option value="DM">Danamon Virtual Account</option>
-            <option value="BV">BSI Virtual Account</option>
-          </select>
+            onChange={(val) => updateField("paymentMethod", val)}
+          />
         </label>
         {errorMsg ? <p className="submit-form__error">{errorMsg}</p> : null}
         <button type="submit" disabled={status === "submitting" || status === "redirecting"}>
