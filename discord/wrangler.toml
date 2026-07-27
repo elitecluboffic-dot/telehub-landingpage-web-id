@@ -11,7 +11,7 @@ database_id = "94715e3b-25a8-46f4-8bd9-0cb795ac771c"
 
 # Variabel non-rahasia (boleh langsung di sini)
 [vars]
-DUITKU_MERCHANT_CODE = "51aba54c72927a5c95db38ad91ab7779"
+DUITKU_MERCHANT_CODE = "DS33445"
 DUITKU_ENV = "sandbox"                     # ganti "production" kalau udah live
 DUITKU_CALLBACK_URL = "https://telehub.web.id/discord/callback"
 DUITKU_RETURN_URL = "https://<username>.github.io/telehub-landingpage-web-id/#/selesai"
