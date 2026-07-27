@@ -3,31 +3,26 @@
   margin: 0 auto;
   padding: 56px 24px 80px;
 }
-
 .submit-page h1 {
   font-family: var(--font-display);
   font-size: 30px;
   margin: 0 0 12px;
 }
-
 .submit-page__subtitle {
   color: var(--text-muted);
   font-size: 14px;
   line-height: 1.6;
   margin-bottom: 32px;
 }
-
 .badge-verified-inline {
   color: var(--verified);
   font-weight: 600;
 }
-
 .submit-form {
   display: flex;
   flex-direction: column;
   gap: 18px;
 }
-
 .submit-form label {
   display: flex;
   flex-direction: column;
@@ -35,7 +30,6 @@
   font-size: 13px;
   color: var(--text-muted);
 }
-
 .submit-form input,
 .submit-form textarea {
   font-family: var(--font-body);
@@ -47,12 +41,10 @@
   color: var(--text);
   resize: vertical;
 }
-
 .submit-form input:focus,
 .submit-form textarea:focus {
   border-color: var(--brand);
 }
-
 .submit-form button {
   margin-top: 8px;
   padding: 14px;
@@ -64,42 +56,87 @@
   font-size: 15px;
   cursor: pointer;
 }
-
 .submit-form button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
-
 .submit-form__error {
   color: var(--danger);
   font-size: 13px;
   margin: 0;
 }
 
-.submit-form select {
+/* Custom dropdown metode pembayaran */
+.payment-select {
+  position: relative;
+  width: 100%;
+}
+
+.payment-select__trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   font-family: var(--font-body);
   font-size: 14px;
   padding: 12px 14px;
   border-radius: 10px;
   border: 1px solid var(--border);
-  background-color: var(--surface);
-  color: var(--text);
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  cursor: pointer;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='8' viewBox='0 0 14 8' fill='none'><path d='M1 1L7 7L13 1' stroke='%238b8b9a' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>");
-  background-repeat: no-repeat;
-  background-position: right 14px center;
-  padding-right: 40px;
-}
-
-.submit-form select:focus {
-  border-color: var(--brand);
-  outline: none;
-}
-
-.submit-form select option {
   background: var(--surface);
   color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.payment-select__trigger.is-open {
+  border-color: var(--brand);
+}
+
+.payment-select__placeholder {
+  color: var(--text-muted);
+}
+
+.payment-select__arrow {
+  flex-shrink: 0;
+  margin-left: 12px;
+  color: var(--text-muted);
+  transition: transform 0.15s ease;
+}
+
+.payment-select__trigger.is-open .payment-select__arrow {
+  transform: rotate(180deg);
+}
+
+.payment-select__menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.payment-select__option {
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.payment-select__option:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.payment-select__option.is-selected {
+  background: var(--brand);
+  color: white;
 }
