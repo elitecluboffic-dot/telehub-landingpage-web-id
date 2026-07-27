@@ -171,8 +171,14 @@ async function paymentCallback(request, env) {
   }
 
   if (resultCode === "00" || resultCode === 0 || resultCode === "0") {
+    // Auto-approve: begitu pembayaran sukses, server langsung tampil publik
+    // (status approved + verified). Admin tetap bisa cek & tendang (reject)
+    // belakangan lewat panel admin kalau isinya bermasalah -- ini moderasi
+    // pasca-tayang, bukan gerbang sebelum tayang.
     await env.DB.prepare(
-      `UPDATE servers SET payment_status = 'paid' WHERE merchant_order_id = ?`
+      `UPDATE servers
+       SET payment_status = 'paid', status = 'approved', verified = 1
+       WHERE merchant_order_id = ?`
     )
       .bind(merchantOrderId)
       .run();
