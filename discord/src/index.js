@@ -75,6 +75,7 @@ async function submitServer(request, env) {
 async function createPayment(request, env) {
   const body = await request.json().catch(() => null);
   if (!body || !body.serverId) return json({ error: "serverId wajib diisi" }, 400);
+  if (!body.paymentMethod) return json({ error: "paymentMethod wajib diisi" }, 400);
 
   const server = await env.DB.prepare(`SELECT * FROM servers WHERE id = ?`)
     .bind(body.serverId)
@@ -96,6 +97,7 @@ async function createPayment(request, env) {
   const payload = {
     merchantCode: env.DUITKU_MERCHANT_CODE,
     paymentAmount,
+    paymentMethod: body.paymentMethod,
     merchantOrderId,
     productDetails: `Promosi server Discord di Telehub: ${server.name}`,
     email: server.email,
