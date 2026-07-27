@@ -11,9 +11,13 @@ command = "cd web && npm install && npm run build"
 
 # Assets: ini yang bikin Worker ini bisa nampilin halaman React-nya sendiri
 # (index.html, JS, CSS hasil build) tanpa perlu server terpisah.
+# not_found_handling: karena ini React SPA, path apapun yang gak match file
+# statis (misal /discord, /discord/apapun) tetap di-serve index.html,
+# biar client-side routing React yang nentuin halaman apa yang ditampilkan.
 [assets]
 directory = "./web/dist"
 binding = "ASSETS"
+not_found_handling = "single-page-application"
 
 # Route custom domain: biar Worker ini tetap ke-mapping ke telehub.web.id/discord
 # (kalau nggak ada ini, Cloudflare bakal hapus route ini setiap kali deploy
