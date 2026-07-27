@@ -24,13 +24,11 @@ export default function Submit() {
     e.preventDefault();
     setStatus("submitting");
     setErrorMsg("");
-
     try {
       const tags = form.tagsInput
         .split(",")
         .map((t) => t.trim())
         .filter(Boolean);
-
       const { id } = await submitServer({
         name: form.name,
         invite_link: form.invite_link,
@@ -39,10 +37,8 @@ export default function Submit() {
         email: form.email,
         tags,
       });
-
       setStatus("redirecting");
       const { paymentUrl } = await createPayment(id);
-
       // Lempar user ke halaman pembayaran Duitku
       window.location.href = paymentUrl;
     } catch (err) {
@@ -56,10 +52,9 @@ export default function Submit() {
       <h1>Promosikan server-mu</h1>
       <p className="submit-page__subtitle">
         Biaya promosi <strong>Rp25.000</strong> per server. Setelah pembayaran dikonfirmasi,
-        server kamu masuk antrean review admin sebelum tampil dengan badge{" "}
+        server kamu langsung tampil dengan badge{" "}
         <span className="badge-verified-inline">✓ terverifikasi</span>.
       </p>
-
       <form onSubmit={handleSubmit} className="submit-form">
         <label>
           Nama server
@@ -70,7 +65,6 @@ export default function Submit() {
             placeholder="Contoh: Warung Kopi Gaming"
           />
         </label>
-
         <label>
           Link invite Discord
           <input
@@ -81,7 +75,6 @@ export default function Submit() {
             placeholder="https://discord.gg/xxxxxxx"
           />
         </label>
-
         <label>
           Email (buat konfirmasi pembayaran)
           <input
@@ -92,7 +85,6 @@ export default function Submit() {
             placeholder="kamu@email.com"
           />
         </label>
-
         <label>
           URL icon server (opsional)
           <input
@@ -102,7 +94,6 @@ export default function Submit() {
             placeholder="https://..."
           />
         </label>
-
         <label>
           Tag (pisahin pakai koma)
           <input
@@ -111,7 +102,6 @@ export default function Submit() {
             placeholder="gaming, anime, santai"
           />
         </label>
-
         <label>
           Deskripsi
           <textarea
@@ -121,9 +111,7 @@ export default function Submit() {
             placeholder="Ceritain server kamu di sini..."
           />
         </label>
-
         {errorMsg ? <p className="submit-form__error">{errorMsg}</p> : null}
-
         <button type="submit" disabled={status === "submitting" || status === "redirecting"}>
           {status === "submitting"
             ? "Menyimpan..."
