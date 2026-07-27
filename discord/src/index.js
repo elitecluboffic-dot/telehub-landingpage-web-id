@@ -31,19 +31,6 @@ function isAdmin(request, env) {
   return !!key && key === env.ADMIN_KEY;
 }
 
-async function hmacSha256Hex(message, key) {
-  const enc = new TextEncoder();
-  const cryptoKey = await crypto.subtle.importKey(
-    "raw",
-    enc.encode(key),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-  const sig = await crypto.subtle.sign("HMAC", cryptoKey, enc.encode(message));
-  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
 // ---- Handlers ----
 
 async function listApprovedServers(env) {
@@ -100,8 +87,11 @@ async function createPayment(request, env) {
 
   const paymentAmount = 25000; // harga tetap: 25k per channel/server
   const merchantOrderId = `TH-${server.id.slice(0, 8)}-${Date.now()}`;
-  const stringToSign = `${env.DUITKU_MERCHANT_CODE}${merchantOrderId}${paymentAmount}`;
-  const signature = await hmacSha256Hex(stringToSign, env.DUITKU_API_KEY);
+
+  // Duitku Create Invoice (v2 inquiry) signature harus MD5, BUKAN HMAC-SHA256:
+  // signature = MD5(merchantCode + merchantOrderId + paymentAmount + apiKey)
+  const stringToSign = `${env.DUITKU_MERCHANT_CODE}${merchantOrderId}${paymentAmount}${env.DUITKU_API_KEY}`;
+  const signature = md5Hex(stringToSign);
 
   const payload = {
     merchantCode: env.DUITKU_MERCHANT_CODE,
