@@ -270,6 +270,12 @@ export default {
         return await adminReject(request, env, rejectMatch[1]);
       }
 
+      // Nggak match API route manapun -> anggap ini request buat halaman/file
+      // statis React (index.html, JS, CSS, dll), lempar ke asset handler.
+      if (env.ASSETS) {
+        return await env.ASSETS.fetch(request);
+      }
+
       return json({ error: "Not found" }, 404);
     } catch (err) {
       return json({ error: err.message || "Internal error" }, 500);
