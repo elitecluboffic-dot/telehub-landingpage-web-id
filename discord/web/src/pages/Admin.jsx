@@ -37,6 +37,12 @@ export default function Admin() {
     setAdminKey(inputKey);
   }
 
+  function handleLogout() {
+    sessionStorage.removeItem(STORAGE_KEY);
+    setAdminKey("");
+    setInputKey("");
+  }
+
   async function handleApprove(id) {
     try {
       await adminApprove(id, adminKey);
@@ -75,7 +81,12 @@ export default function Admin() {
 
   return (
     <div className="admin-page">
-      <h1>Panel Admin</h1>
+      <div className="admin-header">
+        <h1>Panel Admin</h1>
+        <button className="btn-logout" onClick={handleLogout}>
+          Logout
+        </button>
+      </div>
 
       <div className="admin-tabs">
         {["pending", "approved", "rejected"].map((s) => (
