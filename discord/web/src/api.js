@@ -12,13 +12,10 @@ async function request(path, options = {}) {
       ...(options.headers || {}),
     },
   });
-
   const data = await res.json().catch(() => ({}));
-
   if (!res.ok) {
     throw new Error(data.error || "Terjadi kesalahan, coba lagi.");
   }
-
   return data;
 }
 
@@ -33,10 +30,10 @@ export function submitServer(payload) {
   });
 }
 
-export function createPayment(serverId) {
+export function createPayment(serverId, paymentMethod) {
   return request("/discord/payment/create", {
     method: "POST",
-    body: JSON.stringify({ serverId }),
+    body: JSON.stringify({ serverId, paymentMethod }),
   });
 }
 
