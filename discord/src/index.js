@@ -121,13 +121,24 @@ async function createPayment(request, env) {
       ? "https://passport.duitku.com/webapi/api/merchant/v2/inquiry"
       : "https://sandbox.duitku.com/webapi/api/merchant/v2/inquiry";
 
+  // Logging sementara buat debug -- lihat lewat `wrangler tail`
+  console.log("Duitku request payload:", JSON.stringify(payload));
+
   const res = await fetch(duitkuUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 
-  const data = await res.json().catch(() => null);
+  const rawText = await res.text();
+  console.log("Duitku raw response:", res.status, rawText);
+
+  let data = null;
+  try {
+    data = JSON.parse(rawText);
+  } catch {
+    data = null;
+  }
 
   if (!data || data.statusCode !== "00") {
     return json({ error: (data && data.statusMessage) || "Gagal membuat transaksi Duitku" }, 400);
