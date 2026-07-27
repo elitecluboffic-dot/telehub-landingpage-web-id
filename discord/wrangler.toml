@@ -7,7 +7,7 @@ compatibility_date = "2024-11-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "telehub-db"
-database_id = "GANTI_DENGAN_DATABASE_ID_HASIL_WRANGLER_D1_CREATE"
+database_id = "94715e3b-25a8-46f4-8bd9-0cb795ac771c"
 
 # Variabel non-rahasia (boleh langsung di sini)
 [vars]
