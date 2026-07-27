@@ -2,9 +2,14 @@ name = "telehub-api"
 main = "src/index.js"
 compatibility_date = "2024-11-01"
 
+# Build otomatis: Cloudflare bakal jalanin perintah ini DULU sebelum deploy,
+# biar folder web/dist (hasil build React) selalu ada waktu wrangler deploy
+# jalan -- baik lewat GitHub Actions/Git integration MAUPUN manual di lokal.
+[build]
+command = "cd web && npm install && npm run build"
+
 # Assets: ini yang bikin Worker ini bisa nampilin halaman React-nya sendiri
 # (index.html, JS, CSS hasil build) tanpa perlu server terpisah.
-# Foldernya harus udah di-build dulu: cd web && npm install && npm run build
 [assets]
 directory = "./web/dist"
 binding = "ASSETS"
