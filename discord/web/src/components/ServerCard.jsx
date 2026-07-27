@@ -31,7 +31,7 @@ export default function ServerCard({ server }) {
         <p className="server-card__desc">{server.description || "Belum ada deskripsi."}</p>
       </div>
       
-        className="server-card__join"
+      <a className="server-card__join"
         href={server.invite_link}
         target="_blank"
         rel="noopener noreferrer"
