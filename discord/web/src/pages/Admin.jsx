@@ -141,6 +141,12 @@ export default function Admin() {
                   Reject
                 </button>
               </div>
+            ) : status === "approved" ? (
+              <div className="admin-row__actions">
+                <button className="btn-reject" onClick={() => handleReject(server.id)}>
+                  Tendang (Reject)
+                </button>
+              </div>
             ) : null}
           </div>
         ))}
