@@ -10,7 +10,6 @@ export default function ServerCard({ server }) {
           <span>{server.name.charAt(0).toUpperCase()}</span>
         )}
       </div>
-
       <div className="server-card__body">
         <div className="server-card__title-row">
           <h3>{server.name}</h3>
@@ -20,7 +19,6 @@ export default function ServerCard({ server }) {
             </span>
           ) : null}
         </div>
-
         {server.tags?.length ? (
           <div className="server-card__tags">
             {server.tags.map((tag) => (
@@ -30,10 +28,8 @@ export default function ServerCard({ server }) {
             ))}
           </div>
         ) : null}
-
         <p className="server-card__desc">{server.description || "Belum ada deskripsi."}</p>
       </div>
-
       
         className="server-card__join"
         href={server.invite_link}
