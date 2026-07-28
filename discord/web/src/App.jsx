@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Home from "./pages/Home";
 import Submit from "./pages/Submit";
 import Admin from "./pages/Admin";
+import TentangKami from "./pages/TentangKami";
 import "./App.css";
 
 function getRoute() {
@@ -25,6 +26,8 @@ export default function App() {
     page = <Submit />;
   } else if (route.startsWith("/admin")) {
     page = <Admin />;
+  } else if (route.startsWith("/tentang-kami")) {
+    page = <TentangKami />;
   } else {
     page = <Home />;
   }
@@ -38,11 +41,15 @@ export default function App() {
         <div className="navbar__links">
           <a href="#/">Jelajah</a>
           <a href="#/submit">Promosikan Server</a>
+          <a href="#/tentang-kami">Tentang Kami</a>
         </div>
       </nav>
       <main>{page}</main>
       <footer className="footer">
         <span>Telehub — direktori server Discord Indonesia</span>
+        <a href="#/tentang-kami" className="footer__link">
+          Tentang Kami
+        </a>
       </footer>
     </div>
   );
