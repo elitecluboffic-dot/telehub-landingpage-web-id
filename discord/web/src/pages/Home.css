@@ -4,7 +4,109 @@
   padding: 48px 24px 80px;
 }
 
+.hero-stage {
+  position: relative;
+}
+
+.floating-gallery {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.floating-card {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  animation: floaty 6s ease-in-out infinite;
+}
+
+.floating-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.floating-card--1 {
+  width: 76px;
+  height: 76px;
+  top: -28px;
+  left: -20px;
+  transform: rotate(-9deg);
+  animation-delay: 0s;
+}
+
+.floating-card--2 {
+  width: 96px;
+  height: 96px;
+  top: 30px;
+  right: -36px;
+  transform: rotate(7deg);
+  animation-delay: 0.8s;
+}
+
+.floating-card--3 {
+  width: 68px;
+  height: 68px;
+  bottom: 90px;
+  left: -44px;
+  transform: rotate(11deg);
+  animation-delay: 1.4s;
+}
+
+.floating-card--4 {
+  width: 88px;
+  height: 88px;
+  bottom: -24px;
+  right: 90px;
+  transform: rotate(-6deg);
+  animation-delay: 0.4s;
+}
+
+.floating-card--5 {
+  width: 60px;
+  height: 60px;
+  top: 50%;
+  left: -6%;
+  transform: rotate(5deg);
+  animation-delay: 1.8s;
+}
+
+.floating-card--6 {
+  width: 72px;
+  height: 72px;
+  bottom: 20px;
+  right: -6%;
+  transform: rotate(-11deg);
+  animation-delay: 1.1s;
+}
+
+@keyframes floaty {
+  0%, 100% {
+    transform: translateY(0) rotate(var(--r, 0deg));
+  }
+  50% {
+    transform: translateY(-10px) rotate(var(--r, 0deg));
+  }
+}
+
+@media (max-width: 1024px) {
+  .floating-gallery {
+    display: none;
+  }
+}
+
 .home-top {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 32px;
