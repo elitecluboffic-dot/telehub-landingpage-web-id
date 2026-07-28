@@ -1,11 +1,33 @@
 .home {
-  max-width: 1100px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 48px 24px 80px;
 }
+
+.home-top {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  align-items: stretch;
+  margin-bottom: 56px;
+}
+
+.home-top__left,
+.home-top__right {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+@media (max-width: 860px) {
+  .home-top {
+    grid-template-columns: 1fr;
+  }
+}
+
 .hero {
-  text-align: center;
-  padding: 24px 0 40px;
+  text-align: left;
+  padding: 0;
 }
 .hero__ticker {
   display: inline-flex;
@@ -33,14 +55,14 @@
 }
 .hero h1 {
   font-family: var(--font-display);
-  font-size: clamp(28px, 5vw, 44px);
+  font-size: clamp(28px, 4vw, 40px);
   margin: 0 0 12px;
   line-height: 1.15;
 }
 .hero p {
   color: var(--text-muted);
-  max-width: 520px;
-  margin: 0 auto 28px;
+  max-width: 480px;
+  margin: 0 0 28px;
   font-size: 15px;
 }
 .search-input {
@@ -59,7 +81,7 @@
 .tag-filters {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 8px;
   margin-top: 18px;
 }
@@ -93,18 +115,14 @@
   color: var(--danger);
 }
 
-.product-info {
-  text-align: center;
-  padding: 8px 0 48px;
-}
-
 .product-card {
-  max-width: 640px;
-  margin: 0 auto;
-  padding: 36px 28px;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 32px 28px;
   border-radius: 20px;
   border: 1px solid var(--border);
   background: var(--surface);
+  text-align: left;
 }
 
 .product-card__tag {
@@ -130,13 +148,13 @@
 
 .product-card h2 {
   font-family: var(--font-display);
-  font-size: clamp(22px, 4vw, 28px);
+  font-size: clamp(22px, 3vw, 26px);
   margin: 0 0 10px;
 }
 
 .product-card__price {
   font-family: var(--font-mono);
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--brand);
   margin: 0 0 18px;
@@ -154,14 +172,13 @@
   color: var(--text-muted);
   font-size: 14px;
   line-height: 1.6;
-  max-width: 460px;
-  margin: 0 auto 26px;
+  margin: 0 0 26px;
 }
 
 .product-card__features {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 8px;
   margin-bottom: 28px;
 }
@@ -179,7 +196,6 @@
 .product-card__cta {
   display: inline-block;
   width: 100%;
-  max-width: 420px;
   text-align: center;
   padding: 14px;
   border-radius: 12px;
