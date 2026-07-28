@@ -76,22 +76,25 @@ export default function Home() {
 
       <section className="product-info">
         <div className="product-card">
-          <div className="product-card__header">
-            <h2>Promosi Server Discord</h2>
-            <span className="product-card__price">Rp25.000</span>
+          <div className="product-card__tag" aria-hidden="true">
+            <span className="dot" />
+            <span>PRODUK RESMI TELEHUB</span>
           </div>
+          <h2>Promosi Server Discord</h2>
+          <p className="product-card__price">
+            Rp25.000<span>/ server, sekali bayar</span>
+          </p>
           <p className="product-card__desc">
             Tampilkan server Discord kamu di direktori Telehub agar ditemukan ribuan
             pengguna. Setelah pembayaran dikonfirmasi, server kamu langsung tayang
-            dengan badge <strong>✓ terverifikasi</strong> dan bisa dicari lewat nama
-            maupun tag.
+            dengan badge ✓ terverifikasi dan bisa dicari lewat nama maupun tag.
           </p>
-          <ul className="product-card__features">
-            <li>Tampil di halaman direktori publik Telehub</li>
-            <li>Badge "Terverifikasi" pada listing server</li>
-            <li>Bisa dicari dan difilter berdasarkan tag</li>
-            <li>Berlaku selama server aktif dan sesuai ketentuan</li>
-          </ul>
+          <div className="product-card__features">
+            <span className="feature-pill">✓ Tampil di direktori publik</span>
+            <span className="feature-pill">✓ Badge terverifikasi</span>
+            <span className="feature-pill">✓ Bisa dicari & difilter tag</span>
+            <span className="feature-pill">✓ Aktif selama sesuai ketentuan</span>
+          </div>
           <a href="#/submit" className="product-card__cta">
             Promosikan Server Sekarang — Rp25.000
           </a>
