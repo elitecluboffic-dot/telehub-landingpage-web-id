@@ -94,74 +94,92 @@
 }
 
 .product-info {
-  padding: 8px 0 40px;
+  text-align: center;
+  padding: 8px 0 48px;
 }
 
 .product-card {
   max-width: 640px;
   margin: 0 auto;
-  padding: 28px;
-  border-radius: 16px;
+  padding: 36px 28px;
+  border-radius: 20px;
   border: 1px solid var(--border);
   background: var(--surface);
 }
 
-.product-card__header {
-  display: flex;
+.product-card__tag {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--brand);
+  background: transparent;
+  border: 1px solid var(--brand);
+  padding: 6px 14px;
+  border-radius: 999px;
+  margin-bottom: 20px;
 }
 
-.product-card__header h2 {
+.product-card__tag .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--brand);
+}
+
+.product-card h2 {
   font-family: var(--font-display);
-  font-size: 22px;
-  margin: 0;
+  font-size: clamp(22px, 4vw, 28px);
+  margin: 0 0 10px;
 }
 
 .product-card__price {
   font-family: var(--font-mono);
-  font-size: 18px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--brand);
-  white-space: nowrap;
+  margin: 0 0 18px;
+}
+
+.product-card__price span {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-left: 8px;
 }
 
 .product-card__desc {
   color: var(--text-muted);
   font-size: 14px;
   line-height: 1.6;
-  margin: 0 0 18px;
+  max-width: 460px;
+  margin: 0 auto 26px;
 }
 
 .product-card__features {
-  list-style: none;
-  margin: 0 0 24px;
-  padding: 0;
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 28px;
 }
 
-.product-card__features li {
-  font-size: 13px;
-  color: var(--text);
-  padding-left: 22px;
-  position: relative;
-}
-
-.product-card__features li::before {
-  content: "✓";
-  position: absolute;
-  left: 0;
+.feature-pill {
+  font-family: var(--font-mono);
+  font-size: 12px;
   color: var(--verified);
-  font-weight: 700;
+  background: var(--verified-dim);
+  border: 1px solid var(--verified);
+  padding: 7px 14px;
+  border-radius: 999px;
 }
 
 .product-card__cta {
   display: inline-block;
   width: 100%;
+  max-width: 420px;
   text-align: center;
   padding: 14px;
   border-radius: 12px;
@@ -175,12 +193,4 @@
 
 .product-card__cta:hover {
   opacity: 0.92;
-}
-
-@media (max-width: 480px) {
-  .product-card__header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
 }
