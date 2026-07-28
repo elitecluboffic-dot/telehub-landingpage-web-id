@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { adminGetServers, adminApprove, adminReject } from "../api";
+import { adminGetServers, adminApprove, adminReject, adminDelete } from "../api";
 import "./Admin.css";
 
 const STORAGE_KEY = "telehub_admin_key";
@@ -15,6 +15,7 @@ export default function Admin() {
   function loadServers(key, tabStatus) {
     setLoading(true);
     setError(null);
+    setServers([]); // kosongkan dulu biar data tab sebelumnya nggak nyangkut kelihatan
     adminGetServers(tabStatus, key)
       .then((data) => setServers(data.servers || []))
       .catch((err) => {
@@ -55,6 +56,20 @@ export default function Admin() {
   async function handleReject(id) {
     try {
       await adminReject(id, adminKey);
+      setServers((prev) => prev.filter((s) => s.id !== id));
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
+  async function handleDelete(id) {
+    const confirmed = window.confirm(
+      "Hapus permanen submission ini? Tindakan ini tidak bisa dibatalkan."
+    );
+    if (!confirmed) return;
+
+    try {
+      await adminDelete(id, adminKey);
       setServers((prev) => prev.filter((s) => s.id !== id));
     } catch (err) {
       alert(err.message);
@@ -145,6 +160,12 @@ export default function Admin() {
               <div className="admin-row__actions">
                 <button className="btn-reject" onClick={() => handleReject(server.id)}>
                   Tendang (Reject)
+                </button>
+              </div>
+            ) : status === "rejected" ? (
+              <div className="admin-row__actions">
+                <button className="btn-delete" onClick={() => handleDelete(server.id)}>
+                  Hapus Permanen
                 </button>
               </div>
             ) : null}
