@@ -12,6 +12,7 @@ const FLOATING_IMAGES = [
   "/discord/floating/superhero-and-spongebob.jpg",
   "/discord/floating/superhero.jpg",
   "/discord/floating/view-cashier.jpg",
+  "/discord/floating/swimming.jpg",
 ];
 
 // Titik-titik posisi di sekeliling hero (dalam persen), sudah didesain
