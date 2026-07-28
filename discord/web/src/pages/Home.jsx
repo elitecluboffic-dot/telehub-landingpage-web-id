@@ -3,14 +3,34 @@ import { getServers } from "../api";
 import ServerCard from "../components/ServerCard";
 import "./Home.css";
 
-const FLOATING_CARDS = [
-  { src: "/discord/floating/armored-warriors.jpg", className: "floating-card--1" },
-  { src: "/discord/floating/cinematic-bimxr.jpg", className: "floating-card--2" },
-  { src: "/discord/floating/fist-person.jpg", className: "floating-card--3" },
-  { src: "/discord/floating/superhero-and-spongebob.jpg", className: "floating-card--4" },
-  { src: "/discord/floating/superhero.jpg", className: "floating-card--5" },
-  { src: "/discord/floating/view-cashier.jpg", className: "floating-card--6" },
+// Tinggal tambah/kurangi link foto di sini. Posisi, ukuran, rotasi,
+// dan jeda animasi dihitung otomatis di bawah -- nggak perlu sentuh CSS.
+const FLOATING_IMAGES = [
+  "/discord/floating/armored-warriors.jpg",
+  "/discord/floating/cinematic-bimxr.jpg",
+  "/discord/floating/fist-person.jpg",
+  "/discord/floating/superhero-and-spongebob.jpg",
+  "/discord/floating/superhero.jpg",
+  "/discord/floating/view-cashier.jpg",
 ];
+
+// Titik-titik posisi di sekeliling hero (dalam persen), sudah didesain
+// supaya nggak numpuk. Kalau foto lebih banyak dari jumlah slot ini,
+// otomatis mengulang dari slot pertama lagi.
+const FLOATING_SLOTS = [
+  { top: "-9%", left: "-5%", size: 76, rotate: -9 },
+  { top: "6%", right: "-8%", size: 96, rotate: 7 },
+  { bottom: "20%", left: "-10%", size: 68, rotate: 11 },
+  { bottom: "-8%", right: "7%", size: 88, rotate: -6 },
+  { top: "46%", left: "-6%", size: 60, rotate: 5 },
+  { bottom: "4%", right: "-7%", size: 72, rotate: -11 },
+  { top: "-11%", left: "40%", size: 64, rotate: 4 },
+  { top: "20%", left: "-13%", size: 58, rotate: -13 },
+  { bottom: "-9%", left: "32%", size: 70, rotate: 8 },
+  { top: "58%", right: "-10%", size: 66, rotate: -5 },
+];
+
+const CYCLE_DURATION = 9; // detik, harus sama dengan durasi di keyframes CSS
 
 export default function Home() {
   const [servers, setServers] = useState([]);
@@ -41,12 +61,33 @@ export default function Home() {
     });
   }, [servers, search, activeTag]);
 
+  const floatingCards = useMemo(() => {
+    return FLOATING_IMAGES.map((src, i) => {
+      const slot = FLOATING_SLOTS[i % FLOATING_SLOTS.length];
+      const delay = (i * (CYCLE_DURATION / FLOATING_IMAGES.length)).toFixed(2);
+      return {
+        src,
+        key: `${src}-${i}`,
+        style: {
+          top: slot.top,
+          left: slot.left,
+          right: slot.right,
+          bottom: slot.bottom,
+          width: `${slot.size}px`,
+          height: `${slot.size}px`,
+          "--r": `${slot.rotate}deg`,
+          animationDelay: `${delay}s`,
+        },
+      };
+    });
+  }, []);
+
   return (
     <div className="home">
       <div className="hero-stage">
         <div className="floating-gallery" aria-hidden="true">
-          {FLOATING_CARDS.map((card) => (
-            <div key={card.className} className={`floating-card ${card.className}`}>
+          {floatingCards.map((card) => (
+            <div key={card.key} className="floating-card" style={card.style}>
               <img src={card.src} alt="" />
             </div>
           ))}
