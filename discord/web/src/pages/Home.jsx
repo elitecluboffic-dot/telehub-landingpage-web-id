@@ -4,12 +4,12 @@ import ServerCard from "../components/ServerCard";
 import "./Home.css";
 
 const FLOATING_CARDS = [
-  { src: "GANTI_DENGAN_LINK_FOTO_1.jpg", className: "floating-card--1" },
-  { src: "GANTI_DENGAN_LINK_FOTO_2.jpg", className: "floating-card--2" },
-  { src: "GANTI_DENGAN_LINK_FOTO_3.jpg", className: "floating-card--3" },
-  { src: "GANTI_DENGAN_LINK_FOTO_4.jpg", className: "floating-card--4" },
-  { src: "GANTI_DENGAN_LINK_FOTO_5.jpg", className: "floating-card--5" },
-  { src: "GANTI_DENGAN_LINK_FOTO_6.jpg", className: "floating-card--6" },
+  { src: "/discord/floating/armored-warriors.jpg", className: "floating-card--1" },
+  { src: "/discord/floating/cinematic-bimxr.jpg", className: "floating-card--2" },
+  { src: "/discord/floating/fist-person.jpg", className: "floating-card--3" },
+  { src: "/discord/floating/superhero-and-spongebob.jpg", className: "floating-card--4" },
+  { src: "/discord/floating/superhero.jpg", className: "floating-card--5" },
+  { src: "/discord/floating/view-cashier.jpg", className: "floating-card--6" },
 ];
 
 export default function Home() {
