@@ -168,3 +168,14 @@
 .state-text--error {
   color: var(--danger);
 }
+.btn-delete {
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+.btn-delete:hover {
+  background: #b91c1c;
+}
