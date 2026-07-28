@@ -34,70 +34,76 @@ export default function Home() {
 
   return (
     <div className="home">
-      <section className="hero">
-        <div className="hero__ticker" aria-hidden="true">
-          <span>SINYAL AKTIF</span>
-          <span className="dot" />
-          <span>{servers.length} server terverifikasi di Telehub</span>
+      <section className="home-top">
+        <div className="home-top__left">
+          <div className="product-card">
+            <div className="product-card__tag" aria-hidden="true">
+              <span className="dot" />
+              <span>PRODUK RESMI TELEHUB</span>
+            </div>
+            <h2>Promosi Server Discord</h2>
+            <p className="product-card__price">
+              Rp25.000<span>/ server, sekali bayar</span>
+            </p>
+            <p className="product-card__desc">
+              Tampilkan server Discord kamu di direktori Telehub agar ditemukan ribuan
+              pengguna. Setelah pembayaran dikonfirmasi, server kamu langsung tayang
+              dengan badge ✓ terverifikasi dan bisa dicari lewat nama maupun tag.
+            </p>
+            <div className="product-card__features">
+              <span className="feature-pill">✓ Tampil di direktori publik</span>
+              <span className="feature-pill">✓ Badge terverifikasi</span>
+              <span className="feature-pill">✓ Bisa dicari & difilter tag</span>
+              <span className="feature-pill">✓ Aktif selama sesuai ketentuan</span>
+            </div>
+            <a href="#/submit" className="product-card__cta">
+              Promosikan Server Sekarang — Rp25.000
+            </a>
+          </div>
         </div>
-        <h1>Cari server Discord-mu berikutnya.</h1>
-        <p>
-          Telehub adalah titik kumpul server Discord Indonesia — temukan komunitas baru,
-          atau promosikan server-mu ke ribuan orang.
-        </p>
-        <input
-          className="search-input"
-          type="text"
-          placeholder="Cari nama server..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          aria-label="Cari server"
-        />
-        {allTags.length ? (
-          <div className="tag-filters">
-            <button
-              className={!activeTag ? "tag-filter tag-filter--active" : "tag-filter"}
-              onClick={() => setActiveTag(null)}
-            >
-              Semua
-            </button>
-            {allTags.map((tag) => (
-              <button
-                key={tag}
-                className={activeTag === tag ? "tag-filter tag-filter--active" : "tag-filter"}
-                onClick={() => setActiveTag(tag)}
-              >
-                {tag}
-              </button>
-            ))}
-          </div>
-        ) : null}
-      </section>
 
-      <section className="product-info">
-        <div className="product-card">
-          <div className="product-card__tag" aria-hidden="true">
-            <span className="dot" />
-            <span>PRODUK RESMI TELEHUB</span>
+        <div className="home-top__right">
+          <div className="hero">
+            <div className="hero__ticker" aria-hidden="true">
+              <span>SINYAL AKTIF</span>
+              <span className="dot" />
+              <span>{servers.length} server terverifikasi di Telehub</span>
+            </div>
+            <h1>Cari server Discord-mu berikutnya.</h1>
+            <p>
+              Telehub adalah titik kumpul server Discord Indonesia — temukan komunitas
+              baru, atau promosikan server-mu ke ribuan orang.
+            </p>
+            <input
+              className="search-input"
+              type="text"
+              placeholder="Cari nama server..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              aria-label="Cari server"
+            />
+            {allTags.length ? (
+              <div className="tag-filters">
+                <button
+                  className={!activeTag ? "tag-filter tag-filter--active" : "tag-filter"}
+                  onClick={() => setActiveTag(null)}
+                >
+                  Semua
+                </button>
+                {allTags.map((tag) => (
+                  <button
+                    key={tag}
+                    className={
+                      activeTag === tag ? "tag-filter tag-filter--active" : "tag-filter"
+                    }
+                    onClick={() => setActiveTag(tag)}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
-          <h2>Promosi Server Discord</h2>
-          <p className="product-card__price">
-            Rp25.000<span>/ server, sekali bayar</span>
-          </p>
-          <p className="product-card__desc">
-            Tampilkan server Discord kamu di direktori Telehub agar ditemukan ribuan
-            pengguna. Setelah pembayaran dikonfirmasi, server kamu langsung tayang
-            dengan badge ✓ terverifikasi dan bisa dicari lewat nama maupun tag.
-          </p>
-          <div className="product-card__features">
-            <span className="feature-pill">✓ Tampil di direktori publik</span>
-            <span className="feature-pill">✓ Badge terverifikasi</span>
-            <span className="feature-pill">✓ Bisa dicari & difilter tag</span>
-            <span className="feature-pill">✓ Aktif selama sesuai ketentuan</span>
-          </div>
-          <a href="#/submit" className="product-card__cta">
-            Promosikan Server Sekarang — Rp25.000
-          </a>
         </div>
       </section>
 
