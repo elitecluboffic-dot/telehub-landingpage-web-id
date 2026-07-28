@@ -175,6 +175,7 @@
   padding: 0.5rem 1rem;
   border-radius: 0.5rem;
   cursor: pointer;
+  font-weight: 500;
 }
 .btn-delete:hover {
   background: #b91c1c;
