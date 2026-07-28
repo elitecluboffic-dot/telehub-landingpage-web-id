@@ -10,12 +10,13 @@
 //   GET  /discord/admin/servers?status=...   -> list server per status (butuh x-admin-key)
 //   POST /discord/admin/servers/:id/approve  -> approve submission (butuh x-admin-key)
 //   POST /discord/admin/servers/:id/reject   -> reject submission (butuh x-admin-key)
+//   DELETE /discord/admin/servers/:id        -> hapus permanen dari DB (butuh x-admin-key)
 
 import { md5Hex } from "./md5.js";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+  "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, x-admin-key",
 };
 
@@ -239,6 +240,17 @@ async function adminReject(request, env, id) {
   return json({ success: true });
 }
 
+async function adminDelete(request, env, id) {
+  if (!isAdmin(request, env)) return json({ error: "Unauthorized" }, 401);
+
+  const server = await env.DB.prepare(`SELECT id FROM servers WHERE id = ?`).bind(id).first();
+  if (!server) return json({ error: "Server tidak ditemukan" }, 404);
+
+  await env.DB.prepare(`DELETE FROM servers WHERE id = ?`).bind(id).run();
+
+  return json({ success: true });
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -277,6 +289,11 @@ export default {
       const rejectMatch = pathname.match(/^\/discord\/admin\/servers\/([^/]+)\/reject$/);
       if (rejectMatch && request.method === "POST") {
         return await adminReject(request, env, rejectMatch[1]);
+      }
+
+      const deleteMatch = pathname.match(/^\/discord\/admin\/servers\/([^/]+)$/);
+      if (deleteMatch && request.method === "DELETE") {
+        return await adminDelete(request, env, deleteMatch[1]);
       }
 
       // Nggak match API route manapun -> anggap ini request buat halaman/file
