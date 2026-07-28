@@ -36,60 +36,6 @@
   display: block;
 }
 
-.floating-card--1 {
-  width: 76px;
-  height: 76px;
-  top: -28px;
-  left: -20px;
-  --r: -9deg;
-  animation-delay: 0s;
-}
-
-.floating-card--2 {
-  width: 96px;
-  height: 96px;
-  top: 30px;
-  right: -36px;
-  --r: 7deg;
-  animation-delay: 1.5s;
-}
-
-.floating-card--3 {
-  width: 68px;
-  height: 68px;
-  bottom: 90px;
-  left: -44px;
-  --r: 11deg;
-  animation-delay: 3s;
-}
-
-.floating-card--4 {
-  width: 88px;
-  height: 88px;
-  bottom: -24px;
-  right: 90px;
-  --r: -6deg;
-  animation-delay: 4.5s;
-}
-
-.floating-card--5 {
-  width: 60px;
-  height: 60px;
-  top: 50%;
-  left: -6%;
-  --r: 5deg;
-  animation-delay: 6s;
-}
-
-.floating-card--6 {
-  width: 72px;
-  height: 72px;
-  bottom: 20px;
-  right: -6%;
-  --r: -11deg;
-  animation-delay: 7.5s;
-}
-
 @keyframes appear-vanish {
   0% {
     opacity: 0;
