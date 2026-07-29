@@ -33,17 +33,17 @@ const FLOATING_SLOTS = [
 ];
 
 const CYCLE_DURATION = 9; // detik, harus sama dengan durasi di keyframes CSS
-const MIN_LOADING_MS = 1600; // spinner minimal tampil segini lama, biar kelihatan
+const MIN_LOADING_MS = 1800; // splash minimal tampil segini lama, biar kelihatan
 
-function PhotoLoader({ images }) {
+function PageLoader({ images }) {
   const items = images.slice(0, 8);
   return (
-    <div className="photo-loader" role="status" aria-live="polite">
-      <div className="photo-loader__ring">
+    <div className="page-loader" role="status" aria-live="polite">
+      <div className="page-loader__ring">
         {items.map((src, i) => (
           <div
             key={src}
-            className="photo-loader__item"
+            className="page-loader__item"
             style={{
               "--i": i,
               "--n": items.length,
@@ -52,9 +52,9 @@ function PhotoLoader({ images }) {
             <img src={src} alt="" />
           </div>
         ))}
-        <div className="photo-loader__core" />
+        <div className="page-loader__core" />
       </div>
-      <p className="photo-loader__label">Memuat daftar server...</p>
+      <p className="page-loader__label">TELEHUB</p>
     </div>
   );
 }
@@ -82,7 +82,7 @@ export default function Home() {
       .finally(() => {
         if (cancelled) return;
         // Fetch beneran udah selesai (sukses/gagal), tapi kita tunggu
-        // sampai minimal MIN_LOADING_MS terlewati juga, biar spinner
+        // sampai minimal MIN_LOADING_MS terlewati juga, biar splash
         // nggak cuma kedip sekilas kalau koneksi kenceng.
         const elapsed = Date.now() - startedAt;
         const remaining = Math.max(0, MIN_LOADING_MS - elapsed);
@@ -132,6 +132,10 @@ export default function Home() {
     });
   }, []);
 
+  if (loading) {
+    return <PageLoader images={FLOATING_IMAGES} />;
+  }
+
   return (
     <div className="home">
       <div className="hero-stage">
@@ -176,11 +180,7 @@ export default function Home() {
               <div className="hero__ticker" aria-hidden="true">
                 <span>SINYAL AKTIF</span>
                 <span className="dot" />
-                <span>
-                  {loading
-                    ? "Memuat data server..."
-                    : `${servers.length} server terverifikasi di Telehub`}
-                </span>
+                <span>{servers.length} server terverifikasi di Telehub</span>
               </div>
               <h1>Cari server Discord-mu berikutnya.</h1>
               <p>
@@ -195,7 +195,7 @@ export default function Home() {
                 onChange={(e) => setSearch(e.target.value)}
                 aria-label="Cari server"
               />
-              {!loading && allTags.length ? (
+              {allTags.length ? (
                 <div className="tag-filters">
                   <button
                     className={!activeTag ? "tag-filter tag-filter--active" : "tag-filter"}
@@ -222,20 +222,15 @@ export default function Home() {
       </div>
 
       <section className="server-list">
-        {loading ? <PhotoLoader images={FLOATING_IMAGES} /> : null}
-        {!loading && error ? (
-          <p className="state-text state-text--error">Gagal memuat: {error}</p>
-        ) : null}
-        {!loading && !error && filtered.length === 0 ? (
+        {error ? <p className="state-text state-text--error">Gagal memuat: {error}</p> : null}
+        {!error && filtered.length === 0 ? (
           <p className="state-text">Belum ada server yang cocok. Coba kata kunci lain.</p>
         ) : null}
-        {!loading ? (
-          <div className="server-grid">
-            {filtered.map((server) => (
-              <ServerCard key={server.id} server={server} />
-            ))}
-          </div>
-        ) : null}
+        <div className="server-grid">
+          {filtered.map((server) => (
+            <ServerCard key={server.id} server={server} />
+          ))}
+        </div>
       </section>
     </div>
   );
