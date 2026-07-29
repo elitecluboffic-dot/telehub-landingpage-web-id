@@ -2,7 +2,6 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 48px 24px 80px;
-  overflow-x: hidden;
 }
 
 .hero-stage {
@@ -98,6 +97,7 @@
 @media (max-width: 600px) {
   .home {
     padding: 32px 16px 56px;
+    overflow-x: hidden;
   }
   .floating-card {
     width: 40px !important;
