@@ -34,6 +34,30 @@ const FLOATING_SLOTS = [
 
 const CYCLE_DURATION = 9; // detik, harus sama dengan durasi di keyframes CSS
 
+function PhotoLoader({ images }) {
+  const items = images.slice(0, 8);
+  return (
+    <div className="photo-loader" role="status" aria-live="polite">
+      <div className="photo-loader__ring">
+        {items.map((src, i) => (
+          <div
+            key={src}
+            className="photo-loader__item"
+            style={{
+              "--i": i,
+              "--n": items.length,
+            }}
+          >
+            <img src={src} alt="" />
+          </div>
+        ))}
+        <div className="photo-loader__core" />
+      </div>
+      <p className="photo-loader__label">Memuat daftar server...</p>
+    </div>
+  );
+}
+
 export default function Home() {
   const [servers, setServers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -170,7 +194,7 @@ export default function Home() {
       </div>
 
       <section className="server-list">
-        {loading ? <p className="state-text">Memuat daftar server...</p> : null}
+        {loading ? <PhotoLoader images={FLOATING_IMAGES} /> : null}
         {error ? <p className="state-text state-text--error">Gagal memuat: {error}</p> : null}
         {!loading && !error && filtered.length === 0 ? (
           <p className="state-text">Belum ada server yang cocok. Coba kata kunci lain.</p>
