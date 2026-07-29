@@ -33,6 +33,7 @@ const FLOATING_SLOTS = [
 ];
 
 const CYCLE_DURATION = 9; // detik, harus sama dengan durasi di keyframes CSS
+const MIN_LOADING_MS = 1600; // spinner minimal tampil segini lama, biar kelihatan
 
 function PhotoLoader({ images }) {
   const items = images.slice(0, 8);
@@ -66,10 +67,33 @@ export default function Home() {
   const [activeTag, setActiveTag] = useState(null);
 
   useEffect(() => {
+    let cancelled = false;
+    const startedAt = Date.now();
+
     getServers()
-      .then((data) => setServers(data.servers || []))
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
+      .then((data) => {
+        if (cancelled) return;
+        setServers(data.servers || []);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err.message);
+      })
+      .finally(() => {
+        if (cancelled) return;
+        // Fetch beneran udah selesai (sukses/gagal), tapi kita tunggu
+        // sampai minimal MIN_LOADING_MS terlewati juga, biar spinner
+        // nggak cuma kedip sekilas kalau koneksi kenceng.
+        const elapsed = Date.now() - startedAt;
+        const remaining = Math.max(0, MIN_LOADING_MS - elapsed);
+        setTimeout(() => {
+          if (!cancelled) setLoading(false);
+        }, remaining);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const allTags = useMemo(() => {
