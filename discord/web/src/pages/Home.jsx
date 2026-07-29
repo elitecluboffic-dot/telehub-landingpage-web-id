@@ -176,7 +176,11 @@ export default function Home() {
               <div className="hero__ticker" aria-hidden="true">
                 <span>SINYAL AKTIF</span>
                 <span className="dot" />
-                <span>{servers.length} server terverifikasi di Telehub</span>
+                <span>
+                  {loading
+                    ? "Memuat data server..."
+                    : `${servers.length} server terverifikasi di Telehub`}
+                </span>
               </div>
               <h1>Cari server Discord-mu berikutnya.</h1>
               <p>
@@ -191,7 +195,7 @@ export default function Home() {
                 onChange={(e) => setSearch(e.target.value)}
                 aria-label="Cari server"
               />
-              {allTags.length ? (
+              {!loading && allTags.length ? (
                 <div className="tag-filters">
                   <button
                     className={!activeTag ? "tag-filter tag-filter--active" : "tag-filter"}
@@ -219,15 +223,19 @@ export default function Home() {
 
       <section className="server-list">
         {loading ? <PhotoLoader images={FLOATING_IMAGES} /> : null}
-        {error ? <p className="state-text state-text--error">Gagal memuat: {error}</p> : null}
+        {!loading && error ? (
+          <p className="state-text state-text--error">Gagal memuat: {error}</p>
+        ) : null}
         {!loading && !error && filtered.length === 0 ? (
           <p className="state-text">Belum ada server yang cocok. Coba kata kunci lain.</p>
         ) : null}
-        <div className="server-grid">
-          {filtered.map((server) => (
-            <ServerCard key={server.id} server={server} />
-          ))}
-        </div>
+        {!loading ? (
+          <div className="server-grid">
+            {filtered.map((server) => (
+              <ServerCard key={server.id} server={server} />
+            ))}
+          </div>
+        ) : null}
       </section>
     </div>
   );
