@@ -298,3 +298,104 @@
 .product-card__cta:hover {
   opacity: 0.92;
 }
+
+/* Photo loader / spinner -- muncul selama data server sedang di-fetch */
+.photo-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 48px 0;
+}
+
+.photo-loader__ring {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  animation: photo-loader-spin 6s linear infinite;
+}
+
+.photo-loader__item {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 42px;
+  height: 42px;
+  margin: -21px;
+  transform: rotate(calc(360deg / var(--n) * var(--i))) translate(64px);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+  opacity: 0.35;
+  animation: photo-loader-pulse 3s ease-in-out infinite;
+  animation-delay: calc(var(--i) * -0.375s);
+}
+
+.photo-loader__item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  animation: photo-loader-counter-spin 6s linear infinite;
+}
+
+.photo-loader__core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px;
+  border-radius: 50%;
+  background: var(--brand);
+  box-shadow: 0 0 24px var(--brand);
+  animation: photo-loader-core-pulse 1.5s ease-in-out infinite;
+}
+
+.photo-loader__label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+@keyframes photo-loader-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes photo-loader-counter-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+
+@keyframes photo-loader-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
+@keyframes photo-loader-core-pulse {
+  0%, 100% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .photo-loader__ring {
+    width: 120px;
+    height: 120px;
+  }
+  .photo-loader__item {
+    width: 32px;
+    height: 32px;
+    margin: -16px;
+    transform: rotate(calc(360deg / var(--n) * var(--i))) translate(46px);
+  }
+}
