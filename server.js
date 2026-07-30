@@ -104,10 +104,25 @@ app.get(['/ebook/admin', '/ebook/admin/'], (req, res) => {
   res.sendFile(path.join(__dirname, 'ebook', 'admin', 'index.html'));
 });
 
+// Halaman "Ttsaveig" (TikTok & Instagram downloader) — dilayani apa adanya
+// dari folder ttsaveig/index.html, sama seperti /ebook & /indexing di atas.
+// Route ini WAJIB ada dan HARUS ditaruh sebelum static middleware &
+// catch-all '*' di bawah, supaya request ke '/ttsaveig' atau '/ttsaveig/'
+// tidak "ketiban" index.html landing page utama. Ini bug yang sebelumnya
+// kejadian karena route ini belum ada — static middleware di bawah dipasang
+// dengan { index: false }, jadi request folder tanpa route eksplisit selalu
+// jatuh ke catch-all '*' paling bawah dan malah dapat landing page utama,
+// bukan halaman ttsaveig.
+app.get(['/ttsaveig', '/ttsaveig/'], (req, res) => {
+  res.set('Content-Type', 'text/html');
+  res.set('Cache-Control', 'no-cache');
+  res.sendFile(path.join(__dirname, 'ttsaveig', 'index.html'));
+});
+
 /* =========================================================
    TTSAVEIG — TikTok & Instagram Downloader (backend)
-   Frontend statisnya (folder ttsaveig/, di-deploy terpisah lewat
-   Cloudflare Workers) manggil endpoint POST /api/download di sini
+   Frontend statisnya (folder ttsaveig/, dilayani langsung dari server
+   ini lewat route di atas) manggil endpoint POST /api/download di sini
    lewat fetch(), sesuai kontrak di API_CONTRACT.md yang sudah dibikin
    bareng frontend-nya. Route ini HARUS ditaruh sebelum static
    middleware & catch-all '*' di bawah, sama seperti route lain di
@@ -119,6 +134,11 @@ app.get(['/ebook/admin', '/ebook/admin/'], (req, res) => {
    service itu down/berubah format, endpoint ini bisa gagal; sudah
    dibungkus try/catch supaya errornya rapi ke frontend, bukan crash
    server.
+
+   Catatan: package ini bekerja normal di server Node.js biasa seperti
+   ini (beda dengan versi Cloudflare Workers-nya yang harus diganti
+   pakai fetch() manual, karena Workers tidak bisa membundel axios yang
+   dipakai btch-downloader secara internal).
 ========================================================= */
 
 // Rate limiter khusus & lebih ketat untuk endpoint download, di atas
