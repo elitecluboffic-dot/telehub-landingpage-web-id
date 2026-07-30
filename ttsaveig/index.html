@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Telehub Saving — Simpan Video TikTok & Instagram, HD Tanpa Watermark</title>
+<meta name="description" content="Tempel link TikTok atau Instagram, ambil video HD tanpa watermark dalam hitungan detik." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="grain"></div>
+
+<header class="topbar">
+  <div class="wrap topbar__inner">
+    <div class="brand">
+      <span class="brand__mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 2v13.5a3.5 3.5 0 1 1-2-3.16V2h2zm4.5 0c.3 2.1 1.9 3.7 4 4v2c-1.5 0-2.9-.4-4-1.2V11h-2V2h2z" fill="currentColor"/></svg>
+      </span>
+      <span class="brand__name">reel<em>grab</em></span>
+    </div>
+    <nav class="topbar__links">
+      <a href="#cara">Cara pakai</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+  <!-- HERO -->
+  <section class="hero wrap">
+    <div class="hero__copy">
+      <p class="eyebrow">TikTok &amp; Instagram Reels</p>
+      <h1>Tempel link.<br>Bawa pulang videonya.<br><span class="accent">Bersih, tanpa watermark.</span></h1>
+      <p class="hero__sub">Reelgrab mengambil video langsung dari server asal — kualitas HD asli, tanpa watermark, tanpa iklan yang mengganggu. Cukup satu tempel, satu klik.</p>
+
+      <form class="grabform" id="grabForm" autocomplete="off">
+        <div class="platform-toggle" role="tablist" aria-label="Pilih platform">
+          <button type="button" class="platform-btn is-active" data-platform="tiktok" role="tab" aria-selected="true">TikTok</button>
+          <button type="button" class="platform-btn" data-platform="instagram" role="tab" aria-selected="false">Instagram</button>
+        </div>
+
+        <div class="input-row">
+          <input
+            type="url"
+            id="videoUrl"
+            name="videoUrl"
+            placeholder="Tempel link video di sini…"
+            required
+            inputmode="url"
+          />
+          <button type="submit" class="btn-primary" id="submitBtn">
+            <span class="btn-label">Ambil Video</span>
+            <span class="btn-spinner" hidden aria-hidden="true"></span>
+          </button>
+        </div>
+
+        <div class="options-row">
+          <label class="chip">
+            <input type="checkbox" id="noWatermark" checked>
+            <span>Tanpa watermark</span>
+          </label>
+          <label class="quality-select">
+            <span>Kualitas</span>
+            <select id="quality">
+              <option value="hd" selected>HD (Asli)</option>
+              <option value="sd">SD (Lebih ringan)</option>
+              <option value="audio">Hanya audio (MP3)</option>
+            </select>
+          </label>
+        </div>
+      </form>
+
+      <p class="hint" id="statusHint" aria-live="polite"></p>
+    </div>
+
+    <div class="hero__visual" aria-hidden="true">
+      <div class="phone">
+        <div class="phone__notch"></div>
+        <div class="phone__screen">
+          <div class="phone__gradient"></div>
+          <div class="phone__ui">
+            <div class="phone__ui-row skeleton"></div>
+            <div class="phone__ui-row skeleton short"></div>
+          </div>
+        </div>
+        <div class="phone__spill">
+          <div class="spill-card">
+            <div class="spill-card__thumb"></div>
+            <div class="spill-card__meta">
+              <div class="spill-line"></div>
+              <div class="spill-line short"></div>
+            </div>
+            <div class="spill-card__badge">HD · No WM</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESULT AREA -->
+  <section class="result wrap" id="resultArea" hidden>
+    <div class="result__card" id="resultCard"></div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="steps wrap" id="cara">
+    <h2>Cara pakai, tiga langkah</h2>
+    <ol class="steps__list">
+      <li>
+        <span class="steps__num">Salin</span>
+        <p>Buka video TikTok atau Instagram Reels yang ingin disimpan, ketuk <strong>Bagikan</strong>, lalu <strong>Salin Link</strong>.</p>
+      </li>
+      <li>
+        <span class="steps__num">Tempel</span>
+        <p>Tempel link tersebut di kotak di atas, pilih kualitas dan opsi watermark yang diinginkan.</p>
+      </li>
+      <li>
+        <span class="steps__num">Unduh</span>
+        <p>Klik <strong>Ambil Video</strong>, tunggu beberapa detik, lalu simpan file HD ke perangkatmu.</p>
+      </li>
+    </ol>
+  </section>
+
+  <!-- FAQ -->
+  <section class="faq wrap" id="faq">
+    <h2>Pertanyaan yang sering ditanyakan</h2>
+    <details>
+      <summary>Apakah videonya benar-benar tanpa watermark?</summary>
+      <p>Ya. Reelgrab mengambil berkas video langsung dari sumbernya sebelum logo watermark ditambahkan oleh aplikasi, sehingga hasil unduhan bersih.</p>
+    </details>
+    <details>
+      <summary>Apakah ini gratis?</summary>
+      <p>Ya, untuk penggunaan wajar tidak ada biaya. Batasi penggunaan otomatis massal untuk menjaga layanan tetap stabil bagi semua orang.</p>
+    </details>
+    <details>
+      <summary>Video privat bisa diunduh?</summary>
+      <p>Tidak. Reelgrab hanya bekerja untuk konten publik yang linknya bisa diakses siapa saja.</p>
+    </details>
+    <details>
+      <summary>Bagaimana dengan hak cipta?</summary>
+      <p>Unduh dan gunakan video sesuai hukum yang berlaku dan izin dari pembuat kontennya. Reelgrab hanyalah alat bantu teknis.</p>
+    </details>
+  </section>
+
+</main>
+
+<footer class="footer wrap">
+  <p>Reelgrab bukan bagian dari TikTok atau Instagram/Meta. Gunakan secara bertanggung jawab.</p>
+</footer>
+
+<script src="config.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
