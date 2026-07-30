@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import rateLimit from 'express-rate-limit';
 import crypto from 'crypto';
+import { ttdl, igdl } from 'btch-downloader';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -101,6 +102,172 @@ app.get(['/ebook/admin', '/ebook/admin/'], (req, res) => {
   res.set('Content-Type', 'text/html');
   res.set('Cache-Control', 'no-cache');
   res.sendFile(path.join(__dirname, 'ebook', 'admin', 'index.html'));
+});
+
+/* =========================================================
+   TTSAVEIG — TikTok & Instagram Downloader (backend)
+   Frontend statisnya (folder ttsaveig/, di-deploy terpisah lewat
+   Cloudflare Workers) manggil endpoint POST /api/download di sini
+   lewat fetch(), sesuai kontrak di API_CONTRACT.md yang sudah dibikin
+   bareng frontend-nya. Route ini HARUS ditaruh sebelum static
+   middleware & catch-all '*' di bawah, sama seperti route lain di
+   file ini, supaya tidak "ketiban" index.html landing page utama.
+
+   Pakai package "btch-downloader" (npm i btch-downloader) yang di
+   baliknya manggil service pihak ketiga untuk ambil link video HD
+   tanpa watermark — bukan scraping langsung dari server kita. Kalau
+   service itu down/berubah format, endpoint ini bisa gagal; sudah
+   dibungkus try/catch supaya errornya rapi ke frontend, bukan crash
+   server.
+========================================================= */
+
+// Rate limiter khusus & lebih ketat untuk endpoint download, di atas
+// rate limiter global (100/menit) yang sudah ada di atas — proses
+// download ke service pihak ketiga lebih berat, jadi dibatasi lebih
+// kencang: 20 request per menit per IP.
+const downloadLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Terlalu banyak permintaan unduh, coba lagi sebentar lagi.' },
+});
+
+app.use('/api/download', express.json());
+
+// Validasi dasar: link harus benar-benar dari domain TikTok atau
+// Instagram sesuai platform yang dipilih user, supaya endpoint ini
+// tidak dipakai untuk hal lain di luar tujuannya.
+function isValidPlatformUrl(url, platform) {
+  try {
+    const { hostname } = new URL(url);
+    const host = hostname.replace(/^www\./, '');
+    if (platform === 'tiktok') {
+      return /(^|\.)tiktok\.com$/.test(host) || /(^|\.)vt\.tiktok\.com$/.test(host) || /(^|\.)vm\.tiktok\.com$/.test(host);
+    }
+    if (platform === 'instagram') {
+      return /(^|\.)instagram\.com$/.test(host);
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+// Ambil url dari beberapa kemungkinan nama field, karena skema JSON
+// dari btch-downloader tidak didokumentasikan lengkap dan bisa beda
+// antar versi. Kalau kamu jalanin console.log(rawResult) sekali dan
+// nama field-nya ternyata beda, tinggal tambahin di daftar ini.
+function pickFirst(obj, keys) {
+  for (const key of keys) {
+    if (obj && obj[key]) return obj[key];
+  }
+  return null;
+}
+
+function normalizeTikTok(raw, wantAudioOnly) {
+  // ttdl() umumnya mengembalikan object langsung, atau array berisi
+  // satu object hasil (tergantung versi). Kita handle dua-duanya.
+  const item = Array.isArray(raw) ? raw[0] : raw;
+  if (!item) return null;
+
+  const noWatermarkUrl = pickFirst(item, ['video', 'play', 'nowm', 'no_watermark', 'hd', 'video_hd']);
+  const audioUrl = pickFirst(item, ['audio', 'music', 'mp3']);
+  const thumbnail = pickFirst(item, ['thumbnail', 'cover', 'image']);
+  const title = pickFirst(item, ['title', 'desc', 'caption']);
+  const author = pickFirst(item, ['author', 'username', 'nickname']);
+
+  const downloadUrl = Array.isArray(noWatermarkUrl) ? noWatermarkUrl[0] : noWatermarkUrl;
+  const resolvedAudioUrl = Array.isArray(audioUrl) ? audioUrl[0] : audioUrl;
+
+  if (!downloadUrl && !resolvedAudioUrl) return null;
+
+  return {
+    title: title || 'Video TikTok',
+    author: author || '',
+    thumbnail: Array.isArray(thumbnail) ? thumbnail[0] : thumbnail || '',
+    downloadUrl: wantAudioOnly ? null : downloadUrl || null,
+    audioUrl: resolvedAudioUrl || null,
+  };
+}
+
+function normalizeInstagram(raw) {
+  // igdl() umumnya mengembalikan array of media (karena satu post bisa
+  // berisi beberapa foto/video sekaligus / carousel). Kita ambil item
+  // pertama yang punya url video/gambar.
+  const list = Array.isArray(raw) ? raw : raw ? [raw] : [];
+  const item = list.find((i) => pickFirst(i, ['url', 'video', 'download_url', 'play']));
+  if (!item) return null;
+
+  const downloadUrl = pickFirst(item, ['url', 'video', 'download_url', 'play']);
+  const thumbnail = pickFirst(item, ['thumbnail', 'cover', 'image']);
+  const title = pickFirst(item, ['title', 'caption', 'desc']);
+  const author = pickFirst(item, ['author', 'username']);
+
+  return {
+    title: title || 'Video/Foto Instagram',
+    author: author || '',
+    thumbnail: Array.isArray(thumbnail) ? thumbnail[0] : thumbnail || '',
+    downloadUrl: Array.isArray(downloadUrl) ? downloadUrl[0] : downloadUrl,
+    audioUrl: null,
+  };
+}
+
+app.post('/api/download', downloadLimiter, async (req, res) => {
+  const { url, platform, quality, removeWatermark } = req.body || {};
+
+  if (!url || !platform) {
+    return res.status(400).json({ success: false, message: 'url dan platform wajib diisi.' });
+  }
+  if (platform !== 'tiktok' && platform !== 'instagram') {
+    return res.status(400).json({ success: false, message: 'platform harus "tiktok" atau "instagram".' });
+  }
+  if (!isValidPlatformUrl(url, platform)) {
+    return res.status(400).json({
+      success: false,
+      message: `Link ini bukan link ${platform === 'tiktok' ? 'TikTok' : 'Instagram'} yang valid.`,
+    });
+  }
+
+  const wantAudioOnly = quality === 'audio';
+
+  try {
+    let normalized = null;
+
+    if (platform === 'tiktok') {
+      const raw = await ttdl(url);
+      normalized = normalizeTikTok(raw, wantAudioOnly);
+    } else {
+      const raw = await igdl(url);
+      normalized = normalizeInstagram(raw);
+    }
+
+    if (!normalized || (!normalized.downloadUrl && !normalized.audioUrl)) {
+      return res.status(404).json({
+        success: false,
+        message: 'Video tidak ditemukan. Pastikan link publik (bukan akun privat) dan masih tersedia.',
+      });
+    }
+
+    // removeWatermark dari body saat ini informatif saja — ttdl() dari
+    // btch-downloader defaultnya sudah mengembalikan versi tanpa
+    // watermark, jadi tidak ada langkah tambahan yang perlu dilakukan
+    // di sini. Diteruskan ke response supaya frontend tahu preferensi
+    // user tetap tercatat.
+    res.json({
+      success: true,
+      data: {
+        ...normalized,
+        removeWatermark: !!removeWatermark,
+      },
+    });
+  } catch (err) {
+    console.error('[/api/download] error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Gagal memproses link ini sekarang. Coba lagi beberapa saat lagi.',
+    });
+  }
 });
 
 /* =========================================================
