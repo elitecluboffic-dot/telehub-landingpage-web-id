@@ -197,20 +197,26 @@
   // video/gambar pakai URL ASLI dari sumber langsung (dl.tiktokio.com,
   // cdninstagram.com, i.pinimg.com dst.) tanpa proxy sama sekali.
 
-  // Khusus tombol UNDUH: kalau dipakai URL asli langsung, atribut HTML
-  // `download` di <a> diabaikan browser untuk URL cross-origin -> yang
-  // kejadian malah file kebuka di tab baru, bukan ke-download. Makanya
-  // link download (bukan preview) diarahkan ke endpoint backend
-  // /api/download-file, yang men-STREAM isi file (bukan buffer penuh
-  // seperti /api/proxy lama) sambil mengirim header
-  // Content-Disposition: attachment supaya browser pasti memicu
-  // dialog "Save As" apa pun origin sumbernya.
-  function downloadLink(url, filename) {
-    if (!url) return url;
-    const params = new URLSearchParams({ url });
-    if (filename) params.set('filename', filename);
-    return `${API_BASE_URL}/api/download-file?${params.toString()}`;
-  }
+  // [DICABUT] Sebelumnya ada fungsi downloadLink(url, filename) di sini
+  // yang MENYUSUN SENDIRI URL ke `${API_BASE_URL}/api/download-file?url=...`
+  // dari downloadUrl/audioUrl mentah. Backend lama memvalidasi request ke
+  // /api/download-file itu cuma lewat cek header Origin/Referer
+  // (isRequestFromOwnSite di backend) -- di lapangan ini KELIHATAN gagal
+  // random: klik tombol "Unduh" kadang malah dapat balasan JSON
+  // {"success":false,"message":"Permintaan hanya diizinkan dari situs
+  // Reelgrab."} padahal user memang klik dari situs asli. Penyebabnya,
+  // Origin/Referer TIDAK SELALU dikirim browser untuk navigasi <a> biasa
+  // (bisa hilang karena Referrer-Policy, rel="noreferrer", ekstensi
+  // privasi, atau memang Origin tidak dikirim untuk navigasi GET biasa).
+  //
+  // SOLUSI (sinkron dengan update backend poin 12): backend sekarang
+  // membuat SIGNED TOKEN (HMAC) untuk tiap downloadUrl/audioUrl, dan
+  // langsung mengembalikan URL SIAP PAKAI lewat field
+  // `data.downloadFileUrl` / `data.audioDownloadFileUrl` di response
+  // /api/download -- sudah berupa URL absolut lengkap dengan token &
+  // filename, tidak perlu dirakit lagi di frontend. Frontend TINGGAL
+  // PAKAI LANGSUNG field itu sebagai href tombol unduh (lihat
+  // renderResult() di bawah).
 
   // Reset mockup hp balik ke tampilan skeleton awal
   function resetPhonePreview() {
@@ -315,7 +321,6 @@
     // Preview (thumbnail) tetap pakai URL asli langsung dari sumber.
     const thumb = data.thumbnail;
     const rawDownloadUrl = data.downloadUrl;
-    const rawAudioUrl = data.audioUrl;
 
     // Untuk Pinterest, data.isVideo bisa false kalau pin-nya cuma gambar biasa
     // (bukan video/idea pin) -> label tombol & teks default disesuaikan.
@@ -323,16 +328,14 @@
     const downloadLabel = isImageOnly ? "Unduh Gambar" : "Unduh";
     const defaultTitle = isImageOnly ? "Gambar siap diunduh" : "Video siap diunduh";
 
-    // Nama file unduhan dibuat dari judul (kalau ada), supaya file yang
-    // ke-download namanya rapi, bukan nama acak dari URL sumber.
-    const baseFilename = (data.title || (isImageOnly ? "reelgrab-gambar" : "reelgrab-video")).slice(0, 60);
-    const videoExt = isImageOnly ? "jpg" : "mp4";
-
-    // Link download DIARAHKAN lewat /api/download-file (streaming +
-    // Content-Disposition: attachment) supaya browser pasti mendownload,
-    // bukan cuma buka file di tab baru -- lihat catatan di downloadLink().
-    const downloadHref = downloadLink(rawDownloadUrl, `${baseFilename}.${videoExt}`);
-    const audioHref = downloadLink(rawAudioUrl, `${baseFilename}.mp3`);
+    // Link download SEKARANG langsung dipakai dari response backend
+    // (data.downloadFileUrl / data.audioDownloadFileUrl) -- ini URL
+    // absolut ke /api/download-file yang SUDAH berisi signed token &
+    // filename, dibuat oleh backend saat /api/download diproses.
+    // Tidak lagi dirakit manual di frontend (lihat catatan di atas,
+    // dekat komentar "[DICABUT] downloadLink()").
+    const downloadHref = data.downloadFileUrl || null;
+    const audioHref = data.audioDownloadFileUrl || null;
 
     resultArea.hidden = false;
     resultCard.innerHTML = `
