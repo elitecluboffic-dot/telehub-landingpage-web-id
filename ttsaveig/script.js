@@ -11,6 +11,7 @@
   const resultCard = document.getElementById("resultCard");
   const platformBtns = document.querySelectorAll(".platform-btn");
   const noWatermarkChk = document.getElementById("noWatermark");
+  const watermarkChip = noWatermarkChk.closest(".chip");
   const qualitySelect = document.getElementById("quality");
 
   // --- elemen mockup hp ---
@@ -34,10 +35,22 @@
     pinterest: "Ambil Gambar",
   };
 
+  // Opsi "Tanpa watermark" cuma relevan untuk TikTok & Instagram, yang
+  // memang punya watermark aplikasi di video aslinya. Pin Pinterest
+  // (gambar/video) tidak punya watermark yang bisa dihapus, jadi
+  // opsi ini disembunyikan waktu tab Pinterest aktif.
+  const PLATFORMS_WITH_WATERMARK_OPTION = new Set(["tiktok", "instagram"]);
+
   let activePlatform = "tiktok";
 
   function currentSubmitLabel() {
     return PLATFORM_SUBMIT_LABELS[activePlatform] || "Ambil Video";
+  }
+
+  function updateWatermarkOptionVisibility() {
+    if (!watermarkChip) return;
+    const shouldShow = PLATFORMS_WITH_WATERMARK_OPTION.has(activePlatform);
+    watermarkChip.hidden = !shouldShow;
   }
 
   platformBtns.forEach((btn) => {
@@ -51,6 +64,7 @@
       activePlatform = btn.dataset.platform;
       urlInput.placeholder =
         PLATFORM_PLACEHOLDERS[activePlatform] || "Tempel link di sini…";
+      updateWatermarkOptionVisibility();
       // Update label tombol submit sesuai platform yang baru dipilih
       // (hanya kalau sedang tidak dalam proses "Memproses…").
       if (!submitBtn.disabled) {
@@ -58,6 +72,10 @@
       }
     });
   });
+
+  // Set kondisi awal saat halaman dimuat (platform default: tiktok),
+  // supaya chip watermark tampil/sembunyi sesuai tab yang aktif dari awal.
+  updateWatermarkOptionVisibility();
 
   function setLoading(isLoading) {
     submitBtn.disabled = isLoading;
@@ -244,7 +262,13 @@
       url,
       platform: activePlatform,
       quality: qualitySelect.value,
-      removeWatermark: noWatermarkChk.checked,
+      // Opsi watermark disembunyikan untuk Pinterest (lihat
+      // PLATFORMS_WITH_WATERMARK_OPTION di atas) -> paksa false
+      // supaya nilai checkbox dari platform sebelumnya tidak
+      // ikut terkirim tanpa sengaja.
+      removeWatermark: PLATFORMS_WITH_WATERMARK_OPTION.has(activePlatform)
+        ? noWatermarkChk.checked
+        : false,
     };
 
     try {
