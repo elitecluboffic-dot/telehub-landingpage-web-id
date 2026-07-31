@@ -20,13 +20,25 @@
   const spillCard = document.querySelector(".spill-card");
 
   // Placeholder input & label tombol disesuaikan per platform.
+  // Pinterest kebanyakan berupa pin GAMBAR (bukan video), jadi label
+  // tombolnya beda dari TikTok/Instagram yang defaultnya video.
   const PLATFORM_PLACEHOLDERS = {
     tiktok: "Tempel link TikTok di sini…",
     instagram: "Tempel link Instagram Reels/Post di sini…",
     pinterest: "Tempel link pin Pinterest di sini…",
   };
 
+  const PLATFORM_SUBMIT_LABELS = {
+    tiktok: "Ambil Video",
+    instagram: "Ambil Video",
+    pinterest: "Ambil Gambar",
+  };
+
   let activePlatform = "tiktok";
+
+  function currentSubmitLabel() {
+    return PLATFORM_SUBMIT_LABELS[activePlatform] || "Ambil Video";
+  }
 
   platformBtns.forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -39,12 +51,17 @@
       activePlatform = btn.dataset.platform;
       urlInput.placeholder =
         PLATFORM_PLACEHOLDERS[activePlatform] || "Tempel link di sini…";
+      // Update label tombol submit sesuai platform yang baru dipilih
+      // (hanya kalau sedang tidak dalam proses "Memproses…").
+      if (!submitBtn.disabled) {
+        btnLabel.textContent = currentSubmitLabel();
+      }
     });
   });
 
   function setLoading(isLoading) {
     submitBtn.disabled = isLoading;
-    btnLabel.textContent = isLoading ? "Memproses…" : "Ambil Video";
+    btnLabel.textContent = isLoading ? "Memproses…" : currentSubmitLabel();
     btnSpinner.hidden = !isLoading;
   }
 
