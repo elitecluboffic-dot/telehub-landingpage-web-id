@@ -50,7 +50,14 @@
   function updateWatermarkOptionVisibility() {
     if (!watermarkChip) return;
     const shouldShow = PLATFORMS_WITH_WATERMARK_OPTION.has(activePlatform);
-    watermarkChip.hidden = !shouldShow;
+    // PENTING: pakai style.display langsung, BUKAN atribut `hidden`.
+    // Atribut `hidden` cuma didukung lewat CSS bawaan browser
+    // `[hidden] { display: none }` yang prioritasnya rendah — kalau
+    // style.css punya aturan seperti `.chip { display: flex }` (buat
+    // naro checkbox & teks sejajar), aturan itu MENANG dari [hidden]
+    // sehingga elemen tetap kelihatan walau hidden=true. Inline style
+    // di bawah ini selalu menang dari CSS class manapun.
+    watermarkChip.style.setProperty("display", shouldShow ? "" : "none", "important");
   }
 
   platformBtns.forEach((btn) => {
