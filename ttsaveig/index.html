@@ -198,18 +198,21 @@
   </section>
 
   <!-- PENGEMBANG -->
-  <!-- Style kartu "Artist Stories" ala Leonardo.ai: nama & role TIDAK lagi
-       ditaruh di bawah foto sebagai teks terpisah, melainkan jadi overlay
-       yang menyatu di DALAM kotak foto (gradient gelap di bagian bawah
-       supaya teks tetap terbaca di atas foto apa pun). Lihat .dev__overlay
-       di style.css. -->
+  <!-- Style kartu "Artist Stories" ala Leonardo.ai: satu kartu (.dev__card)
+       terdiri dari DUA BLOK yang nempel jadi satu, BUKAN teks overlay
+       transparan di atas foto. Blok atas (.dev__photo) cuma rounded di
+       sudut atas, blok bawah (.dev__info) SOLID gelap dan cuma rounded
+       di sudut bawah -- persis seperti kartu artist Mateo Mejia / Joyce Ng
+       di Leonardo.ai. Lihat style.css bagian "pengembang". -->
   <section class="dev wrap" id="pengembang">
     <p class="eyebrow">ARTIST STORIES</p>
     <h2 class="dev__wordmark">Pengembang</h2>
     <div class="dev__profile">
-      <div class="dev__photo">
-        <img src="/ttsaveig/bimxr.png" alt="Foto pengembang Reelgrab" loading="lazy" width="520" height="1030">
-        <div class="dev__overlay">
+      <div class="dev__card">
+        <div class="dev__photo">
+          <img src="/ttsaveig/bimxr.png" alt="Foto pengembang Reelgrab" loading="lazy" width="520" height="1030">
+        </div>
+        <div class="dev__info">
           <p class="dev__name">Bimxr</p>
           <p class="dev__role">Pembuat &amp; pengembang Reelgrab</p>
         </div>
