@@ -250,11 +250,77 @@
   updateWatermarkOptionVisibility();
   updateQualityOptionsVisibility();
 
+  // ---------- CSS spinner internal (disuntik dari JS) ----------
+  // Spinner loading tombol disuntik langsung dari sini (bukan diandalkan
+  // dari style.css), supaya animasinya DIJAMIN muter apapun isi style.css
+  // di situs ini -- gak ada ketergantungan ke class/keyframe yang mungkin
+  // belum ada atau kepatch di file CSS lain. `!important` dipakai biar gak
+  // ketiban style lain yang kebetulan nimpa `.btn-spinner`.
+  (function injectSpinnerStyles() {
+    if (document.getElementById("reelgrab-spinner-style")) return;
+    const style = document.createElement("style");
+    style.id = "reelgrab-spinner-style";
+    style.textContent = `
+      .btn-spinner {
+        display: inline-block !important;
+        width: 16px !important;
+        height: 16px !important;
+        margin-left: 8px !important;
+        border: 2px solid rgba(0, 0, 0, 0.25) !important;
+        border-top-color: rgba(0, 0, 0, 0.85) !important;
+        border-radius: 50% !important;
+        vertical-align: middle !important;
+        animation: reelgrab-spin 0.7s linear infinite !important;
+      }
+      .btn-spinner[hidden] {
+        display: none !important;
+      }
+      @keyframes reelgrab-spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      #submitBtn[aria-busy="true"] {
+        cursor: progress !important;
+        opacity: 0.85 !important;
+      }
+    `;
+    document.head.appendChild(style);
+  })();
+
+  // Elemen-elemen form lain (selain tombol submit) yang ikut DIKUNCI
+  // selama request beneran berjalan, supaya user gak bisa ganti platform/
+  // opsi/link di tengah proses yang lagi nunggu response asli dari server.
+  // Dikumpulkan sekali di sini supaya gampang di-loop di setLoading().
+  const lockableDuringSubmit = [
+    urlInput,
+    qualitySelect,
+    noWatermarkChk,
+    ...Array.from(platformBtns),
+  ];
+
+  // isLoading di sini TIDAK PERNAH dipicu oleh setTimeout/delay buatan --
+  // satu-satunya pemanggil setLoading(true) adalah tepat sebelum `fetch()`
+  // ke backend jalan (lihat form submit handler di bawah), dan
+  // setLoading(false) baru dipanggil di blok `finally` SETELAH response
+  // (atau error) dari fetch itu benar-benar diterima. Jadi durasi
+  // spinner/lock ini 100% ngikutin waktu round-trip request yang
+  // sesungguhnya ke backend, bukan angka yang dihardcode di frontend.
   function setLoading(isLoading) {
     isSubmitting = isLoading;
     refreshSubmitAvailability();
     btnLabel.textContent = isLoading ? "Memproses…" : currentSubmitLabel();
     btnSpinner.hidden = !isLoading;
+    submitBtn.setAttribute("aria-busy", isLoading ? "true" : "false");
+
+    lockableDuringSubmit.forEach((el) => {
+      if (!el) return;
+      el.disabled = isLoading;
+      if (isLoading) {
+        el.setAttribute("aria-disabled", "true");
+      } else {
+        el.removeAttribute("aria-disabled");
+      }
+    });
   }
 
   function setHint(message, type) {
