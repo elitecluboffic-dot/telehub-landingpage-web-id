@@ -97,6 +97,7 @@ h1{
   border:1px solid var(--line);
   border-radius:var(--radius);
   padding:18px;
+  overflow:visible; /* jangan sampai motong glow tombol submit */
 }
 .platform-toggle{
   display:inline-flex;
@@ -116,6 +117,7 @@ h1{
 }
 .input-row{
   display:flex; gap:10px;
+  overflow:visible; /* jangan sampai motong glow tombol submit */
 }
 #videoUrl{
   flex:1;
@@ -139,12 +141,55 @@ h1{
   font-family:var(--font-display); font-weight:700; font-size:.92rem;
   cursor:pointer;
   min-width:150px;
-  transition:transform .12s ease, filter .12s ease;
+  position:relative;
+  /* Glow ganda: satu shadow rapat (cyan) + satu shadow lebih lebar & blur
+     (magenta) supaya kelihatan lebih "menonjol" dan berpendar halus,
+     bukan cuma shadow datar biasa. */
+  box-shadow:
+    0 4px 14px rgba(85, 230, 201, 0.28),
+    0 6px 28px rgba(255, 61, 129, 0.35),
+    0 0 0 1px rgba(255,255,255,0.04);
+  transition:transform .12s ease, filter .12s ease, box-shadow .25s ease;
+  animation: btn-glow-pulse 2.6s ease-in-out infinite;
 }
-.btn-primary:hover{filter:brightness(1.07);}
-.btn-primary:active{transform:scale(.98);}
+.btn-primary:hover:not([disabled]){
+  filter:brightness(1.07);
+  box-shadow:
+    0 6px 20px rgba(85, 230, 201, 0.4),
+    0 8px 38px rgba(255, 61, 129, 0.48),
+    0 0 0 1px rgba(255,255,255,0.06);
+}
+.btn-primary:active:not([disabled]){
+  transform:scale(.98);
+  box-shadow:
+    0 3px 10px rgba(85, 230, 201, 0.3),
+    0 4px 20px rgba(255, 61, 129, 0.35),
+    0 0 0 1px rgba(255,255,255,0.04);
+}
 .btn-primary:focus-visible{outline:2px solid var(--ink); outline-offset:2px;}
-.btn-primary[disabled]{opacity:.6; cursor:progress;}
+.btn-primary[disabled]{
+  opacity:.6; cursor:progress;
+  box-shadow:none;
+  animation:none;
+}
+
+/* Pendaran lembut yang berdenyut pelan supaya tombol utama makin
+   "hidup" dan menarik perhatian tanpa terasa mengganggu. */
+@keyframes btn-glow-pulse{
+  0%, 100%{
+    box-shadow:
+      0 4px 14px rgba(85, 230, 201, 0.28),
+      0 6px 28px rgba(255, 61, 129, 0.35),
+      0 0 0 1px rgba(255,255,255,0.04);
+  }
+  50%{
+    box-shadow:
+      0 4px 18px rgba(85, 230, 201, 0.4),
+      0 8px 36px rgba(255, 61, 129, 0.48),
+      0 0 0 1px rgba(255,255,255,0.06);
+  }
+}
+
 .btn-spinner{
   width:15px; height:15px; border-radius:50%;
   border:2px solid rgba(18,16,26,0.35); border-top-color:#12101a;
@@ -438,5 +483,6 @@ h1{
 
 @media (prefers-reduced-motion: reduce){
   .btn-spinner{animation:none;}
+  .btn-primary{animation:none;}
   html{scroll-behavior:auto;}
 }
