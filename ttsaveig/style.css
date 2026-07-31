@@ -255,6 +255,45 @@ h1{
   padding:3px 8px; border-radius:999px;
 }
 
+/* ---------- phone media preview (video/gambar asli hasil download) ---------- */
+.phone__media{
+  position:absolute; inset:0;
+  border-radius:28px;
+  overflow:hidden;
+  animation:fadeIn .25s ease;
+}
+.phone__media-video,
+.phone__media-img{
+  width:100%; height:100%;
+  object-fit:cover;
+  display:block;
+}
+@keyframes fadeIn{
+  from{opacity:0;}
+  to{opacity:1;}
+}
+
+/* spill card saat sudah terisi data asli (bukan skeleton lagi) */
+.spill-card__thumb{
+  background-color:transparent; /* biar background-image dari JS yang tampil saat terisi */
+}
+.spill-card.is-filled .spill-line{
+  background:none;
+  height:auto;
+  color:var(--ink);
+  font-size:.72rem;
+  font-weight:600;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:120px;
+}
+.spill-card.is-filled .spill-line.short{
+  color:var(--ink-dim);
+  font-weight:400;
+  font-size:.68rem;
+}
+
 /* ---------- result ---------- */
 .result{padding-bottom:40px;}
 .result__card{
