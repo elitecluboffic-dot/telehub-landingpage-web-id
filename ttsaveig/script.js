@@ -41,6 +41,21 @@
   // opsi ini disembunyikan waktu tab Pinterest aktif.
   const PLATFORMS_WITH_WATERMARK_OPTION = new Set(["tiktok", "instagram"]);
 
+  // Pinterest kebanyakan berupa pin GAMBAR statis, jadi opsi kualitas
+  // "SD (Lebih ringan)" (kompresi video) dan "Hanya audio (MP3)" (ekstrak
+  // audio dari video) gak relevan buat Pinterest -> disembunyikan waktu
+  // tab Pinterest aktif, cuma sisain "HD (Asli)". TikTok & Instagram tetap
+  // dapat semua opsi kualitas seperti biasa.
+  const PLATFORMS_WITH_FULL_QUALITY_OPTIONS = new Set(["tiktok", "instagram"]);
+
+  // Value opsi <select id="quality"> yang mau disembunyikan untuk Pinterest.
+  // Dicocokkan lewat value ATAU teks (fallback) supaya tetap jalan walaupun
+  // atribut value di HTML sedikit beda dari yang diperkirakan di sini.
+  const QUALITY_OPTIONS_HIDDEN_ON_PINTEREST = [
+    { value: "sd", textIncludes: "sd" },
+    { value: "audio", textIncludes: "audio" },
+  ];
+
   let activePlatform = "tiktok";
 
   // ---------- State Cloudflare Turnstile (CAPTCHA) ----------
@@ -137,6 +152,77 @@
     watermarkChip.style.setProperty("display", shouldShow ? "" : "none", "important");
   }
 
+  // Simpan SEMUA elemen <option> asli dari <select id="quality"> begitu
+  // script pertama kali jalan (urutan asli dari HTML). Ini dipakai sebagai
+  // "master list" buat nyusun ulang isi select tiap kali platform ganti.
+  const allQualityOptionNodes = qualitySelect
+    ? Array.from(qualitySelect.options)
+    : [];
+
+  // Sembunyikan opsi "SD (Lebih ringan)" & "Hanya audio (MP3)" dari
+  // <select id="quality"> pas tab Pinterest aktif, cuma sisain
+  // "HD (Asli)".
+  //
+  // CATATAN PENTING: sengaja HAPUS BENERAN elemen <option>-nya dari DOM
+  // (bukan cuma pakai atribut `hidden`/CSS `display:none`), karena browser
+  // (Chrome dkk) TIDAK KONSISTEN nyembunyiin <option> yang cuma di-hidden/
+  // di-disable lewat CSS di dalam popup native dropdown -- opsinya tetep
+  // muncul di list (cuma keliatan abu-abu/disabled), gak beneran ilang.
+  // Dengan appendChild/removeChild langsung ke <select>, opsi yang gak
+  // relevan gak akan pernah dirender sama sekali di dropdown native-nya.
+  //
+  // Elemen <option> yang sama (bukan clone) dipindah-pindah masuk/keluar
+  // dari <select>, jadi value & teksnya tetap persis sama kayak di HTML
+  // asli, cuma urutan re-append-nya disamain sama urutan asli.
+  //
+  // Dicocokkan lewat <option value="..."> DULU (list di
+  // QUALITY_OPTIONS_HIDDEN_ON_PINTEREST), dengan fallback cocokkan teks
+  // opsi (case-insensitive, contains) kalau value-nya ternyata beda dari
+  // yang diperkirakan -- supaya tetap jalan walau markup HTML asli sedikit
+  // berbeda.
+  function updateQualityOptionsVisibility() {
+    if (!qualitySelect || allQualityOptionNodes.length === 0) return;
+
+    const showAllOptions = PLATFORMS_WITH_FULL_QUALITY_OPTIONS.has(activePlatform);
+    const previousValue = qualitySelect.value;
+
+    // Kosongkan select, lalu susun ulang dari master list sesuai platform
+    // yang aktif.
+    while (qualitySelect.firstChild) {
+      qualitySelect.removeChild(qualitySelect.firstChild);
+    }
+
+    allQualityOptionNodes.forEach((opt) => {
+      const valueLower = (opt.value || "").toLowerCase();
+      const textLower = (opt.textContent || "").toLowerCase();
+
+      const matchesHiddenList = QUALITY_OPTIONS_HIDDEN_ON_PINTEREST.some(
+        (rule) => valueLower === rule.value || textLower.includes(rule.textIncludes)
+      );
+
+      // "HD (Asli)" (atau opsi apapun yang gak match list di atas) selalu
+      // tetap tampil di semua platform.
+      const shouldHide = !showAllOptions && matchesHiddenList;
+
+      if (!shouldHide) {
+        qualitySelect.appendChild(opt);
+      }
+    });
+
+    // Kalau opsi yang tadinya kepilih ternyata ikut disembunyikan (misal
+    // user pilih SD di tab TikTok, lalu pindah ke tab Pinterest), otomatis
+    // balik ke opsi pertama yang tersisa (HD) supaya value select gak
+    // nyangkut ke opsi yang udah gak ada di DOM.
+    const stillAvailable = Array.from(qualitySelect.options).some(
+      (opt) => opt.value === previousValue
+    );
+    if (stillAvailable) {
+      qualitySelect.value = previousValue;
+    } else if (qualitySelect.options.length > 0) {
+      qualitySelect.value = qualitySelect.options[0].value;
+    }
+  }
+
   platformBtns.forEach((btn) => {
     btn.addEventListener("click", () => {
       platformBtns.forEach((b) => {
@@ -149,6 +235,7 @@
       urlInput.placeholder =
         PLATFORM_PLACEHOLDERS[activePlatform] || "Tempel link di sini…";
       updateWatermarkOptionVisibility();
+      updateQualityOptionsVisibility();
       // Update label tombol submit sesuai platform yang baru dipilih
       // (hanya kalau sedang tidak dalam proses "Memproses…").
       if (!submitBtn.disabled) {
@@ -158,8 +245,10 @@
   });
 
   // Set kondisi awal saat halaman dimuat (platform default: tiktok),
-  // supaya chip watermark tampil/sembunyi sesuai tab yang aktif dari awal.
+  // supaya chip watermark & opsi kualitas tampil/sembunyi sesuai tab
+  // yang aktif dari awal.
   updateWatermarkOptionVisibility();
+  updateQualityOptionsVisibility();
 
   function setLoading(isLoading) {
     isSubmitting = isLoading;
