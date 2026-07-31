@@ -29,9 +29,17 @@
     pinterest: "Tempel link pin Pinterest di sini…",
   };
 
+  // Label tombol submit per platform. TikTok selalu video, Pinterest
+  // kebanyakan gambar (jadi labelnya "Ambil Gambar"). Instagram beda --
+  // sebuah link Instagram bisa berupa Reels/video ATAU foto biasa, dan
+  // ini baru ketahuan SETELAH backend memproses link-nya (lihat field
+  // `isVideo` di response /api/download). Karena labelnya harus dipasang
+  // SEBELUM link diproses, dipakai label gabungan "Ambil Video/Gambar"
+  // supaya dari awal jelas kedua jenis konten didukung, tanpa perlu
+  // nebak isi link-nya duluan.
   const PLATFORM_SUBMIT_LABELS = {
     tiktok: "Ambil Video",
-    instagram: "Ambil Video",
+    instagram: "Ambil Video/Gambar",
     pinterest: "Ambil Gambar",
   };
 
