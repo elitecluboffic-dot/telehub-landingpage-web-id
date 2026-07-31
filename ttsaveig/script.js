@@ -189,12 +189,13 @@
     return div.innerHTML;
   }
 
-  // Bungkus URL asli lewat endpoint proxy backend sendiri,
-  // supaya browser tidak pernah menghubungi domain sumber (mis. dl.tiktokio.com) secara langsung.
-  function proxied(url) {
-    if (!url) return url;
-    return `${API_BASE_URL}/api/proxy?url=${encodeURIComponent(url)}`;
-  }
+  // [DICABUT] Sebelumnya ada fungsi proxied() di sini yang membungkus
+  // semua URL media lewat backend (/api/proxy?url=...). Endpoint itu
+  // sudah dihapus dari backend karena bikin Worker kelewat resource
+  // limit (error 1102) saat menampung seluruh isi video ke memory.
+  // Sekarang thumbnail/download/audio URL dari backend dipakai APA
+  // ADANYA (URL asli dari sumber, mis. dl.tiktokio.com, cdninstagram.com,
+  // i.pinimg.com) tanpa dibungkus proxy sama sekali.
 
   // Reset mockup hp balik ke tampilan skeleton awal
   function resetPhonePreview() {
@@ -210,7 +211,8 @@
     }
   }
 
-  // Isi mockup hp dengan hasil video/gambar asli (sudah dalam bentuk URL ter-proxy).
+  // Isi mockup hp dengan hasil video/gambar asli (URL langsung dari sumber,
+  // tidak lagi lewat proxy backend).
   // data.isVideo (opsional, dikirim backend untuk Pinterest) menentukan apakah
   // media dirender sebagai <video> atau langsung sebagai gambar diam.
   function renderPhonePreview(data) {
@@ -295,9 +297,11 @@
   }
 
   function renderResult(data) {
-    const proxiedThumb = proxied(data.thumbnail);
-    const proxiedDownload = proxied(data.downloadUrl);
-    const proxiedAudio = proxied(data.audioUrl);
+    // URL langsung dari sumber (tidak lagi dibungkus lewat /api/proxy
+    // backend -- lihat catatan di atas fungsi proxied() yang sudah dicabut).
+    const thumb = data.thumbnail;
+    const downloadUrl = data.downloadUrl;
+    const audioUrl = data.audioUrl;
 
     // Untuk Pinterest, data.isVideo bisa false kalau pin-nya cuma gambar biasa
     // (bukan video/idea pin) -> label tombol & teks default disesuaikan.
@@ -307,23 +311,23 @@
 
     resultArea.hidden = false;
     resultCard.innerHTML = `
-      <img class="result__thumb" src="${proxiedThumb || proxiedDownload || ""}" alt="" onerror="this.style.display='none'">
+      <img class="result__thumb" src="${thumb || downloadUrl || ""}" alt="" onerror="this.style.display='none'">
       <div class="result__info">
         <h3>${escapeHtml(data.title || defaultTitle)}</h3>
         <p>${escapeHtml(data.author ? "Oleh " + data.author : "")}</p>
       </div>
       <div class="result__actions">
-        ${proxiedDownload ? `<a href="${proxiedDownload}" target="_blank" rel="noopener">${escapeHtml(downloadLabel)}</a>` : ""}
-        ${proxiedAudio ? `<a class="secondary" href="${proxiedAudio}" target="_blank" rel="noopener">Unduh audio (MP3)</a>` : ""}
+        ${downloadUrl ? `<a href="${downloadUrl}" target="_blank" rel="noopener">${escapeHtml(downloadLabel)}</a>` : ""}
+        ${audioUrl ? `<a class="secondary" href="${audioUrl}" target="_blank" rel="noopener">Unduh audio (MP3)</a>` : ""}
       </div>
     `;
     resultArea.scrollIntoView({ behavior: "smooth", block: "start" });
 
-    // Kirim versi ter-proxy ke preview hp, bukan URL asli
+    // Kirim data apa adanya ke preview hp (URL asli, bukan versi ter-proxy)
     renderPhonePreview({
       ...data,
-      thumbnail: proxiedThumb,
-      downloadUrl: proxiedDownload,
+      thumbnail: thumb,
+      downloadUrl: downloadUrl,
     });
   }
 
