@@ -355,6 +355,69 @@ h1{
 .faq details[open] summary::after{content:'–';}
 .faq p{color:var(--ink-dim); margin:10px 0 0; font-size:.9rem;}
 
+/* ---------- pengembang ---------- */
+/* Wordmark besar gaya footer Leonardo.ai, ditaruh di antara FAQ dan
+   footer. Pakai gradient cyan->magenta yang sama dengan .accent dan
+   tombol utama, biar konsisten sama identitas warna Reelgrab. */
+.dev{
+  text-align:center;
+  padding:96px 0 56px;
+}
+.dev__wordmark{
+  margin:0 0 48px;
+  font-family:var(--font-display);
+  font-weight:700;
+  font-size:clamp(48px, 13vw, 168px);
+  line-height:0.92;
+  letter-spacing:-0.02em;
+  text-transform:uppercase;
+  background:linear-gradient(90deg, var(--cyan), var(--magenta));
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+}
+.dev__profile{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+}
+/* Foto (bimxr.png) backgroundnya putih (bukan PNG transparan), jadi
+   sengaja dibungkus jadi "kartu foto" (bg putih + padding + shadow)
+   supaya kelihatan sengaja/rapi di atas situs gelap, bukan kotak putih
+   nyasar. Kalau nanti ganti ke foto PNG transparan (subjek saja tanpa
+   background), hapus `background`, `padding`, dan `border` di bawah
+   supaya foto nempel langsung tanpa bingkai. */
+.dev__photo{
+  width:clamp(180px, 32vw, 260px);
+  margin:0 0 22px;
+  padding:10px;
+  border-radius:var(--radius);
+  background:#ffffff;
+  border:1px solid var(--line);
+  box-shadow:0 30px 70px rgba(0,0,0,0.55);
+}
+.dev__photo img{
+  display:block;
+  width:100%;
+  height:auto;
+  border-radius:calc(var(--radius) - 4px);
+  object-fit:cover;
+}
+.dev__name{
+  margin:0;
+  font-family:var(--font-display);
+  font-weight:600;
+  font-size:1.15rem;
+  color:var(--ink);
+}
+.dev__role{
+  margin:4px 0 0;
+  font-family:var(--font-mono);
+  font-size:.8rem;
+  color:var(--ink-dim);
+}
+
 /* ---------- footer ---------- */
 .footer{
   padding:28px 24px 40px;
@@ -369,6 +432,8 @@ h1{
   .steps__list{grid-template-columns:1fr;}
   .input-row{flex-direction:column;}
   .btn-primary{width:100%;}
+  .dev{padding:64px 0 40px;}
+  .dev__wordmark{margin-bottom:36px;}
 }
 
 @media (prefers-reduced-motion: reduce){
