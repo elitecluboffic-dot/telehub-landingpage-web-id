@@ -190,12 +190,27 @@
   }
 
   // [DICABUT] Sebelumnya ada fungsi proxied() di sini yang membungkus
-  // semua URL media lewat backend (/api/proxy?url=...). Endpoint itu
-  // sudah dihapus dari backend karena bikin Worker kelewat resource
-  // limit (error 1102) saat menampung seluruh isi video ke memory.
-  // Sekarang thumbnail/download/audio URL dari backend dipakai APA
-  // ADANYA (URL asli dari sumber, mis. dl.tiktokio.com, cdninstagram.com,
-  // i.pinimg.com) tanpa dibungkus proxy sama sekali.
+  // semua URL media (thumbnail, video/gambar preview, DAN link download)
+  // lewat backend (/api/proxy?url=...). Endpoint itu sudah dihapus dari
+  // backend karena bikin Worker kelewat resource limit (error 1102) saat
+  // menampung seluruh isi video ke memory. Sekarang thumbnail & preview
+  // video/gambar pakai URL ASLI dari sumber langsung (dl.tiktokio.com,
+  // cdninstagram.com, i.pinimg.com dst.) tanpa proxy sama sekali.
+
+  // Khusus tombol UNDUH: kalau dipakai URL asli langsung, atribut HTML
+  // `download` di <a> diabaikan browser untuk URL cross-origin -> yang
+  // kejadian malah file kebuka di tab baru, bukan ke-download. Makanya
+  // link download (bukan preview) diarahkan ke endpoint backend
+  // /api/download-file, yang men-STREAM isi file (bukan buffer penuh
+  // seperti /api/proxy lama) sambil mengirim header
+  // Content-Disposition: attachment supaya browser pasti memicu
+  // dialog "Save As" apa pun origin sumbernya.
+  function downloadLink(url, filename) {
+    if (!url) return url;
+    const params = new URLSearchParams({ url });
+    if (filename) params.set('filename', filename);
+    return `${API_BASE_URL}/api/download-file?${params.toString()}`;
+  }
 
   // Reset mockup hp balik ke tampilan skeleton awal
   function resetPhonePreview() {
@@ -297,11 +312,10 @@
   }
 
   function renderResult(data) {
-    // URL langsung dari sumber (tidak lagi dibungkus lewat /api/proxy
-    // backend -- lihat catatan di atas fungsi proxied() yang sudah dicabut).
+    // Preview (thumbnail) tetap pakai URL asli langsung dari sumber.
     const thumb = data.thumbnail;
-    const downloadUrl = data.downloadUrl;
-    const audioUrl = data.audioUrl;
+    const rawDownloadUrl = data.downloadUrl;
+    const rawAudioUrl = data.audioUrl;
 
     // Untuk Pinterest, data.isVideo bisa false kalau pin-nya cuma gambar biasa
     // (bukan video/idea pin) -> label tombol & teks default disesuaikan.
@@ -309,25 +323,38 @@
     const downloadLabel = isImageOnly ? "Unduh Gambar" : "Unduh";
     const defaultTitle = isImageOnly ? "Gambar siap diunduh" : "Video siap diunduh";
 
+    // Nama file unduhan dibuat dari judul (kalau ada), supaya file yang
+    // ke-download namanya rapi, bukan nama acak dari URL sumber.
+    const baseFilename = (data.title || (isImageOnly ? "reelgrab-gambar" : "reelgrab-video")).slice(0, 60);
+    const videoExt = isImageOnly ? "jpg" : "mp4";
+
+    // Link download DIARAHKAN lewat /api/download-file (streaming +
+    // Content-Disposition: attachment) supaya browser pasti mendownload,
+    // bukan cuma buka file di tab baru -- lihat catatan di downloadLink().
+    const downloadHref = downloadLink(rawDownloadUrl, `${baseFilename}.${videoExt}`);
+    const audioHref = downloadLink(rawAudioUrl, `${baseFilename}.mp3`);
+
     resultArea.hidden = false;
     resultCard.innerHTML = `
-      <img class="result__thumb" src="${thumb || downloadUrl || ""}" alt="" onerror="this.style.display='none'">
+      <img class="result__thumb" src="${thumb || rawDownloadUrl || ""}" alt="" onerror="this.style.display='none'">
       <div class="result__info">
         <h3>${escapeHtml(data.title || defaultTitle)}</h3>
         <p>${escapeHtml(data.author ? "Oleh " + data.author : "")}</p>
       </div>
       <div class="result__actions">
-        ${downloadUrl ? `<a href="${downloadUrl}" target="_blank" rel="noopener">${escapeHtml(downloadLabel)}</a>` : ""}
-        ${audioUrl ? `<a class="secondary" href="${audioUrl}" target="_blank" rel="noopener">Unduh audio (MP3)</a>` : ""}
+        ${downloadHref ? `<a href="${downloadHref}" rel="noopener">${escapeHtml(downloadLabel)}</a>` : ""}
+        ${audioHref ? `<a class="secondary" href="${audioHref}" rel="noopener">Unduh audio (MP3)</a>` : ""}
       </div>
     `;
     resultArea.scrollIntoView({ behavior: "smooth", block: "start" });
 
-    // Kirim data apa adanya ke preview hp (URL asli, bukan versi ter-proxy)
+    // Preview mockup hp tetap pakai URL asli (bukan link /api/download-file),
+    // karena elemen <video>/<img> di sini untuk DITONTON di halaman, bukan
+    // didownload -- browser tetap bisa render langsung dari URL sumber.
     renderPhonePreview({
       ...data,
       thumbnail: thumb,
-      downloadUrl: downloadUrl,
+      downloadUrl: rawDownloadUrl,
     });
   }
 
