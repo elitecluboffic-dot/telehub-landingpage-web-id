@@ -64,6 +64,13 @@
     return div.innerHTML;
   }
 
+  // Bungkus URL asli lewat endpoint proxy backend sendiri,
+  // supaya browser tidak pernah menghubungi domain sumber (mis. dl.tiktokio.com) secara langsung.
+  function proxied(url) {
+    if (!url) return url;
+    return `${API_BASE_URL}/api/proxy?url=${encodeURIComponent(url)}`;
+  }
+
   // Reset mockup hp balik ke tampilan skeleton awal
   function resetPhonePreview() {
     if (!phoneScreen) return;
@@ -78,7 +85,7 @@
     }
   }
 
-  // Isi mockup hp dengan hasil video asli
+  // Isi mockup hp dengan hasil video asli (sudah dalam bentuk URL ter-proxy)
   function renderPhonePreview(data) {
     if (!phoneScreen) return;
 
@@ -99,8 +106,7 @@
       video.autoplay = true;
       video.poster = data.thumbnail || "";
 
-      // Kalau video gagal dimuat/diputar (mis. server sumber block CORS),
-      // otomatis fallback ke thumbnail gambar diam.
+      // Kalau video gagal dimuat/diputar, otomatis fallback ke thumbnail gambar diam.
       video.addEventListener("error", () => {
         mediaWrap.innerHTML = "";
         appendThumbFallback(mediaWrap, data);
@@ -150,21 +156,30 @@
   }
 
   function renderResult(data) {
+    const proxiedThumb = proxied(data.thumbnail);
+    const proxiedDownload = proxied(data.downloadUrl);
+    const proxiedAudio = proxied(data.audioUrl);
+
     resultArea.hidden = false;
     resultCard.innerHTML = `
-      <img class="result__thumb" src="${data.thumbnail || ""}" alt="" onerror="this.style.display='none'">
+      <img class="result__thumb" src="${proxiedThumb || ""}" alt="" onerror="this.style.display='none'">
       <div class="result__info">
         <h3>${escapeHtml(data.title || "Video siap diunduh")}</h3>
         <p>${escapeHtml(data.author ? "Oleh " + data.author : "")}</p>
       </div>
       <div class="result__actions">
-        ${data.downloadUrl ? `<a href="${data.downloadUrl}" target="_blank" rel="noopener">Unduh</a>` : ""}
-        ${data.audioUrl ? `<a class="secondary" href="${data.audioUrl}" target="_blank" rel="noopener">Unduh audio (MP3)</a>` : ""}
+        ${proxiedDownload ? `<a href="${proxiedDownload}" target="_blank" rel="noopener">Unduh</a>` : ""}
+        ${proxiedAudio ? `<a class="secondary" href="${proxiedAudio}" target="_blank" rel="noopener">Unduh audio (MP3)</a>` : ""}
       </div>
     `;
     resultArea.scrollIntoView({ behavior: "smooth", block: "start" });
 
-    renderPhonePreview(data);
+    // Kirim versi ter-proxy ke preview hp, bukan URL asli
+    renderPhonePreview({
+      ...data,
+      thumbnail: proxiedThumb,
+      downloadUrl: proxiedDownload,
+    });
   }
 
   form.addEventListener("submit", async (e) => {
