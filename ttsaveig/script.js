@@ -43,9 +43,86 @@
 
   let activePlatform = "tiktok";
 
+  // ---------- State Cloudflare Turnstile (CAPTCHA) ----------
+  let turnstileToken = null;
+  let turnstileWidgetId = null;
+  let isSubmitting = false;
+
   function currentSubmitLabel() {
     return PLATFORM_SUBMIT_LABELS[activePlatform] || "Ambil Video";
   }
+
+  // Tombol submit HANYA aktif kalau: (1) tidak sedang proses request, DAN
+  // (2) captcha Turnstile sudah diselesaikan (turnstileToken terisi).
+  function refreshSubmitAvailability() {
+    submitBtn.disabled = isSubmitting || !turnstileToken;
+  }
+
+  // Dipanggil otomatis oleh script Cloudflare Turnstile lewat parameter
+  // ?onload=onTurnstileLoad di URL <script> pada index.html. Nama fungsi
+  // ini HARUS persis "onTurnstileLoad" dan HARUS global (di window),
+  // karena itu yang dipanggil oleh script eksternal Cloudflare.
+  function initTurnstileWidget() {
+    if (!window.turnstile) return;
+
+    const container = document.getElementById("turnstileWidget");
+    if (!container) return;
+
+    const siteKey = window.TURNSTILE_SITE_KEY;
+    if (!siteKey) {
+      // Site key wajib diisi di config.js sebagai window.TURNSTILE_SITE_KEY
+      // (site key itu PUBLIC, aman ditaruh di frontend -- yang rahasia
+      // cuma secret key-nya, dan itu cuma ada di sisi backend Worker).
+      console.error(
+        "TURNSTILE_SITE_KEY belum diisi di config.js (window.TURNSTILE_SITE_KEY kosong)."
+      );
+      setHint(
+        "Captcha belum dikonfigurasi (site key kosong). Hubungi admin situs ini.",
+        "is-error"
+      );
+      return;
+    }
+
+    turnstileWidgetId = window.turnstile.render(container, {
+      sitekey: siteKey,
+      callback: (token) => {
+        turnstileToken = token;
+        refreshSubmitAvailability();
+        // Bersihkan pesan error captcha sebelumnya (kalau ada) begitu
+        // berhasil diselesaikan.
+        if (statusHint.classList.contains("is-error")) {
+          setHint("");
+        }
+      },
+      "expired-callback": () => {
+        turnstileToken = null;
+        refreshSubmitAvailability();
+        setHint("Captcha kedaluwarsa, selesaikan lagi sebelum mengunduh.", "is-error");
+      },
+      "error-callback": () => {
+        turnstileToken = null;
+        refreshSubmitAvailability();
+        setHint("Captcha gagal dimuat. Coba refresh halaman.", "is-error");
+      },
+    });
+
+    refreshSubmitAvailability();
+  }
+
+  // Fungsi ini WAJIB global (window.onTurnstileLoad), dipanggil oleh
+  // script Cloudflare Turnstile setelah selesai dimuat.
+  window.onTurnstileLoad = initTurnstileWidget;
+
+  // Jaga-jaga race condition: kalau script Turnstile (yang di-load async)
+  // ternyata SUDAH selesai duluan sebelum baris ini sempat jalan (jarang
+  // tapi mungkin di koneksi sangat cepat/cache), window.turnstile sudah
+  // tersedia tapi callback onload-nya sudah lewat -> render manual di sini.
+  if (window.turnstile) {
+    initTurnstileWidget();
+  }
+
+  // Tombol submit nonaktif dari awal sampai captcha selesai diselesaikan.
+  refreshSubmitAvailability();
 
   function updateWatermarkOptionVisibility() {
     if (!watermarkChip) return;
@@ -85,7 +162,8 @@
   updateWatermarkOptionVisibility();
 
   function setLoading(isLoading) {
-    submitBtn.disabled = isLoading;
+    isSubmitting = isLoading;
+    refreshSubmitAvailability();
     btnLabel.textContent = isLoading ? "Memproses…" : currentSubmitLabel();
     btnSpinner.hidden = !isLoading;
   }
@@ -258,6 +336,14 @@
       return;
     }
 
+    // Jaga-jaga tambahan di luar disabled state tombol (mis. submit
+    // ke-trigger lewat cara lain selain klik tombol) -> captcha tetap
+    // wajib ada sebelum request dikirim ke backend.
+    if (!turnstileToken) {
+      setHint("Selesaikan captcha di bawah terlebih dahulu.", "is-error");
+      return;
+    }
+
     resultArea.hidden = true;
     resetPhonePreview();
     setHint(
@@ -276,6 +362,10 @@
       removeWatermark: PLATFORMS_WITH_WATERMARK_OPTION.has(activePlatform)
         ? noWatermarkChk.checked
         : false,
+      // Token Turnstile diverifikasi ulang di backend (siteverify)
+      // sebelum request diproses sama sekali -> lihat verifyTurnstileToken()
+      // di index.js backend.
+      turnstileToken,
     };
 
     try {
@@ -313,6 +403,16 @@
       );
     } finally {
       setLoading(false);
+
+      // Token Turnstile SEKALI PAKAI (Cloudflare menolak token yang sama
+      // dipakai dua kali, error-code "timeout-or-duplicate") -> reset
+      // widget setelah tiap percobaan submit, apa pun hasilnya, supaya
+      // user harus menyelesaikan captcha baru sebelum bisa submit lagi.
+      turnstileToken = null;
+      if (window.turnstile && turnstileWidgetId !== null) {
+        window.turnstile.reset(turnstileWidgetId);
+      }
+      refreshSubmitAvailability();
     }
   });
 })();
