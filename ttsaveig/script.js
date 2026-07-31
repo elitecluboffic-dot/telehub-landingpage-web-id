@@ -19,6 +19,13 @@
   const phoneUi = document.querySelector(".phone__ui");
   const spillCard = document.querySelector(".spill-card");
 
+  // Placeholder input & label tombol disesuaikan per platform.
+  const PLATFORM_PLACEHOLDERS = {
+    tiktok: "Tempel link TikTok di sini…",
+    instagram: "Tempel link Instagram Reels/Post di sini…",
+    pinterest: "Tempel link pin Pinterest di sini…",
+  };
+
   let activePlatform = "tiktok";
 
   platformBtns.forEach((btn) => {
@@ -31,9 +38,7 @@
       btn.setAttribute("aria-selected", "true");
       activePlatform = btn.dataset.platform;
       urlInput.placeholder =
-        activePlatform === "tiktok"
-          ? "Tempel link TikTok di sini…"
-          : "Tempel link Instagram Reels/Post di sini…";
+        PLATFORM_PLACEHOLDERS[activePlatform] || "Tempel link di sini…";
     });
   });
 
@@ -85,7 +90,9 @@
     }
   }
 
-  // Isi mockup hp dengan hasil video asli (sudah dalam bentuk URL ter-proxy)
+  // Isi mockup hp dengan hasil video/gambar asli (sudah dalam bentuk URL ter-proxy).
+  // data.isVideo (opsional, dikirim backend untuk Pinterest) menentukan apakah
+  // media dirender sebagai <video> atau langsung sebagai gambar diam.
   function renderPhonePreview(data) {
     if (!phoneScreen) return;
 
@@ -96,7 +103,9 @@
     const mediaWrap = document.createElement("div");
     mediaWrap.className = "phone__media";
 
-    if (data.downloadUrl) {
+    const treatAsImage = data.isVideo === false;
+
+    if (data.downloadUrl && !treatAsImage) {
       const video = document.createElement("video");
       video.className = "phone__media-video";
       video.src = data.downloadUrl;
@@ -113,6 +122,9 @@
       });
 
       mediaWrap.appendChild(video);
+    } else if (treatAsImage && data.downloadUrl) {
+      // Pin Pinterest berupa gambar biasa -> downloadUrl-nya sendiri adalah gambar.
+      appendThumbFallback(mediaWrap, { thumbnail: data.downloadUrl });
     } else if (data.thumbnail) {
       appendThumbFallback(mediaWrap, data);
     } else {
@@ -127,17 +139,24 @@
     if (spillCard) {
       spillCard.classList.add("is-filled");
       const thumb = spillCard.querySelector(".spill-card__thumb");
-      if (thumb && data.thumbnail) {
-        thumb.style.backgroundImage = `url("${data.thumbnail}")`;
+      const thumbSrc = data.thumbnail || (treatAsImage ? data.downloadUrl : "");
+      if (thumb && thumbSrc) {
+        thumb.style.backgroundImage = `url("${thumbSrc}")`;
         thumb.style.backgroundSize = "cover";
         thumb.style.backgroundPosition = "center";
       }
       const lines = spillCard.querySelectorAll(".spill-line");
-      if (lines[0]) lines[0].textContent = data.title ? truncate(data.title, 22) : "Video siap";
+      if (lines[0])
+        lines[0].textContent = data.title
+          ? truncate(data.title, 22)
+          : treatAsImage
+          ? "Gambar siap"
+          : "Video siap";
       if (lines[1]) lines[1].textContent = data.author ? "@" + data.author : "";
       const badge = spillCard.querySelector(".spill-card__badge");
       if (badge) {
-        badge.textContent = (qualitySelect.value === "sd" ? "SD" : "HD") +
+        badge.textContent =
+          (qualitySelect.value === "sd" ? "SD" : "HD") +
           (noWatermarkChk.checked ? " · No WM" : "");
       }
     }
@@ -160,15 +179,21 @@
     const proxiedDownload = proxied(data.downloadUrl);
     const proxiedAudio = proxied(data.audioUrl);
 
+    // Untuk Pinterest, data.isVideo bisa false kalau pin-nya cuma gambar biasa
+    // (bukan video/idea pin) -> label tombol & teks default disesuaikan.
+    const isImageOnly = data.isVideo === false;
+    const downloadLabel = isImageOnly ? "Unduh Gambar" : "Unduh";
+    const defaultTitle = isImageOnly ? "Gambar siap diunduh" : "Video siap diunduh";
+
     resultArea.hidden = false;
     resultCard.innerHTML = `
-      <img class="result__thumb" src="${proxiedThumb || ""}" alt="" onerror="this.style.display='none'">
+      <img class="result__thumb" src="${proxiedThumb || proxiedDownload || ""}" alt="" onerror="this.style.display='none'">
       <div class="result__info">
-        <h3>${escapeHtml(data.title || "Video siap diunduh")}</h3>
+        <h3>${escapeHtml(data.title || defaultTitle)}</h3>
         <p>${escapeHtml(data.author ? "Oleh " + data.author : "")}</p>
       </div>
       <div class="result__actions">
-        ${proxiedDownload ? `<a href="${proxiedDownload}" target="_blank" rel="noopener">Unduh</a>` : ""}
+        ${proxiedDownload ? `<a href="${proxiedDownload}" target="_blank" rel="noopener">${escapeHtml(downloadLabel)}</a>` : ""}
         ${proxiedAudio ? `<a class="secondary" href="${proxiedAudio}" target="_blank" rel="noopener">Unduh audio (MP3)</a>` : ""}
       </div>
     `;
@@ -193,7 +218,9 @@
 
     resultArea.hidden = true;
     resetPhonePreview();
-    setHint("Mengambil data video…");
+    setHint(
+      activePlatform === "pinterest" ? "Mengambil data pin…" : "Mengambil data video…"
+    );
     setLoading(true);
 
     const payload = {
@@ -223,7 +250,12 @@
       }
 
       renderResult(data.data);
-      setHint("Berhasil! Video siap diunduh.", "is-ok");
+      setHint(
+        data.data && data.data.isVideo === false
+          ? "Berhasil! Gambar siap diunduh."
+          : "Berhasil! Video siap diunduh.",
+        "is-ok"
+      );
     } catch (err) {
       console.error(err);
       resetPhonePreview();
