@@ -426,28 +426,29 @@ h1{
   flex-direction:column;
   align-items:center;
 }
-/* Kartu foto gaya "Artist Stories" Leonardo.ai: nama & role TIDAK lagi
-   ditaruh di bawah foto, melainkan jadi overlay yang menyatu di DALAM
-   kotak foto lewat .dev__overlay (lihat di bawah), dengan gradient gelap
-   supaya teks tetap terbaca di atas foto apa pun.
-   Foto (bimxr.png) sumbernya berlatar putih, jadi dipakai object-fit:cover
-   di dalam frame rasio potret tetap (bukan lagi height:auto) supaya
-   framing-nya konsisten & rapi seperti kartu-kartu di Leonardo.ai --
-   sedikit bagian putih di tepi foto masih bisa kelihatan, itu wajar
-   karena sumber fotonya sendiri tidak transparan. */
-.dev__photo{
-  position:relative;
+/* Kartu "Artist Stories" gaya Leonardo.ai: SATU kartu (.dev__card) yang
+   dibentuk dari DUA BLOK terpisah yang nempel jadi satu -- BUKAN teks
+   overlay transparan di atas foto:
+   - .dev__photo  = blok foto, rounded cuma di sudut ATAS
+   - .dev__info   = blok info, SOLID warna gelap, rounded cuma di sudut BAWAH
+   Shadow & radius luar ada di .dev__card supaya kartunya kelihatan
+   sebagai satu kesatuan utuh, persis kayak kartu Mateo Mejia / Joyce Ng
+   di Leonardo.ai. */
+.dev__card{
   width:clamp(220px, 34vw, 300px);
-  aspect-ratio: 3 / 4;
   border-radius:var(--radius);
   overflow:hidden;
-  background:#ffffff;
   box-shadow:0 30px 70px rgba(0,0,0,0.55);
   transition:transform .25s ease, box-shadow .25s ease;
 }
-.dev__photo:hover{
+.dev__card:hover{
   transform:translateY(-4px);
   box-shadow:0 36px 80px rgba(0,0,0,0.6);
+}
+.dev__photo{
+  width:100%;
+  aspect-ratio: 3 / 4;
+  background:#ffffff;
 }
 .dev__photo img{
   display:block;
@@ -456,37 +457,26 @@ h1{
   object-fit:cover;
   object-position:top center;
 }
-/* Overlay teks nama+role, nempel di bagian bawah kotak foto, dengan
-   gradient gelap dari bawah ke atas supaya teks tetap kebaca jelas
-   walau foto di baliknya terang. Ini yang bikin efeknya kerasa "menyatu
-   dengan foto" persis seperti kartu artist di Leonardo.ai. */
-.dev__overlay{
-  position:absolute;
-  left:0; right:0; bottom:0;
-  padding:28px 18px 16px;
+/* Bar info SOLID (bukan transparan/gradient) supaya teks selalu kontras
+   tinggi, terlepas dari warna latar foto di atasnya (foto bimxr.png
+   sendiri berlatar putih). */
+.dev__info{
+  background:#26222f;
+  padding:16px 18px 18px;
   text-align:left;
-  background:linear-gradient(
-    to top,
-    rgba(10,8,14,0.94) 0%,
-    rgba(10,8,14,0.75) 40%,
-    rgba(10,8,14,0.0) 100%
-  );
 }
 .dev__name{
   margin:0;
   font-family:var(--font-display);
   font-weight:700;
-  font-size:1.15rem;
+  font-size:1.05rem;
   letter-spacing:-0.01em;
-  background:linear-gradient(90deg, var(--cyan), var(--magenta));
-  -webkit-background-clip:text;
-  background-clip:text;
-  color:transparent;
+  color:var(--cyan);
 }
 .dev__role{
-  margin:3px 0 0;
+  margin:4px 0 0;
   font-family:var(--font-mono);
-  font-size:.76rem;
+  font-size:.78rem;
   color:var(--ink-dim);
 }
 
