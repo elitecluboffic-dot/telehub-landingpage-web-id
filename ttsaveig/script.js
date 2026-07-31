@@ -13,6 +13,12 @@
   const noWatermarkChk = document.getElementById("noWatermark");
   const qualitySelect = document.getElementById("quality");
 
+  // --- elemen mockup hp ---
+  const phoneScreen = document.querySelector(".phone__screen");
+  const phoneGradient = document.querySelector(".phone__gradient");
+  const phoneUi = document.querySelector(".phone__ui");
+  const spillCard = document.querySelector(".spill-card");
+
   let activePlatform = "tiktok";
 
   platformBtns.forEach((btn) => {
@@ -52,6 +58,97 @@
     }
   }
 
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // Reset mockup hp balik ke tampilan skeleton awal
+  function resetPhonePreview() {
+    if (!phoneScreen) return;
+    phoneScreen.querySelectorAll(".phone__media").forEach((el) => el.remove());
+    if (phoneGradient) phoneGradient.style.display = "";
+    if (phoneUi) phoneUi.style.display = "";
+    if (spillCard) {
+      spillCard.classList.remove("is-filled");
+      const thumb = spillCard.querySelector(".spill-card__thumb");
+      if (thumb) thumb.style.backgroundImage = "";
+      spillCard.querySelectorAll(".spill-line").forEach((el) => (el.textContent = ""));
+    }
+  }
+
+  // Isi mockup hp dengan hasil video asli
+  function renderPhonePreview(data) {
+    if (!phoneScreen) return;
+
+    // sembunyikan skeleton/gradient placeholder
+    if (phoneGradient) phoneGradient.style.display = "none";
+    if (phoneUi) phoneUi.style.display = "none";
+
+    const mediaWrap = document.createElement("div");
+    mediaWrap.className = "phone__media";
+
+    if (data.downloadUrl) {
+      const video = document.createElement("video");
+      video.className = "phone__media-video";
+      video.src = data.downloadUrl;
+      video.muted = true;
+      video.loop = true;
+      video.playsInline = true;
+      video.autoplay = true;
+      video.poster = data.thumbnail || "";
+
+      // Kalau video gagal dimuat/diputar (mis. server sumber block CORS),
+      // otomatis fallback ke thumbnail gambar diam.
+      video.addEventListener("error", () => {
+        mediaWrap.innerHTML = "";
+        appendThumbFallback(mediaWrap, data);
+      });
+
+      mediaWrap.appendChild(video);
+    } else if (data.thumbnail) {
+      appendThumbFallback(mediaWrap, data);
+    } else {
+      // tidak ada media sama sekali, tampilkan gradient lagi
+      if (phoneGradient) phoneGradient.style.display = "";
+      return;
+    }
+
+    phoneScreen.appendChild(mediaWrap);
+
+    // update kartu kecil (spill card) di luar hp
+    if (spillCard) {
+      spillCard.classList.add("is-filled");
+      const thumb = spillCard.querySelector(".spill-card__thumb");
+      if (thumb && data.thumbnail) {
+        thumb.style.backgroundImage = `url("${data.thumbnail}")`;
+        thumb.style.backgroundSize = "cover";
+        thumb.style.backgroundPosition = "center";
+      }
+      const lines = spillCard.querySelectorAll(".spill-line");
+      if (lines[0]) lines[0].textContent = data.title ? truncate(data.title, 22) : "Video siap";
+      if (lines[1]) lines[1].textContent = data.author ? "@" + data.author : "";
+      const badge = spillCard.querySelector(".spill-card__badge");
+      if (badge) {
+        badge.textContent = (qualitySelect.value === "sd" ? "SD" : "HD") +
+          (noWatermarkChk.checked ? " · No WM" : "");
+      }
+    }
+  }
+
+  function appendThumbFallback(container, data) {
+    const img = document.createElement("img");
+    img.className = "phone__media-img";
+    img.src = data.thumbnail;
+    img.alt = "";
+    container.appendChild(img);
+  }
+
+  function truncate(str, max) {
+    return str.length > max ? str.slice(0, max - 1) + "…" : str;
+  }
+
   function renderResult(data) {
     resultArea.hidden = false;
     resultCard.innerHTML = `
@@ -66,12 +163,8 @@
       </div>
     `;
     resultArea.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
 
-  function escapeHtml(str) {
-    const div = document.createElement("div");
-    div.textContent = str;
-    return div.innerHTML;
+    renderPhonePreview(data);
   }
 
   form.addEventListener("submit", async (e) => {
@@ -84,6 +177,7 @@
     }
 
     resultArea.hidden = true;
+    resetPhonePreview();
     setHint("Mengambil data video…");
     setLoading(true);
 
@@ -117,6 +211,7 @@
       setHint("Berhasil! Video siap diunduh.", "is-ok");
     } catch (err) {
       console.error(err);
+      resetPhonePreview();
       setHint(
         err.message || "Terjadi kesalahan. Coba lagi beberapa saat lagi.",
         "is-error"
