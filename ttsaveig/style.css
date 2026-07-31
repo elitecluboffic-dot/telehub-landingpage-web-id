@@ -425,41 +425,68 @@ h1{
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap:4px;
 }
-/* Foto (bimxr.png) backgroundnya putih (bukan PNG transparan), jadi
-   sengaja dibungkus jadi "kartu foto" (bg putih + padding + shadow)
-   supaya kelihatan sengaja/rapi di atas situs gelap, bukan kotak putih
-   nyasar. Kalau nanti ganti ke foto PNG transparan (subjek saja tanpa
-   background), hapus `background`, `padding`, dan `border` di bawah
-   supaya foto nempel langsung tanpa bingkai. */
+/* Kartu foto gaya "Artist Stories" Leonardo.ai: nama & role TIDAK lagi
+   ditaruh di bawah foto, melainkan jadi overlay yang menyatu di DALAM
+   kotak foto lewat .dev__overlay (lihat di bawah), dengan gradient gelap
+   supaya teks tetap terbaca di atas foto apa pun.
+   Foto (bimxr.png) sumbernya berlatar putih, jadi dipakai object-fit:cover
+   di dalam frame rasio potret tetap (bukan lagi height:auto) supaya
+   framing-nya konsisten & rapi seperti kartu-kartu di Leonardo.ai --
+   sedikit bagian putih di tepi foto masih bisa kelihatan, itu wajar
+   karena sumber fotonya sendiri tidak transparan. */
 .dev__photo{
-  width:clamp(180px, 32vw, 260px);
-  margin:0 0 22px;
-  padding:10px;
+  position:relative;
+  width:clamp(220px, 34vw, 300px);
+  aspect-ratio: 3 / 4;
   border-radius:var(--radius);
+  overflow:hidden;
   background:#ffffff;
-  border:1px solid var(--line);
   box-shadow:0 30px 70px rgba(0,0,0,0.55);
+  transition:transform .25s ease, box-shadow .25s ease;
+}
+.dev__photo:hover{
+  transform:translateY(-4px);
+  box-shadow:0 36px 80px rgba(0,0,0,0.6);
 }
 .dev__photo img{
   display:block;
   width:100%;
-  height:auto;
-  border-radius:calc(var(--radius) - 4px);
+  height:100%;
   object-fit:cover;
+  object-position:top center;
+}
+/* Overlay teks nama+role, nempel di bagian bawah kotak foto, dengan
+   gradient gelap dari bawah ke atas supaya teks tetap kebaca jelas
+   walau foto di baliknya terang. Ini yang bikin efeknya kerasa "menyatu
+   dengan foto" persis seperti kartu artist di Leonardo.ai. */
+.dev__overlay{
+  position:absolute;
+  left:0; right:0; bottom:0;
+  padding:28px 18px 16px;
+  text-align:left;
+  background:linear-gradient(
+    to top,
+    rgba(10,8,14,0.94) 0%,
+    rgba(10,8,14,0.75) 40%,
+    rgba(10,8,14,0.0) 100%
+  );
 }
 .dev__name{
   margin:0;
   font-family:var(--font-display);
-  font-weight:600;
+  font-weight:700;
   font-size:1.15rem;
-  color:var(--ink);
+  letter-spacing:-0.01em;
+  background:linear-gradient(90deg, var(--cyan), var(--magenta));
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
 }
 .dev__role{
-  margin:4px 0 0;
+  margin:3px 0 0;
   font-family:var(--font-mono);
-  font-size:.8rem;
+  font-size:.76rem;
   color:var(--ink-dim);
 }
 
