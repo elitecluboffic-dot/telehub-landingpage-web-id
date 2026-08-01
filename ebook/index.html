@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="UTF-8">
@@ -28,6 +28,39 @@
 <meta name="twitter:image:alt" content="Ebook Telehub — karya tulis BIMXR" />
 
 <link rel="canonical" href="https://telehub.web.id/ebook/">
+
+<meta name="application-name" content="Ebook Telehub">
+<meta itemprop="name" content="Ebook Telehub">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  "name": "Ebook Telehub",
+  "url": "https://telehub.web.id/ebook/",
+  "description": "Kumpulan buku renungan tentang ketenangan, kebiasaan, dan hidup yang tidak terburu-buru, ditulis oleh BIMXR.",
+  "inLanguage": "id",
+  "isPartOf": {
+    "@type": "WebSite",
+    "name": "Telehub Bimxr",
+    "alternateName": "Telehub",
+    "url": "https://telehub.web.id/"
+  },
+  "about": {
+    "@type": "Person",
+    "name": "BIMXR"
+  }
+}
+</script>
+<!-- Catatan: JSON-LD di atas ini VERSI STATIS/FALLBACK -- selalu ada
+     walau JavaScript gagal jalan atau daftar buku belum sempat di-fetch
+     (baik untuk crawler yang tidak menjalankan JS). Daftar BUKU secara
+     rinci (ItemList berisi tiap judul) disuntikkan secara TERPISAH &
+     DINAMIS oleh script di bagian akhir <body> (lihat fungsi
+     injectBooksJsonLd), tepat setelah data buku selesai di-fetch dari
+     /ebook/api/books -- supaya daftar itu SELALU sinkron dengan buku
+     yang benar-benar tampil di rak, tanpa perlu edit manual JSON-LD ini
+     tiap kali ada judul baru ditambahkan lewat admin panel. -->
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -863,6 +896,57 @@
     return div.innerHTML;
   }
 
+  // Menyuntik/memperbarui JSON-LD berisi daftar buku SEBENARNYA yang lagi
+  // tampil di rak (ItemList of Book), berdasarkan data yang sama persis
+  // dipakai buat render kartu-kartu di atas -- jadi search engine dapat
+  // markup terstruktur yang SELALU sinkron dengan isi rak asli, tanpa
+  // perlu update manual JSON-LD tiap kali ada judul baru ditambahkan
+  // lewat admin panel.
+  //
+  // Elemen lama (kalau ada, dari pemanggilan sebelumnya) dihapus dulu
+  // sebelum yang baru disisipkan, supaya tidak ada JSON-LD dobel kalau
+  // loadShelf() sempat dipanggil ulang.
+  function injectBooksJsonLd(books){
+    const existing = document.getElementById('books-jsonld');
+    if (existing) existing.remove();
+
+    if (!Array.isArray(books) || books.length === 0) return;
+
+    const itemListElement = books.map((book, index) => {
+      const hasChapters = Array.isArray(book.chapters) && book.chapters.length > 0;
+      const bookUrl = hasChapters
+        ? `https://telehub.web.id/ebook/read/${encodeURIComponent(book.id)}`
+        : 'https://telehub.web.id/ebook/';
+
+      return {
+        "@type": "ListItem",
+        "position": index + 1,
+        "item": {
+          "@type": "Book",
+          "name": book.title,
+          "url": bookUrl,
+          "author": {
+            "@type": "Person",
+            "name": book.author || "BIMXR"
+          },
+          "description": book.description || undefined,
+          "inLanguage": "id"
+        }
+      };
+    });
+
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.id = 'books-jsonld';
+    script.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      "name": "Rak Buku BIMXR",
+      "itemListElement": itemListElement
+    });
+    document.head.appendChild(script);
+  }
+
   async function loadShelf(){
     const shelf = document.getElementById('shelf');
     let books = FALLBACK_BOOKS;
@@ -881,6 +965,11 @@
 
     shelf.innerHTML = '';
     books.forEach(book => shelf.appendChild(renderBookCard(book, covers)));
+
+    // JSON-LD daftar buku disinkronkan dengan data yang SAMA PERSIS baru
+    // saja dipakai buat render kartu di atas (baik itu dari /ebook/api/books
+    // atau FALLBACK_BOOKS kalau API belum bisa diakses).
+    injectBooksJsonLd(books);
 
     const minSlots = 3;
     for (let i = books.length; i < minSlots; i++){
