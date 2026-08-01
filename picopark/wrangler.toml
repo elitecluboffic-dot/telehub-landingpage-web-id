@@ -17,8 +17,3 @@ database_id = "0e516354-d090-43ac-8fb8-ccce137ebdcc"
 
 # Secret untuk signing session (opsional dipakai sebagai pepper tambahan).
 # Set lewat: wrangler secret put SESSION_SECRET
-
-[[routes]]
-pattern = "telehub.web.id/picopark*"
-zone_name = "telehub.web.id"
-custom_domain = false
