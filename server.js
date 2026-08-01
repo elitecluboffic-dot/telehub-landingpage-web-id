@@ -104,7 +104,105 @@ app.get(['/ebook/admin', '/ebook/admin/'], (req, res) => {
   res.sendFile(path.join(__dirname, 'ebook', 'admin', 'index.html'));
 });
 
+/* =========================================================
+   PICOPARK — reverse proxy ke Worker "picopark-clone"
+   Worker picopark-clone (source: repo telehub-landingpage-web-id/picopark,
+   deploy terpisah lewat "npx wrangler deploy" dari folder picopark/) sudah
+   terbukti jalan sempurna di URL workers.dev-nya:
+     https://picopark-clone.internetdnsofficial.workers.dev
+   tapi route Cloudflare "telehub.web.id/picopark*" yang didaftarkan di
+   wrangler.toml worker itu ketabrak/kalah prioritas sama route/deployment
+   lain yang juga pegang zone telehub.web.id (kemungkinan besar deployment
+   server ini sendiri). Daripada gantung ke penyelesaian konflik routing di
+   level Cloudflare dashboard, di sini semua request ke /picopark* langsung
+   di-proxy dari origin server ini ke Worker picopark-clone lewat fetch(),
+   lalu response-nya (HTML/CSS/JS/JSON, termasuk Set-Cookie utk session
+   login) diteruskan apa adanya ke browser user.
+   Route ini HARUS ditaruh sebelum static middleware & catch-all '*' di
+   bawah, sama seperti route lain di file ini, supaya tidak "ketiban"
+   index.html landing page utama.
+========================================================= */
+const PICOPARK_ORIGIN = process.env.PICOPARK_ORIGIN || 'https://picopark-clone.internetdnsofficial.workers.dev';
 
+// Header bawaan Node/Express yang tidak boleh ikut diteruskan mentah-mentah
+// ke upstream fetch() (hop-by-hop headers / bikin fetch() error kalau
+// dipaksa ikut).
+const HOP_BY_HOP_REQUEST_HEADERS = new Set([
+  'host',
+  'connection',
+  'content-length',
+  'accept-encoding',
+]);
+
+// Header dari response upstream yang tidak boleh ikut diteruskan mentah-mentah
+// balik ke client (biar Express yang atur ulang sendiri).
+const HOP_BY_HOP_RESPONSE_HEADERS = new Set([
+  'content-encoding',
+  'content-length',
+  'connection',
+  'transfer-encoding',
+]);
+
+app.all(['/picopark', '/picopark/*'], async (req, res) => {
+  const targetUrl = new URL(req.originalUrl, PICOPARK_ORIGIN);
+
+  const forwardHeaders = {};
+  for (const [key, value] of Object.entries(req.headers)) {
+    if (!HOP_BY_HOP_REQUEST_HEADERS.has(key.toLowerCase()) && value !== undefined) {
+      forwardHeaders[key] = value;
+    }
+  }
+  // Biar Worker tahu domain/host asli yang diakses user (berguna kalau
+  // nanti butuh generate URL absolut, cookie domain, dll).
+  forwardHeaders['x-forwarded-host'] = req.headers.host || '';
+  forwardHeaders['x-forwarded-proto'] = req.protocol;
+
+  const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
+
+  try {
+    const upstreamRes = await fetch(targetUrl.toString(), {
+      method: req.method,
+      headers: forwardHeaders,
+      body: hasBody ? req : undefined,
+      duplex: hasBody ? 'half' : undefined,
+      redirect: 'manual',
+    });
+
+    res.status(upstreamRes.status);
+
+    upstreamRes.headers.forEach((value, key) => {
+      if (!HOP_BY_HOP_RESPONSE_HEADERS.has(key.toLowerCase())) {
+        res.setHeader(key, value);
+      }
+    });
+
+    // Set-Cookie bisa lebih dari satu header sekaligus (misal login session),
+    // pakai getSetCookie() kalau tersedia biar semua ikut, bukan cuma satu.
+    if (typeof upstreamRes.headers.getSetCookie === 'function') {
+      const cookies = upstreamRes.headers.getSetCookie();
+      if (cookies.length > 0) res.setHeader('Set-Cookie', cookies);
+    }
+
+    if (!upstreamRes.body) {
+      return res.end();
+    }
+
+    const reader = upstreamRes.body.getReader();
+    const pump = async () => {
+      const { done, value } = await reader.read();
+      if (done) {
+        res.end();
+        return;
+      }
+      res.write(Buffer.from(value));
+      await pump();
+    };
+    await pump();
+  } catch (err) {
+    console.error('[/picopark proxy] error:', err);
+    res.status(502).send('Gagal menghubungi PicoPark server, coba lagi beberapa saat lagi.');
+  }
+});
 
 app.get(['/ttsaveig', '/ttsaveig/'], (req, res) => {
   res.set('Content-Type', 'text/html');
