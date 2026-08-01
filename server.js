@@ -104,60 +104,7 @@ app.get(['/ebook/admin', '/ebook/admin/'], (req, res) => {
   res.sendFile(path.join(__dirname, 'ebook', 'admin', 'index.html'));
 });
 
-/* =========================================================
-   PICOPARK — game clone (dideploy juga terpisah lewat Cloudflare
-   Workers + D1, tapi route ini bikin folder picopark/ ikut dilayani
-   dari server Express ini juga kalau kamu jalanin/preview di sini).
-   Struktur folder yang diharapkan (sesuai hasil deploy Wrangler
-   sebelumnya):
-     picopark/index.html
-     picopark/game.html
-     picopark/admin.html
-     picopark/css/style.css
-     picopark/js/auth.js
-     picopark/js/payment.js
-     picopark/js/engine.js
-     picopark/js/game.js
-     picopark/js/levels.json
-   Static assets (css/js/json) disajikan lewat express.static, lalu
-   3 halaman HTML-nya (index, game, admin) masing-masing punya route
-   eksplisit biar gampang diatur cache-header-nya secara terpisah.
-   Route ini HARUS ditaruh sebelum static middleware & catch-all '*'
-   di bawah, sama seperti route lain di file ini, supaya tidak
-   "ketiban" index.html landing page utama.
-========================================================= */
-app.use(
-  '/picopark',
-  express.static(path.join(__dirname, 'picopark'), {
-    index: false,
-    etag: true,
-    setHeaders: (res, filePath) => {
-      if (filePath.endsWith('.html')) {
-        res.setHeader('Cache-Control', 'no-cache');
-      } else {
-        res.setHeader('Cache-Control', 'public, max-age=2592000, immutable');
-      }
-    },
-  })
-);
 
-app.get(['/picopark', '/picopark/'], (req, res) => {
-  res.set('Content-Type', 'text/html');
-  res.set('Cache-Control', 'no-cache');
-  res.sendFile(path.join(__dirname, 'picopark', 'index.html'));
-});
-
-app.get(['/picopark/game', '/picopark/game/'], (req, res) => {
-  res.set('Content-Type', 'text/html');
-  res.set('Cache-Control', 'no-cache');
-  res.sendFile(path.join(__dirname, 'picopark', 'game.html'));
-});
-
-app.get(['/picopark/admin', '/picopark/admin/'], (req, res) => {
-  res.set('Content-Type', 'text/html');
-  res.set('Cache-Control', 'no-cache');
-  res.sendFile(path.join(__dirname, 'picopark', 'admin.html'));
-});
 
 app.get(['/ttsaveig', '/ttsaveig/'], (req, res) => {
   res.set('Content-Type', 'text/html');
