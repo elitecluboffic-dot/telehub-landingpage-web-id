@@ -13,7 +13,7 @@ binding = "ASSETS"
 [[d1_databases]]
 binding = "DB"
 database_name = "picopark-db"
-database_id = "9131f2bb-dbd7-49dd-b389-5ab3a0c7a352"
+database_id = "0e516354-d090-43ac-8fb8-ccce137ebdcc2"
 
 # Secret untuk signing session (opsional dipakai sebagai pepper tambahan).
 # Set lewat: wrangler secret put SESSION_SECRET
