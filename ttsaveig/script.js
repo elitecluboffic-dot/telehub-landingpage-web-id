@@ -56,11 +56,26 @@
   // dapat semua opsi kualitas seperti biasa.
   const PLATFORMS_WITH_FULL_QUALITY_OPTIONS = new Set(["tiktok", "instagram"]);
 
-  // Value opsi <select id="quality"> yang mau disembunyikan untuk Pinterest.
-  // Dicocokkan lewat value ATAU teks (fallback) supaya tetap jalan walaupun
-  // atribut value di HTML sedikit beda dari yang diperkirakan di sini.
+  // Value opsi <select id="quality"> yang DIHAPUS PERMANEN di SEMUA
+  // platform (bukan cuma disembunyikan pas Pinterest seperti sebelumnya).
+  //
+  // Alasan: opsi "SD (Lebih ringan)" ini sebenarnya cuma dekorasi UI --
+  // backend (server.js) belum benar-benar bisa mengecilkan/mengompres
+  // video. Video TikTok yang dikembalikan backend pihak ketiga
+  // (backend1.tioo.eu.org) cuma satu link, dan link itu SAMA PERSIS
+  // dipakai apapun pilihan kualitas yang user klik di sini -- jadi kalau
+  // dibiarkan, user yang pilih "SD (Lebih ringan)" akan tetap dapat file
+  // HD yang sama ukurannya, cuma dikira lebih kecil padahal enggak.
+  // Daripada nawarin fitur yang sebenarnya tidak berbuat apa-apa, opsinya
+  // dicabut total dari dropdown sampai ada dukungan transcoding beneran
+  // di backend (lihat diskusi soal Cloudinary/Cloudflare Stream).
+  const QUALITY_OPTIONS_ALWAYS_HIDDEN = [{ value: "sd", textIncludes: "sd" }];
+
+  // Value opsi <select id="quality"> yang cuma disembunyikan KHUSUS waktu
+  // tab Pinterest aktif (lihat PLATFORMS_WITH_FULL_QUALITY_OPTIONS) --
+  // sekarang cuma tinggal "Hanya audio (MP3)", karena SD sudah dihapus
+  // permanen di semua platform lewat QUALITY_OPTIONS_ALWAYS_HIDDEN di atas.
   const QUALITY_OPTIONS_HIDDEN_ON_PINTEREST = [
-    { value: "sd", textIncludes: "sd" },
     { value: "audio", textIncludes: "audio" },
   ];
 
@@ -184,10 +199,10 @@
   // asli, cuma urutan re-append-nya disamain sama urutan asli.
   //
   // Dicocokkan lewat <option value="..."> DULU (list di
-  // QUALITY_OPTIONS_HIDDEN_ON_PINTEREST), dengan fallback cocokkan teks
-  // opsi (case-insensitive, contains) kalau value-nya ternyata beda dari
-  // yang diperkirakan -- supaya tetap jalan walau markup HTML asli sedikit
-  // berbeda.
+  // QUALITY_OPTIONS_ALWAYS_HIDDEN / QUALITY_OPTIONS_HIDDEN_ON_PINTEREST),
+  // dengan fallback cocokkan teks opsi (case-insensitive, contains) kalau
+  // value-nya ternyata beda dari yang diperkirakan -- supaya tetap jalan
+  // walau markup HTML asli sedikit berbeda.
   function updateQualityOptionsVisibility() {
     if (!qualitySelect || allQualityOptionNodes.length === 0) return;
 
@@ -204,13 +219,20 @@
       const valueLower = (opt.value || "").toLowerCase();
       const textLower = (opt.textContent || "").toLowerCase();
 
-      const matchesHiddenList = QUALITY_OPTIONS_HIDDEN_ON_PINTEREST.some(
+      // SD dicabut permanen -- dicek duluan, di SEMUA platform, tidak
+      // peduli showAllOptions true/false.
+      const isAlwaysHidden = QUALITY_OPTIONS_ALWAYS_HIDDEN.some(
+        (rule) => valueLower === rule.value || textLower.includes(rule.textIncludes)
+      );
+      if (isAlwaysHidden) return;
+
+      const matchesHiddenOnPinterest = QUALITY_OPTIONS_HIDDEN_ON_PINTEREST.some(
         (rule) => valueLower === rule.value || textLower.includes(rule.textIncludes)
       );
 
-      // "HD (Asli)" (atau opsi apapun yang gak match list di atas) selalu
+      // "HD (Asli)" (atau opsi apapun yang gak match list manapun) selalu
       // tetap tampil di semua platform.
-      const shouldHide = !showAllOptions && matchesHiddenList;
+      const shouldHide = !showAllOptions && matchesHiddenOnPinterest;
 
       if (!shouldHide) {
         qualitySelect.appendChild(opt);
@@ -218,9 +240,9 @@
     });
 
     // Kalau opsi yang tadinya kepilih ternyata ikut disembunyikan (misal
-    // user pilih SD di tab TikTok, lalu pindah ke tab Pinterest), otomatis
-    // balik ke opsi pertama yang tersisa (HD) supaya value select gak
-    // nyangkut ke opsi yang udah gak ada di DOM.
+    // value select masih "sd" dari state lama), otomatis balik ke opsi
+    // pertama yang tersisa (HD) supaya value select gak nyangkut ke opsi
+    // yang udah gak ada di DOM.
     const stillAvailable = Array.from(qualitySelect.options).some(
       (opt) => opt.value === previousValue
     );
