@@ -45,8 +45,10 @@ document.getElementById("btn-logout").addEventListener("click", async () => {
 
 const listEl = document.getElementById("payment-list");
 const emptyMsg = document.getElementById("empty-msg");
+let currentStatus = "pending";
 
 async function loadPayments(status) {
+  currentStatus = status;
   listEl.innerHTML = "Memuat...";
   try {
     const res = await aapi(`/api/admin/payments?status=${status}`);
@@ -65,7 +67,11 @@ async function loadPayments(status) {
             <div class="payment-actions">
               <button class="btn btn-green" data-action="approve" data-id="${p.id}">Approve</button>
               <button class="btn btn-danger" data-action="reject" data-id="${p.id}">Reject</button>
-            </div>` : `<span class="status-pill ${p.status}">${p.status}</span>`}
+            </div>` : `
+            <div class="payment-actions">
+              <span class="status-pill ${p.status}">${p.status}</span>
+              <button class="btn btn-ghost" data-action="delete" data-id="${p.id}">🗑️ Hapus</button>
+            </div>`}
         </div>
       `;
       listEl.appendChild(card);
@@ -84,6 +90,20 @@ listEl.addEventListener("click", async (e) => {
   if (!btn) return;
   const id = btn.dataset.id;
   const action = btn.dataset.action;
+
+  if (action === "delete") {
+    if (!confirm(`Hapus payment #${id}? Data tidak bisa dikembalikan.`)) return;
+    btn.disabled = true;
+    try {
+      await aapi(`/api/admin/payments/${id}`, { method: "DELETE" });
+      loadPayments(currentStatus);
+    } catch (e) {
+      alert(e.error || "Gagal menghapus");
+      btn.disabled = false;
+    }
+    return;
+  }
+
   btn.disabled = true;
   try {
     await aapi(`/api/admin/payments/${id}/${action}`, { method: "POST", body: JSON.stringify({}) });
