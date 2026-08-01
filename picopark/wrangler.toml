@@ -1,0 +1,19 @@
+name = "picopark-clone"
+main = "worker/src/index.js"
+compatibility_date = "2024-11-01"
+
+# Static frontend files (public/) di-serve otomatis oleh Workers Assets.
+# ASSETS binding dipakai di kode untuk fallback ke file statis.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+# D1 Database. Ganti "database_id" setelah kamu jalankan:
+#   wrangler d1 create picopark-db
+[[d1_databases]]
+binding = "DB"
+database_name = "picopark-db"
+database_id = "9131f2bb-dbd7-49dd-b389-5ab3a0c7a352"
+
+# Secret untuk signing session (opsional dipakai sebagai pepper tambahan).
+# Set lewat: wrangler secret put SESSION_SECRET
