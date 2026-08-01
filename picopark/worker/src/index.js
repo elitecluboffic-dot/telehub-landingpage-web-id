@@ -48,6 +48,8 @@ async function handleApi(request, env, path) {
     return handleAdminReview(request, env, path, "approved");
   if (path.match(/^\/api\/admin\/payments\/\d+\/reject$/) && method === "POST")
     return handleAdminReview(request, env, path, "rejected");
+  if (path.match(/^\/api\/admin\/payments\/\d+$/) && method === "DELETE")
+    return handleAdminDeletePayment(request, env, path);
 
   // ---------- LEVELS / PROGRESS ----------
   if (path === "/api/levels" && method === "GET") return handleGetLevelsMeta(request, env);
@@ -253,6 +255,26 @@ async function handleAdminReview(request, env, path, newStatus) {
   return json({ ok: true });
 }
 
+async function handleAdminDeletePayment(request, env, path) {
+  const admin = await requireAdmin(request, env);
+  if (!admin) return json({ error: "Forbidden" }, 403);
+
+  const paymentId = path.match(/\/payments\/(\d+)$/)[1];
+
+  const payment = await env.DB.prepare("SELECT id, status FROM payments WHERE id = ?")
+    .bind(paymentId)
+    .first();
+  if (!payment) return json({ error: "Payment tidak ditemukan" }, 404);
+
+  if (payment.status === "pending") {
+    return json({ error: "Tidak bisa hapus payment yang masih pending" }, 409);
+  }
+
+  await env.DB.prepare("DELETE FROM payments WHERE id = ?").bind(paymentId).run();
+
+  return json({ ok: true });
+}
+
 // ============================================================
 // LEVELS & PROGRESS
 // ============================================================
@@ -330,4 +352,4 @@ async function safeJson(request) {
   } catch {
     return {};
   }
-}
+    }
