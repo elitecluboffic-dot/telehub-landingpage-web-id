@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DuoJump — Co-op Puzzle Adventure</title>
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+<div class="center-screen">
+  <div class="auth-wrap">
+    <div class="mascots">
+      <div class="blob p1"></div>
+      <div class="blob p2"></div>
+    </div>
+
+    <div class="auth-card">
+      <div id="login-form">
+        <h1>DuoJump</h1>
+        <p class="sub">Puzzle co-op 2 pemain, 1 layar, 100 level. Ajak temanmu duduk berdua.</p>
+        <div class="field">
+          <label for="login-username">Username</label>
+          <input id="login-username" autocomplete="username" />
+        </div>
+        <div class="field">
+          <label for="login-password">Password</label>
+          <input id="login-password" type="password" autocomplete="current-password" />
+        </div>
+        <button class="btn btn-primary" id="btn-login">Masuk</button>
+        <div class="error-msg" id="login-error"></div>
+        <div class="toggle-row">Belum punya akun? <button id="show-register">Daftar</button></div>
+      </div>
+
+      <div id="register-form" class="hidden">
+        <h1>Buat Akun</h1>
+        <p class="sub">Satu akun, satu kali bayar, main selamanya.</p>
+        <div class="field">
+          <label for="reg-username">Username</label>
+          <input id="reg-username" autocomplete="username" />
+        </div>
+        <div class="field">
+          <label for="reg-password">Password</label>
+          <input id="reg-password" type="password" autocomplete="new-password" />
+        </div>
+        <button class="btn btn-primary" id="btn-register">Daftar</button>
+        <div class="error-msg" id="register-error"></div>
+        <div class="toggle-row">Sudah punya akun? <button id="show-login">Masuk</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/auth.js"></script>
+</body>
+</html>
