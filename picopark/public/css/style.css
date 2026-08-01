@@ -1,0 +1,184 @@
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg: #12142a;
+  --bg-soft: #1a1e3d;
+  --panel: #1f2450;
+  --panel-2: #262c60;
+  --p1: #3aa0ff;
+  --p2: #ff59a8;
+  --gold: #ffb84d;
+  --green: #34d399;
+  --red: #f87171;
+  --text: #f4f6ff;
+  --text-dim: #9aa1cf;
+  --radius: 18px;
+  --font-display: 'Fredoka', sans-serif;
+  --font-body: 'Inter', sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  background: radial-gradient(circle at 20% 0%, #232a5c 0%, var(--bg) 55%);
+  color: var(--text);
+  min-height: 100vh;
+}
+h1, h2, h3, .brand { font-family: var(--font-display); }
+button { font-family: var(--font-body); cursor: pointer; }
+a { color: inherit; }
+.hidden { display: none !important; }
+
+/* ---------- Layout shells ---------- */
+.center-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.auth-wrap {
+  display: flex;
+  align-items: center;
+  gap: 48px;
+  max-width: 920px;
+  width: 100%;
+}
+
+.mascots {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  flex-shrink: 0;
+}
+.blob {
+  position: absolute;
+  width: 96px;
+  height: 96px;
+  border-radius: 40% 60% 55% 45% / 55% 45% 55% 45%;
+  animation: bob 3.2s ease-in-out infinite;
+}
+.blob.p1 { background: var(--p1); left: 10px; top: 60px; box-shadow: 0 0 40px -8px var(--p1); }
+.blob.p2 { background: var(--p2); left: 110px; top: 20px; animation-delay: -1.6s; box-shadow: 0 0 40px -8px var(--p2); }
+.blob::after {
+  content: '';
+  position: absolute; top: 30%; left: 25%;
+  width: 10px; height: 10px; background: #12142a; border-radius: 50%;
+  box-shadow: 34px 0 0 #12142a;
+}
+@keyframes bob {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50% { transform: translateY(-16px) rotate(3deg); }
+}
+
+.auth-card {
+  background: var(--panel);
+  border-radius: var(--radius);
+  padding: 36px 40px;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 24px 60px -20px rgba(0,0,0,0.6);
+}
+.auth-card h1 { font-size: 28px; margin: 0 0 4px; }
+.auth-card .sub { color: var(--text-dim); margin: 0 0 24px; font-size: 14px; }
+
+.field { margin-bottom: 16px; }
+.field label { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 6px; }
+.field input {
+  width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid #333a6e;
+  background: #0f1230; color: var(--text); font-size: 15px;
+}
+.field input:focus { outline: 2px solid var(--gold); border-color: transparent; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 12px 20px; border-radius: 12px; border: none; font-weight: 600; font-size: 15px;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--gold); color: #1a1200; width: 100%; }
+.btn-primary:hover { box-shadow: 0 8px 24px -8px var(--gold); }
+.btn-ghost { background: transparent; color: var(--text-dim); border: 1px solid #333a6e; }
+.btn-danger { background: var(--red); color: #2a0000; }
+.btn-green { background: var(--green); color: #002a17; }
+
+.toggle-row { text-align: center; margin-top: 18px; font-size: 14px; color: var(--text-dim); }
+.toggle-row button { background: none; border: none; color: var(--gold); font-weight: 600; padding: 0; }
+
+.error-msg { color: var(--red); font-size: 13px; margin-top: 8px; min-height: 16px; }
+.info-msg { color: var(--green); font-size: 13px; margin-top: 8px; min-height: 16px; }
+
+/* ---------- Gate / payment screen ---------- */
+.gate-card {
+  background: var(--panel); border-radius: var(--radius); padding: 32px;
+  max-width: 460px; width: 100%; text-align: center;
+}
+.gate-card .badge { display:inline-block; background:#332400; color: var(--gold); padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight:600; margin-bottom:14px;}
+.upload-box {
+  border: 2px dashed #3a4180; border-radius: 14px; padding: 24px; margin: 18px 0; cursor: pointer;
+  color: var(--text-dim);
+}
+.upload-box img { max-width: 100%; border-radius: 10px; margin-top: 12px; }
+.status-pill { display:inline-block; padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight:600; }
+.status-pill.pending { background:#3a2f00; color: var(--gold); }
+.status-pill.approved { background:#003a20; color: var(--green); }
+.status-pill.rejected { background:#3a0000; color: var(--red); }
+
+/* ---------- Level select ---------- */
+.select-header { display:flex; align-items:center; justify-content:space-between; padding: 20px 28px; }
+.select-header .brand { font-size: 20px; }
+.level-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  gap: 10px; padding: 0 28px 40px; max-width: 900px; margin: 0 auto;
+}
+.level-btn {
+  aspect-ratio: 1; border-radius: 12px; border: none; background: var(--panel-2);
+  color: var(--text); font-weight: 700; font-size: 15px; font-family: var(--font-display);
+}
+.level-btn.completed { background: var(--green); color: #002a17; }
+.level-btn.locked { background: #181b3a; color: #454b83; cursor: not-allowed; }
+
+/* ---------- Play screen ---------- */
+#play-screen { position: fixed; inset: 0; display: flex; flex-direction: column; background: #0d0f22; }
+.hud { display:flex; align-items:center; justify-content:space-between; padding: 10px 18px; font-family: var(--font-display); }
+.hud-right { display:flex; align-items:center; gap: 14px; }
+.canvas-wrap { flex: 1; position: relative; }
+#game-canvas { width: 100%; height: 100%; display:block; background:#eef3fb; }
+
+.touch-controls {
+  position: absolute; inset: 0; display:flex; justify-content:space-between; pointer-events:none;
+}
+.touch-side { display:flex; align-items:flex-end; gap:10px; padding: 18px; pointer-events:none; }
+.touch-side button {
+  pointer-events: auto; width: 58px; height: 58px; border-radius: 50%; border: none;
+  background: rgba(255,255,255,0.18); color:#fff; font-size: 20px; font-weight:700; backdrop-filter: blur(4px);
+}
+.touch-side.p1 button { border: 2px solid var(--p1); }
+.touch-side.p2 button { border: 2px solid var(--p2); }
+
+.modal-overlay {
+  position: fixed; inset:0; background: rgba(10,11,26,0.82); display:flex; align-items:center; justify-content:center; z-index: 50;
+}
+.modal-card { background: var(--panel); border-radius: var(--radius); padding: 32px; text-align:center; max-width:360px; }
+.modal-card h2 { margin-top:0; }
+.modal-actions { display:flex; gap:10px; margin-top: 20px; }
+
+/* ---------- Admin ---------- */
+.admin-wrap { max-width: 900px; margin: 0 auto; padding: 32px 20px 60px; }
+.payment-card {
+  background: var(--panel); border-radius: 14px; padding: 18px; margin-bottom: 16px;
+  display:flex; gap: 16px;
+}
+.payment-card img { width: 140px; height: 140px; object-fit: cover; border-radius: 10px; }
+.payment-info { flex: 1; }
+.payment-actions { display:flex; gap: 10px; margin-top: 10px; }
+
+@media (max-width: 720px) {
+  .auth-wrap { flex-direction: column; }
+  .mascots { width: 160px; height: 140px; }
+  .payment-card { flex-direction: column; }
+  .payment-card img { width: 100%; height: 180px; }
+}
