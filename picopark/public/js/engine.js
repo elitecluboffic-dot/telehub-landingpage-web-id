@@ -35,6 +35,32 @@
 // dipanggil di luar blok ctx.translate/ctx.scale), supaya langit selalu
 // menutupi seluruh viewport dan awan punya parallax halus terhadap
 // pergerakan kamera, bukan ikut ter-scale/pan sama seperti terrain.
+//
+// UPDATE (tali penghubung P1<->P2, visual): ditambahkan drawRope() --
+// tali digambar sebagai SATU kurva bezier utuh (satu beginPath/stroke),
+// bukan segmen-segmen kecil berjajar, supaya tidak pernah kelihatan
+// "kepotong-potong" di jarak/ketinggian berapa pun. Kurva punya sag
+// (kendur) otomatis proporsional ke jarak antar player. Dipanggil di
+// render() sebelum drawPlayer, supaya badan dino digambar di atas tali.
+//
+// UPDATE (tali jadi mekanik rescue, fisik): ditambahkan ROPE_MAX_LENGTH
+// + enforceRope() yang jalan tiap frame di update(), SETELAH fisika
+// player biasa tapi SEBELUM pengecekan PIT_Y. Perilakunya:
+//  - Kalau satu player masih berpijak (onGround) dan satunya lagi lepas
+//    pijakan (jatuh), dan jarak mereka sudah melewati ROPE_MAX_LENGTH,
+//    player yang jatuh "ditahan" tali -- posisinya dipaksa persis di
+//    radius tali dari player yang berpijak (jadi menggantung/berayun),
+//    bukan lanjut freefall ke arah PIT_Y. Karena ini terjadi sebelum
+//    cek PIT_Y, selama ROPE_MAX_LENGTH didesain wajar terhadap tinggi
+//    platform di level, player yang ditahan tidak akan sempat melewati
+//    PIT_Y sama sekali -- efeknya jadi "diselamatkan" oleh rekannya.
+//  - Kalau dua-duanya berpijak atau dua-duanya sama-sama jatuh, tali
+//    cuma jadi soft-constraint (ditarik pelan 50/50 ke tengah) supaya
+//    jaraknya tidak pernah melebihi batas, tanpa ada yang jadi "jangkar"
+//    tetap.
+// Ini murni positional correction (bukan spring-damper penuh), simpel
+// tapi cukup buat kesan "ditarik tali" -- vy/vx yang ditahan juga
+// diredam sedikit di pullTowardAnchor() biar tidak kelihatan getar.
 // ============================================================
 
 import { buildTerrain, drawTerrain } from "./terrain-renderer.js";
@@ -47,6 +73,7 @@ const PLAYER_W = 30;
 const PLAYER_H = 44;
 const BOX_SIZE = 40;
 const PIT_Y = 900; // jatuh di bawah ini = respawn
+const ROPE_MAX_LENGTH = 140; // px -- jarak maksimum "tali" antara P1 dan P2
 
 function aabbOverlap(a, b) {
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
@@ -160,6 +187,12 @@ export class GameLevel {
     this.updatePlayer(this.player2, dt, input.p2);
     this.updateBoxes(dt);
 
+    // Tali penghubung P1<->P2 sebagai constraint fisik (lihat komentar
+    // besar di atas file). Dijalankan SETELAH fisika normal player,
+    // SEBELUM cek PIT_Y -- supaya kalau salah satu ketahan tali, dia
+    // tidak sempat "kehitung" jatuh ke pit di bawah.
+    this.enforceRope();
+
     // Update plate state
     for (const plate of this.def.plates) {
       const zone = { x: plate.x, y: plate.y - 20, w: plate.w, h: plate.h + 20 };
@@ -180,7 +213,9 @@ export class GameLevel {
       }
     }
 
-    // Respawn kalau jatuh
+    // Respawn kalau jatuh (kalau tali sempat "menyelamatkan" salah satu
+    // player di enforceRope() di atas, y-nya sudah tertahan duluan
+    // sebelum sampai sini, jadi tidak akan kena kondisi ini).
     for (const p of [this.player1, this.player2]) {
       if (p.y > PIT_Y) {
         p.x = p.spawnX; p.y = p.spawnY; p.vx = 0; p.vy = 0;
@@ -309,6 +344,58 @@ export class GameLevel {
   }
 
   // ============================================================
+  // enforceRope()
+  // Constraint fisik sederhana (positional correction, bukan
+  // spring-damper) yang menjaga jarak P1<->P2 tidak pernah melebihi
+  // ROPE_MAX_LENGTH:
+  //  - Satu grounded, satu jatuh -> yang jatuh "digantung" persis di
+  //    radius tali dari yang grounded (efek: ditahan/diselamatkan).
+  //  - Selain itu (dua-duanya grounded, atau dua-duanya sama-sama
+  //    jatuh) -> ditarik pelan 50/50 ke tengah, tidak ada yang jadi
+  //    jangkar tetap.
+  // ============================================================
+  enforceRope() {
+    const p1 = this.player1;
+    const p2 = this.player2;
+
+    const ax = p1.x + p1.w / 2, ay = p1.y + p1.h / 2;
+    const bx = p2.x + p2.w / 2, by = p2.y + p2.h / 2;
+    const dx = bx - ax, dy = by - ay;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist <= ROPE_MAX_LENGTH || dist === 0) return;
+
+    const nx = dx / dist, ny = dy / dist;
+
+    if (p1.onGround && !p2.onGround) {
+      // P1 jadi jangkar, P2 ketahan/digantung di ujung tali
+      this.pullTowardAnchor(p2, ax, ay, nx, ny);
+    } else if (p2.onGround && !p1.onGround) {
+      // P2 jadi jangkar, P1 ketahan/digantung di ujung tali
+      this.pullTowardAnchor(p1, bx, by, -nx, -ny);
+    } else {
+      // Dua-duanya grounded atau dua-duanya jatuh bareng: soft-pull 50/50
+      const excess = dist - ROPE_MAX_LENGTH;
+      const half = excess / 2;
+      p1.x += nx * half;
+      p1.y += ny * half;
+      p2.x -= nx * half;
+      p2.y -= ny * half;
+    }
+  }
+
+  // Menahan `faller` persis di ROPE_MAX_LENGTH dari titik jangkar
+  // (anchorX, anchorY), searah vektor (dirX, dirY) yang sudah dinormalisasi
+  // dari jangkar menuju faller. Kecepatan jatuh diredam biar tidak
+  // kelihatan getar/nge-jitter pas ketahan tali.
+  pullTowardAnchor(faller, anchorX, anchorY, dirX, dirY) {
+    faller.x = anchorX + dirX * ROPE_MAX_LENGTH - faller.w / 2;
+    faller.y = anchorY + dirY * ROPE_MAX_LENGTH - faller.h / 2;
+    faller.vy *= 0.2;
+    faller.vx *= 0.5;
+  }
+
+  // ============================================================
   // render(ctx, camera)
   // camera = { x: <world-x kamera>, scale: <faktor zoom> }
   // scale WAJIB diisi dari game.js sebagai viewH / level.height,
@@ -381,6 +468,11 @@ export class GameLevel {
 
     // Goal — gerbang kerajaan (menara + lengkungan + daun pintu + obor + bendera)
     this.drawGoalGate(ctx, this.def.goal, this.completed);
+
+    // Tali penghubung P1 <-> P2 -- digambar SEBELUM drawPlayer supaya
+    // badan dino ada di atas tali (nutupin titik ikat di pinggang),
+    // dan tali selalu berupa satu kurva utuh (lihat drawRope() di bawah).
+    this.drawRope(ctx, this.player1, this.player2);
 
     // Players (dino couple)
     this.drawPlayer(ctx, this.player1);
@@ -658,6 +750,66 @@ export class GameLevel {
     ctx.lineTo(x, y + rr);
     ctx.quadraticCurveTo(x, y, x + rr, y);
     ctx.closePath();
+  }
+
+  // ============================================================
+  // drawRope(ctx, p1, p2)
+  // Menggambar tali penghubung P1<->P2 sebagai SATU kurva utuh
+  // (satu beginPath/quadraticCurveTo/stroke per lapisan), bukan
+  // segmen-segmen kecil berjajar -- ini yang bikin rope tidak
+  // pernah kelihatan "kepotong-potong" walau jaraknya jauh atau
+  // player lagi di ketinggian beda.
+  //
+  // Kurva pakai bezier kuadratik dengan sag (kendur) yang besarnya
+  // mengikuti jarak antar player, supaya terasa seperti tali/tambang
+  // beneran (nunduk di tengah) bukan garis lurus kaku. Sag juga
+  // dikasih sedikit ayunan halus dari this.elapsedMs biar tali
+  // kelihatan hidup, bukan statis. (Rope ini murni visual -- fisika
+  // "penariknya" ada di enforceRope(), dipanggil terpisah di update().)
+  // ============================================================
+  drawRope(ctx, p1, p2) {
+    // Titik ikat: dari sekitar pinggang masing-masing dino (bukan
+    // pojok atas bounding box), biar keliatan nyambung ke badan.
+    const ax = p1.x + p1.w / 2;
+    const ay = p1.y + p1.h * 0.55;
+    const bx = p2.x + p2.w / 2;
+    const by = p2.y + p2.h * 0.55;
+
+    const dx = bx - ax;
+    const dy = by - ay;
+    const dist = Math.hypot(dx, dy);
+
+    // Sag dasar proporsional ke jarak (dibatasi biar tidak berlebihan
+    // di level yang lebar banget), plus ayunan halus deterministik.
+    const baseSag = Math.min(60, dist * 0.18);
+    const sway = Math.sin(this.elapsedMs / 500) * Math.min(6, dist * 0.03);
+    const sag = baseSag + sway;
+
+    const midX = (ax + bx) / 2;
+    const midY = (ay + by) / 2 + sag;
+
+    ctx.save();
+
+    // Lapisan bawah: warna tali gelap (memberi kesan ketebalan/bayangan)
+    ctx.strokeStyle = "#6b4420";
+    ctx.lineWidth = 5;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.quadraticCurveTo(midX, midY, bx, by);
+    ctx.stroke();
+
+    // Lapisan atas: highlight tipis di tengah tali biar kelihatan
+    // bervolume (masih satu path yang sama, cuma digambar tipis
+    // di atasnya -- bukan segmen terpisah).
+    ctx.strokeStyle = "#a9743f";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.quadraticCurveTo(midX, midY, bx, by);
+    ctx.stroke();
+
+    ctx.restore();
   }
 
   // ============================================================
