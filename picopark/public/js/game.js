@@ -459,6 +459,41 @@ async function onLevelComplete() {
   victoryModal.classList.remove("hidden");
 }
 
+// ============================================================
+// FIX (kamera kezoom kegedean di HP, rintangan nggak keliatan):
+// ------------------------------------------------------------
+// Sebelumnya scale = viewH / currentLevel.height (fit-to-height
+// murni). Di HP viewport tinggi (viewH besar, mis. ~1900+ px logis
+// karena address bar nyembul-ilang dihitung ResizeObserver), scale
+// yang dihasilkan jadi cukup besar sehingga dunia game "dizoom
+// dekat" -- yang kelihatan di layar cuma sepotong kecil area dekat
+// pemain (tanah + karakter), sementara rintangan yang sedikit lebih
+// jauh (kiri/kanan/atas) ke-crop di luar frame kamera.
+//
+// getCameraScale() menambahkan faktor ZOOM_OUT (<1) supaya area
+// dunia yang tampil di layar lebih luas (kamera ditarik mundur),
+// dipakai KONSISTEN oleh host (loop) maupun client (clientLoop)
+// supaya framing di kedua device sama-sama proporsional.
+// ============================================================
+const ZOOM_OUT = 0.62; // <1 = kamera ditarik mundur (area terlihat lebih luas)
+
+function getCameraScale() {
+  return (viewH / currentLevel.height) * ZOOM_OUT;
+}
+
+function computeCamera(level, scale) {
+  const viewWorldWidth = viewW / scale;
+  // Kamera dipusatkan berdasar titik tengah kedua pemain secara
+  // horizontal, dan digeser vertikal sedikit ke bawah supaya area di
+  // ATAS pemain (tempat rintangan/platform sering ditaruh) tetap
+  // masuk frame, bukan cuma area persis di bawah kaki pemain.
+  const camX = Math.max(0, Math.min(
+    (level.player1.x + level.player2.x) / 2 - viewWorldWidth / 2,
+    Math.max(0, level.width - viewWorldWidth)
+  ));
+  return { camX, viewWorldWidth };
+}
+
 function loop(now) {
   if (!running) return;
   const dt = Math.min((now - lastTime) / 1000, 1 / 30);
@@ -474,20 +509,8 @@ function loop(now) {
 
   currentLevel.update(dt, frameInput);
 
-  // FIX (scale-to-fit-height): level punya tinggi dunia tetap
-  // (biasanya 600px), sedangkan tinggi canvas asli (viewH) di HP
-  // biasanya jauh lebih besar. Tanpa scaling, dunia game cuma nongol
-  // sebagai sliver tipis di bagian bawah canvas dan sisanya kosong
-  // (karakter kelihatan "stuck" karena area geraknya kegencet di situ).
-  // Dengan scale ini, tinggi dunia level selalu di-fit pas ke tinggi
-  // canvas, baru di-pan horizontal seperti biasa berdasarkan posisi
-  // rata-rata kedua pemain.
-  const scale = viewH / currentLevel.height;
-  const viewWorldWidth = viewW / scale;
-  const camX = Math.max(0, Math.min(
-    (currentLevel.player1.x + currentLevel.player2.x) / 2 - viewWorldWidth / 2,
-    Math.max(0, currentLevel.width - viewWorldWidth)
-  ));
+  const scale = getCameraScale();
+  const { camX } = computeCamera(currentLevel, scale);
   currentLevel.render(ctx, { x: camX, scale });
 
   const secs = currentLevel.elapsedMs / 1000;
@@ -496,9 +519,8 @@ function loop(now) {
   // Host mengirim snapshot posisi ke client sekitar 30x/detik
   // (dibagi 2 dari rAF 60fps) supaya hemat bandwidth tapi tetap halus.
   // NOTE: camX & scale tetap dikirim di snapshot untuk kompatibilitas /
-  // debugging, TAPI client versi terbaru (lihat clientLoop di bawah)
-  // TIDAK lagi memakai dua field ini untuk render -- client menghitung
-  // kamera miliknya sendiri berdasarkan ukuran layarnya sendiri.
+  // debugging, TAPI client menghitung kamera miliknya sendiri
+  // berdasarkan ukuran layarnya sendiri (lihat clientLoop di bawah).
   if (net.connected && net.isHost()) {
     netSendCounter++;
     if (netSendCounter % 2 === 0) {
@@ -547,31 +569,17 @@ function clientLoop() {
     // ============================================================
     // FIX (kamera client ikut layar sendiri, BUKAN layar host):
     // ------------------------------------------------------------
-    // Sebelumnya client langsung pakai camX/scale KIRIMAN HOST
-    // (latestRemoteState.camX / .scale). Itu dihitung host memakai
-    // viewW/viewH milik HOST (mis. laptop layar lebar). Kalau device
-    // client (mis. HP, portrait, jauh lebih sempit) punya rasio
-    // aspek beda, framing kamera "pas" untuk host itu BISA SAJA
-    // sama sekali tidak mencakup posisi karakter di layar client --
-    // hasilnya layar client kelihatan kosong/statis padahal data
-    // posisi (player1/player2) yang diterima sebenarnya valid dan
-    // terus diperbarui (makanya timer tetap jalan normal).
-    //
-    // applyStateToLevel() di atas sudah menaruh posisi player1/2
-    // yang benar ke currentLevel milik device ini. Jadi sekarang
-    // kamera dihitung ULANG secara lokal, persis memakai rumus yang
-    // sama seperti host di loop(), tapi dengan viewW/viewH milik
-    // device client sendiri. Ini juga otomatis membereskan kasus
-    // P1 & P2 terpisah jauh -- karena tiap device selalu framing
-    // berdasarkan posisi kedua pemain dan ukuran layarnya sendiri.
+    // Client TIDAK memakai camX/scale kiriman host (yang dihitung
+    // memakai viewW/viewH milik HOST), karena rasio layar bisa beda
+    // jauh (mis. HP portrait vs laptop lebar) sehingga framing "pas"
+    // buat host belum tentu mencakup posisi karakter di layar client.
+    // Kamera dihitung ULANG secara lokal di sini, memakai fungsi
+    // getCameraScale()/computeCamera() yang SAMA dengan host, tapi
+    // dengan viewW/viewH milik device client sendiri. Ini juga
+    // otomatis membereskan kasus P1 & P2 terpisah jauh.
     // ============================================================
-    const scale = viewH / currentLevel.height;
-    const viewWorldWidth = viewW / scale;
-    const camX = Math.max(0, Math.min(
-      (currentLevel.player1.x + currentLevel.player2.x) / 2 - viewWorldWidth / 2,
-      Math.max(0, currentLevel.width - viewWorldWidth)
-    ));
-
+    const scale = getCameraScale();
+    const { camX } = computeCamera(currentLevel, scale);
     currentLevel.render(ctx, { x: camX, scale });
 
     if (currentLevel.completed && !clientCompletedHandled) {
