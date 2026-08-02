@@ -1,6 +1,7 @@
 // ============================================================
 // Engine fisika + rendering sederhana buat game co-op 2 pemain.
 // Semua unit dalam pixel "logical" (canvas di-scale otomatis).
+// Karakter player digambar sebagai dino couple (bukan kotak lagi).
 // ============================================================
 
 const GRAVITY = 1400; // px/s^2
@@ -25,12 +26,14 @@ class Entity {
 }
 
 class Player extends Entity {
-  constructor(x, y, color, label) {
+  constructor(x, y, color, bellyColor, label) {
     super(x, y, PLAYER_W, PLAYER_H);
     this.color = color;
+    this.bellyColor = bellyColor;
     this.label = label;
     this.facing = 1;
     this.spawnX = x; this.spawnY = y;
+    this.walkCycle = 0; // buat animasi kaki jalan ringan
   }
 }
 
@@ -77,8 +80,9 @@ export class GameLevel {
     this.keysCollected = new Set();
     this.doorOpenOverride = new Set(); // doorId dibuka permanen kalau punya key match
 
-    this.player1 = new Player(levelDef.spawn.p1.x, levelDef.spawn.p1.y, "#3aa0ff", "P1");
-    this.player2 = new Player(levelDef.spawn.p2.x, levelDef.spawn.p2.y, "#ff59a8", "P2");
+    // P1 = dino biru, P2 = dino pink (masing-masing punya warna perut lebih terang)
+    this.player1 = new Player(levelDef.spawn.p1.x, levelDef.spawn.p1.y, "#3aa0ff", "#bfe6ff", "P1");
+    this.player2 = new Player(levelDef.spawn.p2.x, levelDef.spawn.p2.y, "#ff59a8", "#ffd3e6", "P2");
 
     this.completed = false;
     this.elapsedMs = 0;
@@ -148,6 +152,13 @@ export class GameLevel {
     if (keys.left) { p.vx = -MOVE_SPEED; p.facing = -1; }
     if (keys.right) { p.vx = MOVE_SPEED; p.facing = 1; }
     if (keys.jump && p.onGround) { p.vy = JUMP_VELOCITY; p.onGround = false; }
+
+    // Update walk cycle buat animasi kaki (hanya jalan kalau nempel tanah & gerak)
+    if (p.onGround && p.vx !== 0) {
+      p.walkCycle += dt * 10;
+    } else {
+      p.walkCycle = 0;
+    }
 
     p.vy += GRAVITY * dt;
 
@@ -302,20 +313,142 @@ export class GameLevel {
     ctx.font = "12px sans-serif";
     ctx.fillText("GOAL", g.x + 6, g.y + g.h / 2);
 
-    // Players
+    // Players (dino couple)
     this.drawPlayer(ctx, this.player1);
     this.drawPlayer(ctx, this.player2);
 
     ctx.restore();
   }
 
+  // ============================================================
+  // Render karakter dino (menggantikan kotak polos P1/P2).
+  // Digambar full pakai path canvas, jadi tidak butuh file gambar
+  // eksternal dan tidak terpotong di bounding box player.
+  // ============================================================
   drawPlayer(ctx, p) {
-    ctx.fillStyle = p.color;
-    ctx.fillRect(p.x, p.y, p.w, p.h);
+    const x = p.x, y = p.y, w = p.w, h = p.h;
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+    const facing = p.facing >= 0 ? 1 : -1;
+    const bodyColor = p.color;
+    const bellyColor = p.bellyColor;
+
+    // Sedikit "bounce" halus kalau lagi jalan biar kelihatan hidup
+    const bob = p.onGround && p.vx !== 0 ? Math.sin(p.walkCycle) * 1.5 : 0;
+
+    ctx.save();
+    ctx.translate(cx, cy + bob);
+    ctx.scale(facing, 1); // flip horizontal sesuai arah hadap
+    // Mulai dari sini, +x = arah depan dino, origin = titik tengah badan
+
+    // --- Kaki (belakang dulu biar badan nutup sambungannya) ---
+    ctx.fillStyle = shade(bodyColor, -20);
+    const legSwing = Math.sin(p.walkCycle) * 3;
+    // kaki belakang
+    ctx.fillRect(-w * 0.26, h * 0.30 - legSwing, w * 0.16, h * 0.24);
+    // kaki depan
+    ctx.fillRect(w * 0.06, h * 0.30 + legSwing, w * 0.16, h * 0.24);
+
+    // --- Ekor ---
+    ctx.fillStyle = bodyColor;
+    ctx.beginPath();
+    ctx.moveTo(-w * 0.42, h * 0.02);
+    ctx.quadraticCurveTo(-w * 0.85, -h * 0.05, -w * 0.95, -h * 0.28);
+    ctx.quadraticCurveTo(-w * 0.65, -h * 0.02, -w * 0.38, h * 0.20);
+    ctx.closePath();
+    ctx.fill();
+
+    // --- Badan (oval gempal) ---
+    ctx.beginPath();
+    ctx.ellipse(0, h * 0.04, w * 0.46, h * 0.34, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // --- Perut (warna lebih terang) ---
+    ctx.fillStyle = bellyColor;
+    ctx.beginPath();
+    ctx.ellipse(w * 0.02, h * 0.20, w * 0.28, h * 0.18, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // --- Duri-duri di punggung ---
+    ctx.fillStyle = bodyColor;
+    for (let i = 0; i < 3; i++) {
+      const sx = -w * 0.22 + i * w * 0.18;
+      const spikeH = h * (0.16 + (i === 1 ? 0.06 : 0)); // duri tengah sedikit lebih tinggi
+      ctx.beginPath();
+      ctx.moveTo(sx - w * 0.05, -h * 0.24);
+      ctx.lineTo(sx + w * 0.03, -h * 0.24 - spikeH);
+      ctx.lineTo(sx + w * 0.11, -h * 0.24);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // --- Leher/kepala (lingkaran di depan) ---
+    ctx.beginPath();
+    ctx.ellipse(w * 0.34, -h * 0.10, w * 0.30, h * 0.28, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // --- Moncong ---
+    ctx.beginPath();
+    ctx.ellipse(w * 0.56, -h * 0.02, w * 0.16, h * 0.15, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // --- Duri kecil di kepala ---
+    ctx.beginPath();
+    ctx.moveTo(w * 0.22, -h * 0.32);
+    ctx.lineTo(w * 0.30, -h * 0.44);
+    ctx.lineTo(w * 0.36, -h * 0.30);
+    ctx.closePath();
+    ctx.fill();
+
+    // --- Mata (putih + pupil) ---
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(w * 0.40, -h * 0.14, h * 0.09, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#111111";
+    ctx.beginPath();
+    ctx.arc(w * 0.44, -h * 0.13, h * 0.045, 0, Math.PI * 2);
+    ctx.fill();
+    // kilau mata biar lucu
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(w * 0.455, -h * 0.145, h * 0.015, 0, Math.PI * 2);
+    ctx.fill();
+
+    // --- Lubang hidung ---
+    ctx.fillStyle = "#111111";
+    ctx.beginPath();
+    ctx.arc(w * 0.64, -h * 0.02, h * 0.02, 0, Math.PI * 2);
+    ctx.fill();
+
+    // --- Senyum kecil ---
+    ctx.strokeStyle = "#111111";
+    ctx.lineWidth = Math.max(1, h * 0.02);
+    ctx.beginPath();
+    ctx.arc(w * 0.52, -h * 0.02, w * 0.08, 0.1 * Math.PI, 0.6 * Math.PI);
+    ctx.stroke();
+
+    ctx.restore();
+
+    // Label nama (tidak ikut di-flip supaya teksnya selalu tegak & terbaca)
     ctx.fillStyle = "#111";
     ctx.font = "bold 12px sans-serif";
-    ctx.fillText(p.label, p.x, p.y - 6);
+    ctx.textAlign = "center";
+    ctx.fillText(p.label, cx, y - 8);
+    ctx.textAlign = "left";
   }
+}
+
+// Util kecil buat menggelapkan/menerangkan warna hex, dipakai buat warna kaki dino
+function shade(hexColor, percent) {
+  const num = parseInt(hexColor.slice(1), 16);
+  let r = (num >> 16) + Math.round((percent / 100) * 255);
+  let g = ((num >> 8) & 0x00ff) + Math.round((percent / 100) * 255);
+  let b = (num & 0x0000ff) + Math.round((percent / 100) * 255);
+  r = Math.max(0, Math.min(255, r));
+  g = Math.max(0, Math.min(255, g));
+  b = Math.max(0, Math.min(255, b));
+  return `#${(0x1000000 + r * 0x10000 + g * 0x100 + b).toString(16).slice(1)}`;
 }
 
 export { PLAYER_W, PLAYER_H };
