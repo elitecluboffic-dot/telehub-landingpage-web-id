@@ -213,8 +213,43 @@
 //        LURUS, kelihatan benar-benar tegang/ditarik, bukan melar.
 //  - Ini murni perubahan di drawRope() (rendering). Tidak ada satupun
 //    baris di enforceRope/resolveRopeConstraint/updateClimb/collision
-//    yang diubah -- semua mekanik fisik & climb-back yang sudah benar
-//    di atas tetap identik seperti sebelumnya.
+//    yang diubah di update itu -- semua mekanik fisik & climb-back yang
+//    sudah benar di atas tetap identik.
+//
+// UPDATE (fix: faller keliatan TELEPORT instan pas tali baru kencang,
+// bukan ditarik pelan-pelan -- root cause ada di "JARING PENGAMAN
+// TERAKHIR" di enforceRope(), bukan di resolveRopeConstraint()):
+//  - resolveRopeConstraint() SUDAH BENAR: dia menggeser faller cuma
+//    sejauh ROPE_PULL_SPEED*dt per frame (gerakan kecil, bertahap) --
+//    itu didesain supaya kelihatan "ditarik", bukan diteleport.
+//  - MASALAHNYA: setelah resolveRopeConstraint() jalan (dan cuma
+//    menutup SEBAGIAN excess, sisanya sengaja dibiarkan buat frame
+//    berikutnya), blok "jaring pengaman terakhir" di bawahnya langsung
+//    menghitung ULANG jarak P1<->P2 dan -- karena sisa excess itu masih
+//    ada -- langsung MENGKLEM PENUH sisa excess itu DALAM FRAME YANG
+//    SAMA, tanpa batas kecepatan sama sekali dan tanpa cek tabrakan.
+//    Efek gabungannya: tarikan pelan dari resolveRopeConstraint() jadi
+//    percuma, karena selalu ditimpa snap instan ke radius tali persis
+//    oleh jaring pengaman -- inilah yang kelihatan sebagai "teleport"
+//    tepat begitu faller pertama kali menyentuh batas tali (mis. jatuh
+//    ke jurang/pit), bukan proses ditarik yang halus.
+//  - Fix: jaring pengaman sekarang JUGA dibatasi kecepatannya dengan
+//    ROPE_PULL_SPEED yang sama (bukan lagi instan/tanpa batas), dan
+//    JUGA collision-aware (pakai helper baru moveEntityCollisionAware()
+//    -- coba gerak penuh dulu, kalau nabrak platform/box coba per-sumbu,
+//    persis pola yang sama dipakai resolveRopeConstraint()). Jadi dia
+//    sekarang murni berfungsi sebagai jaring pengaman beneran (nutup
+//    celah kasus yang lolos dari branch anchor-faller/simetris di atas),
+//    TAPI dengan cara bertahap yang sama -- tidak ada lagi snap instan
+//    di frame pertama tali kencang. Karena blok ini tetap jalan tiap
+//    frame tanpa syarat, celah kasus manapun tetap tertutup dalam
+//    beberapa frame saja (jarak tetap terjamin tidak pernah melar lebih
+//    dari ROPE_MAX_LENGTH untuk waktu lama), cuma sekarang keliatannya
+//    beneran "ditarik", bukan diteleport.
+//  - Tidak ada logic lain (resolveRopeConstraint, updateClimb, role
+//    anchor/faller, collision player biasa, dll) yang diubah oleh fix
+//    ini -- cuma blok jaring pengaman di enforceRope() dan satu helper
+//    baru (moveEntityCollisionAware) yang ditambahkan.
 // ============================================================
 
 import { buildTerrain, drawTerrain } from "./terrain-renderer.js";
@@ -232,7 +267,7 @@ const ROPE_MAX_LENGTH = 190; // px -- jarak maksimum "tali" antara P1 dan P2 (di
 const ROPE_MIN_LENGTH = 40; // px -- sedekat apapun manjat, faller tidak akan sampai menempel pas di jangkar
 const CLIMB_SPEED = 95; // px/s -- seberapa cepat panjang tali efektif mengecil selama tombol jump ditahan (manjat naik)
 const CLIMB_SLIP_SPEED = 40; // px/s -- seberapa cepat merosot balik kalau tombol jump dilepas saat masih menggantung
-const ROPE_PULL_SPEED = 320; // px/s -- menghaluskan GERAKAN VISUAL faller menuju radius tali. TIDAK membatasi apakah koreksi kecepatan terjadi (itu selalu tuntas, lihat resolveRopeConstraint), jadi tidak menyebabkan tali "melar".
+const ROPE_PULL_SPEED = 320; // px/s -- menghaluskan GERAKAN VISUAL faller menuju radius tali (dipakai konsisten oleh resolveRopeConstraint() MAUPUN jaring pengaman di enforceRope(), supaya keduanya sama-sama bertahap, tidak ada yang instan/teleport). TIDAK membatasi apakah koreksi kecepatan terjadi (itu selalu tuntas), jadi tidak menyebabkan tali "melar".
 const ROPE_VELOCITY_CORRECTION_CAP = 260; // px/s -- batas koreksi kecepatan HANYA untuk branch simetris (dua-duanya benar-benar jatuh bareng tanpa jangkar sama sekali). Tidak dipakai lagi untuk kasus anchor+faller biasa (itu sekarang selalu koreksi tuntas lewat role persisten isTetheredFaller).
 
 function aabbOverlap(a, b) {
@@ -643,24 +678,39 @@ export class GameLevel {
     }
 
     // ============================================================
-    // JARING PENGAMAN TERAKHIR (fix definitif #2 buat "melar"):
+    // JARING PENGAMAN TERAKHIR:
     // Semua branch di atas (anchor-faller / simetris / dua-duanya
     // grounded) MESTINYA sudah cukup buat jaga jarak <= ROPE_MAX_LENGTH,
     // tapi state machine anchor/faller di atas ada banyak kondisi
     // (onGround berubah-ubah, climb, respawn, dll) yang gampang punya
-    // celah kasus yang kelewat -- terbukti dari laporan tali masih
-    // "melar" jauh di atas 190px walau fix role-persisten sebelumnya
-    // sudah dipasang.
+    // celah kasus yang kelewat. Blok ini jalan TERAKHIR, TANPA SYARAT,
+    // tiap frame, dan cuma punya satu tugas: pastikan jarak P1<->P2
+    // tidak PERNAH lebih dari ROPE_MAX_LENGTH untuk waktu lama -- apapun
+    // yang terjadi/kelewat di branch di atas.
     //
-    // Daripada terus nambal kasus per kasus, blok ini jalan TERAKHIR,
-    // TANPA SYARAT, tiap frame, dan cuma punya satu tugas: pastikan
-    // jarak P1<->P2 tidak PERNAH lebih dari ROPE_MAX_LENGTH begitu
-    // fungsi ini selesai -- apapun yang terjadi/kelewat di branch di
-    // atas. Beda dengan resolveRopeConstraint() yang gerakannya
-    // dihaluskan (dibatasi ROPE_PULL_SPEED per frame), blok ini
-    // langsung KLEM PENUH ke radius maksimum dalam SATU frame kalau
-    // masih ada excess tersisa -- supaya tidak ada celah waktu sama
-    // sekali di mana tali kelihatan lebih panjang dari seharusnya.
+    // FIX (dulu ini menyebabkan TELEPORT instan, sekarang tidak lagi):
+    // Versi sebelumnya blok ini mengklem PENUH seluruh sisa excess
+    // dalam SATU frame, tanpa batas kecepatan sama sekali dan tanpa
+    // cek tabrakan -- begitu resolveRopeConstraint()/branch simetris di
+    // atas baru menutup SEBAGIAN excess (sengaja dibatasi ROPE_PULL_SPEED
+    // biar bertahap), blok ini langsung menimpa dengan snap instan ke
+    // radius tali persis di frame yang sama. Hasilnya: tarikan bertahap
+    // yang didesain di atas jadi percuma, faller kelihatan mendadak
+    // nyentak/lompat ke posisi radius tali (persis seperti teleport)
+    // tepat di frame pertama tali kencang -- misalnya begitu jatuh ke
+    // jurang/pit dan tali baru saja mengencang.
+    //
+    // Sekarang blok ini JUGA dibatasi kecepatannya pakai ROPE_PULL_SPEED
+    // yang sama (konsisten dengan resolveRopeConstraint()), dan JUGA
+    // collision-aware lewat moveEntityCollisionAware() (coba gerak penuh
+    // dulu, kalau nabrak platform/box coba per-sumbu -- pola yang sama
+    // dipakai resolveRopeConstraint()). Jadi jaring pengaman ini sekarang
+    // murni menutup celah kasus yang lolos dari branch di atas, TAPI
+    // dengan cara bertahap yang sama persis -- tidak ada lagi snap
+    // instan/teleport. Karena blok ini tetap jalan tiap frame tanpa
+    // syarat, celah kasus manapun tetap tertutup dalam beberapa frame
+    // (jarak tetap terjamin tidak "melar" berkepanjangan), cuma sekarang
+    // keliatannya beneran ditarik.
     //
     // Bobot koreksi: kalau salah satu sisi berpijak dan sisi lain
     // tidak, SELURUH koreksi dibebankan ke sisi yang tidak berpijak
@@ -678,13 +728,20 @@ export class GameLevel {
     if (hdist > ROPE_MAX_LENGTH && hdist > 0) {
       const hnx = hdx / hdist, hny = hdy / hdist;
       const hexcess = hdist - ROPE_MAX_LENGTH;
+      // Dibatasi ROPE_PULL_SPEED -- tidak pernah menutup seluruh excess
+      // dalam satu frame kalau excess-nya besar, supaya kelihatan
+      // beneran ditarik bertahap, bukan diteleport.
+      const hpull = Math.min(hexcess, ROPE_PULL_SPEED * dt);
 
       let wA = 0.5, wB = 0.5; // wA = porsi geser p1 (menuju p2), wB = porsi geser p2 (menuju p1)
       if (p1.onGround && !p2.onGround) { wA = 0; wB = 1; }
       else if (p2.onGround && !p1.onGround) { wA = 1; wB = 0; }
 
-      if (wA > 0) { p1.x += hnx * hexcess * wA; p1.y += hny * hexcess * wA; }
-      if (wB > 0) { p2.x -= hnx * hexcess * wB; p2.y -= hny * hexcess * wB; }
+      // Gerakan hasil koreksi ini juga dicek tabrakan (sama seperti
+      // resolveRopeConstraint()), supaya jaring pengaman ini tidak
+      // pernah menembus platform/box padat.
+      if (wA > 0) this.moveEntityCollisionAware(p1, hnx * hpull * wA, hny * hpull * wA);
+      if (wB > 0) this.moveEntityCollisionAware(p2, -hnx * hpull * wB, -hny * hpull * wB);
 
       if (wB > 0) {
         const vB = p2.vx * hnx + p2.vy * hny;
@@ -694,6 +751,40 @@ export class GameLevel {
         const vA = -(p1.vx * hnx + p1.vy * hny);
         if (vA > 0) { p1.vx += vA * hnx; p1.vy += vA * hny; }
       }
+    }
+  }
+
+  // Helper generik: geser sebuah entity (moveX, moveY) dengan collision
+  // check sederhana -- coba gerak penuh (X+Y sekaligus) dulu, kalau
+  // nabrak sesuatu (platform/pintu tertutup/box), coba per-sumbu (biar
+  // masih bisa "ngesot" di sumbu yang bebas alih-alih macet total atau
+  // nembus). Persis pola yang sama dipakai resolveRopeConstraint(),
+  // diekstrak jadi helper terpisah supaya jaring pengaman terakhir di
+  // enforceRope() juga bisa collision-aware tanpa duplikasi besar.
+  moveEntityCollisionAware(entity, moveX, moveY) {
+    if (moveX === 0 && moveY === 0) return;
+
+    const blockedAt = (testX, testY) => {
+      const testRect = { x: testX, y: testY, w: entity.w, h: entity.h };
+      for (const r of this.solidRects()) {
+        if (aabbOverlap(testRect, r)) return true;
+      }
+      for (const box of this.boxes) {
+        if (aabbOverlap(testRect, box.rect)) return true;
+      }
+      return false;
+    };
+
+    if (!blockedAt(entity.x + moveX, entity.y + moveY)) {
+      entity.x += moveX;
+      entity.y += moveY;
+      return;
+    }
+    if (!blockedAt(entity.x + moveX, entity.y)) {
+      entity.x += moveX;
+    }
+    if (!blockedAt(entity.x, entity.y + moveY)) {
+      entity.y += moveY;
     }
   }
 
@@ -1190,22 +1281,14 @@ export class GameLevel {
   // pernah kelihatan "kepotong-potong" walau jaraknya jauh atau
   // player lagi di ketinggian beda.
   //
-  // FIX (tali kelihatan "melar" saat tegang/ditarik): sag di sini
-  // SEBELUMNYA dihitung dari jarak absolut (dist * 0.18), jadi begitu
-  // tali sedang ditarik penuh/mentok di ROPE_MAX_LENGTH (secara fisik
-  // sudah dikunci oleh enforceRope(), TIDAK ikut berubah oleh fix ini),
-  // sag yang digambar tetap besar -- tali kelihatan melengkung jauh ke
-  // bawah kayak karet molor, padahal jarak sebenarnya sudah mentok.
-  //
-  // Sekarang sag dihitung dari SLACK (ROPE_MAX_LENGTH - dist), bukan
-  // dari dist itu sendiri:
+  // Sag (kelengkungan tali) dihitung dari SLACK (ROPE_MAX_LENGTH - dist),
+  // bukan dari jarak absolut:
   //   - dist kecil (P1&P2 berdekatan) -> slack besar -> boleh melengkung
   //     natural (tali kendur beneran, kayak tali nganggur).
   //   - dist mendekati/pas ROPE_MAX_LENGTH (tali tegang/lagi menahan
   //     salah satu yang jatuh) -> slack mendekati 0 -> tali digambar
   //     nyaris garis lurus, kelihatan BENERAN tegang ditarik, bukan
   //     melar/molor.
-  // Ini murni ganti rumus sag, tidak menyentuh fisika/constraint apa pun.
   // ============================================================
   drawRope(ctx, p1, p2) {
     // Titik ikat: dari sekitar pinggang masing-masing dino (bukan
