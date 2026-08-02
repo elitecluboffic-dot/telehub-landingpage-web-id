@@ -7,14 +7,12 @@
 <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
-
 <!-- ===================== GATE PEMBAYARAN ===================== -->
 <div id="gate-overlay" class="center-screen hidden">
   <div class="gate-card">
     <span class="badge">Akses Premium</span>
     <h2>Buka Semua 100 Level</h2>
     <p style="color:var(--text-dim)">Bayar sekali, main selamanya berdua. Upload bukti transfer di bawah, tim kami akan cek manual dan aktifkan akunmu.</p>
-
     <div id="gate-form">
       <div class="upload-box" id="upload-box">
         <div id="upload-placeholder">📎 Tap untuk upload bukti pembayaran (screenshot transfer)</div>
@@ -28,34 +26,32 @@
       <button class="btn btn-primary" id="btn-submit-payment">Kirim Bukti Pembayaran</button>
       <div class="error-msg" id="payment-error"></div>
     </div>
-
     <div id="gate-pending" class="hidden">
       <p>Status pembayaran kamu: <span class="status-pill pending">Menunggu review</span></p>
       <p style="color:var(--text-dim); font-size:13px">Halaman ini akan otomatis update begitu admin approve.</p>
       <button class="btn btn-ghost" id="btn-refresh-status">Cek status lagi</button>
     </div>
-
     <div id="gate-rejected" class="hidden">
       <p><span class="status-pill rejected">Ditolak</span></p>
       <p id="reject-note" style="color:var(--text-dim); font-size:13px"></p>
       <button class="btn btn-primary" id="btn-retry-payment">Upload Ulang</button>
     </div>
-
     <div style="margin-top:16px">
       <button class="btn btn-ghost" id="btn-logout-gate">Keluar</button>
     </div>
   </div>
 </div>
-
 <!-- ===================== LEVEL SELECT ===================== -->
 <div id="select-screen" class="hidden">
   <div class="select-header">
     <div class="brand">🎮 DuoJump</div>
-    <button class="btn btn-ghost" id="btn-logout">Keluar</button>
+    <div class="select-header-actions">
+      <button class="btn btn-ghost" id="btn-reset-progress">Reset Semua Level</button>
+      <button class="btn btn-ghost" id="btn-logout">Keluar</button>
+    </div>
   </div>
   <div class="level-grid" id="level-select"></div>
 </div>
-
 <!-- ===================== PLAY SCREEN ===================== -->
 <div id="play-screen" class="hidden">
   <div class="hud">
@@ -79,7 +75,6 @@
     </div>
   </div>
 </div>
-
 <div id="victory-modal" class="modal-overlay hidden">
   <div class="modal-card">
     <h2>🎉 Level Selesai!</h2>
@@ -90,7 +85,6 @@
     </div>
   </div>
 </div>
-
 <script src="/js/payment.js"></script>
 <script type="module" src="/js/game.js"></script>
 </body>
