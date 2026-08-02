@@ -310,7 +310,7 @@ function restoreMultiplayerUI() {
     // tombol toggle tetap disembunyikan (perilaku aslinya).
     if (badge) badge.style.display = "block";
   } else {
-    if (btn) btn.style.display = "block";
+    if (btn) btn.style.display = "";
   }
 }
 
@@ -622,18 +622,51 @@ function applyStateToLevel(level, state) {
 }
 
 // ---------------- UI MULTIPLAYER (dibuat lewat JS, tanpa perlu ubah HTML) ----------------
+// ============================================================
+// UPDATE (tombol "Main Berdua" disamakan sama tombol header lain):
+// ------------------------------------------------------------
+// Sebelumnya tombol ini "mengambang" (position: fixed) sendirian di
+// pojok kanan atas, terpisah dari tombol "Reset Semua Level" &
+// "Keluar" -- jadi kelihatan nyempil/nggak nyatu sama baris tombol
+// header yang lain.
+//
+// Sekarang: className tombol ini di-copy PERSIS dari tombol
+// "Reset Semua Level" (btnResetProgress), jadi ukuran, padding,
+// border-radius, font, dan efek hover-nya otomatis identik. Elemen
+// ini juga dipasang sebagai SIBLING tepat sebelum tombol Reset di
+// dalam container yang sama (bukan appendChild ke <body> lagi),
+// sehingga otomatis ikut baris flex/row yang sama seperti tombol
+// Reset & Keluar. Satu-satunya yang beda cuma warnanya, yang tetap
+// di-override manual jadi emas/oranye lewat inline style supaya
+// tombol ini tetap gampang dibedakan dari tombol lain.
+// ============================================================
 function initMultiplayerUI() {
   const btn = document.createElement("button");
   btn.id = "mp-toggle-btn";
   btn.textContent = "🔗 Main Berdua";
+
+  if (btnResetProgress) {
+    // Samain persis class/style tombol Reset Semua Level (ukuran,
+    // padding, border-radius, font, dsb ikut CSS class itu).
+    btn.className = btnResetProgress.className;
+  }
+  // Override warna aja supaya tetap emas/oranye, sisanya (ukuran,
+  // bentuk, border-radius, font) ikut class yang barusan di-copy.
   Object.assign(btn.style, {
-    position: "fixed", top: "64px", right: "14px", zIndex: "9999",
-    padding: "10px 16px", borderRadius: "10px", border: "none",
-    background: "#ff8c3b", color: "#1a1200", fontWeight: "700",
-    fontFamily: "sans-serif", fontSize: "13px", cursor: "pointer",
-    boxShadow: "0 6px 18px rgba(0,0,0,.25)",
+    background: "#ff8c3b",
+    borderColor: "#ff8c3b",
+    color: "#1a1200",
+    fontWeight: "700",
   });
-  document.body.appendChild(btn);
+
+  if (btnResetProgress && btnResetProgress.parentElement) {
+    // Taruh tepat di sebelah kiri tombol "Reset Semua Level", jadi
+    // urutannya: [Main Berdua] [Reset Semua Level] [Keluar].
+    btnResetProgress.parentElement.insertBefore(btn, btnResetProgress);
+  } else {
+    // Fallback kalau strukturnya beda dari dugaan: tetap tampil di body.
+    document.body.appendChild(btn);
+  }
 
   const modal = document.createElement("div");
   modal.id = "mp-modal";
