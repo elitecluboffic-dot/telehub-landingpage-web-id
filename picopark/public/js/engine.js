@@ -190,6 +190,31 @@
 //    lalu dilontar ke atas gundukan itu. Untuk naik ke atas gundukan,
 //    tetap harus lewat manjat (climbOffset, tombol jump) atau gerak
 //    jalan/lompat normal, bukan hasil "efek samping" tarikan tali.
+//
+// UPDATE (fix visual: tali kelihatan "melar" padahal fisikanya sudah
+// dikunci -- root cause murni ada di RENDERING, bukan di enforceRope):
+//  - Semua constraint fisik di atas (resolveRopeConstraint + jaring
+//    pengaman hard-clamp di akhir enforceRope) SUDAH menjamin jarak
+//    P1<->P2 tidak pernah lebih dari ROPE_MAX_LENGTH -- itu tidak
+//    disentuh sama sekali di update ini.
+//  - Tapi drawRope() (murni visual) menghitung sag/kelengkungan tali
+//    dari JARAK ABSOLUT (`dist * 0.18`), bukan dari SEBERAPA KENDUR
+//    talinya. Akibatnya begitu tali sedang tegang/ditarik penuh
+//    (dist mendekati ROPE_MAX_LENGTH), sag yang digambar tetap besar
+//    (~34px pada dist=190) -- talinya digambar melengkung turun jauh,
+//    kelihatan seperti karet yang "melar", padahal posisi kedua
+//    karakter sebenarnya sudah dikunci pas di radius maksimal.
+//  - Fix: sag sekarang dihitung dari SLACK (sisa kekenduran =
+//    ROPE_MAX_LENGTH - dist), bukan dari dist itu sendiri:
+//      * dist kecil (dua player berdekatan) -> slack besar -> tali
+//        boleh melengkung natural, kayak tali beneran nganggur.
+//      * dist mendekati/pas di ROPE_MAX_LENGTH (tali tegang/lagi
+//        menarik) -> slack mendekati 0 -> tali digambar HAMPIR GARIS
+//        LURUS, kelihatan benar-benar tegang/ditarik, bukan melar.
+//  - Ini murni perubahan di drawRope() (rendering). Tidak ada satupun
+//    baris di enforceRope/resolveRopeConstraint/updateClimb/collision
+//    yang diubah -- semua mekanik fisik & climb-back yang sudah benar
+//    di atas tetap identik seperti sebelumnya.
 // ============================================================
 
 import { buildTerrain, drawTerrain } from "./terrain-renderer.js";
@@ -1165,12 +1190,22 @@ export class GameLevel {
   // pernah kelihatan "kepotong-potong" walau jaraknya jauh atau
   // player lagi di ketinggian beda.
   //
-  // Kurva pakai bezier kuadratik dengan sag (kendur) yang besarnya
-  // mengikuti jarak antar player, supaya terasa seperti tali/tambang
-  // beneran (nunduk di tengah) bukan garis lurus kaku. Sag juga
-  // dikasih sedikit ayunan halus dari this.elapsedMs biar tali
-  // kelihatan hidup, bukan statis. (Rope ini murni visual -- fisika
-  // "penariknya" ada di enforceRope(), dipanggil terpisah di update().)
+  // FIX (tali kelihatan "melar" saat tegang/ditarik): sag di sini
+  // SEBELUMNYA dihitung dari jarak absolut (dist * 0.18), jadi begitu
+  // tali sedang ditarik penuh/mentok di ROPE_MAX_LENGTH (secara fisik
+  // sudah dikunci oleh enforceRope(), TIDAK ikut berubah oleh fix ini),
+  // sag yang digambar tetap besar -- tali kelihatan melengkung jauh ke
+  // bawah kayak karet molor, padahal jarak sebenarnya sudah mentok.
+  //
+  // Sekarang sag dihitung dari SLACK (ROPE_MAX_LENGTH - dist), bukan
+  // dari dist itu sendiri:
+  //   - dist kecil (P1&P2 berdekatan) -> slack besar -> boleh melengkung
+  //     natural (tali kendur beneran, kayak tali nganggur).
+  //   - dist mendekati/pas ROPE_MAX_LENGTH (tali tegang/lagi menahan
+  //     salah satu yang jatuh) -> slack mendekati 0 -> tali digambar
+  //     nyaris garis lurus, kelihatan BENERAN tegang ditarik, bukan
+  //     melar/molor.
+  // Ini murni ganti rumus sag, tidak menyentuh fisika/constraint apa pun.
   // ============================================================
   drawRope(ctx, p1, p2) {
     // Titik ikat: dari sekitar pinggang masing-masing dino (bukan
@@ -1184,10 +1219,18 @@ export class GameLevel {
     const dy = by - ay;
     const dist = Math.hypot(dx, dy);
 
-    // Sag dasar proporsional ke jarak (dibatasi biar tidak berlebihan
-    // di level yang lebar banget), plus ayunan halus deterministik.
-    const baseSag = Math.min(60, dist * 0.18);
-    const sway = Math.sin(this.elapsedMs / 500) * Math.min(6, dist * 0.03);
+    // Slack = seberapa banyak "sisa kekenduran" tali dibanding panjang
+    // maksimalnya. 0 kalau tali sedang tegang penuh (dist >= ROPE_MAX_LENGTH),
+    // makin besar kalau P1&P2 makin berdekatan.
+    const slack = Math.max(0, ROPE_MAX_LENGTH - dist);
+    // slackRatio 0..1: 0 = tegang total (garis lurus), 1 = sekendur mungkin.
+    const slackRatio = Math.min(1, slack / ROPE_MAX_LENGTH);
+
+    // Sag proporsional ke slackRatio (bukan ke dist absolut), juga
+    // dibatasi ke sebagian kecil dist itu sendiri supaya tali pendek
+    // yang kendur tidak melengkung berlebihan dibanding panjangnya.
+    const baseSag = Math.min(50, dist * 0.28) * slackRatio;
+    const sway = Math.sin(this.elapsedMs / 500) * Math.min(4, dist * 0.02) * slackRatio;
     const sag = baseSag + sway;
 
     const midX = (ax + bx) / 2;
