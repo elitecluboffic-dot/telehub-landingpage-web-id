@@ -583,6 +583,7 @@ window.addEventListener("beforeunload", () => {
 
 btnBackToSelect.addEventListener("click", backToSelect);
 btnRestart.addEventListener("click", () => {
+  victoryModal.classList.add("hidden");
   if (myRole === "client") return; // client menunggu host yang mulai ulang
   startLevel(currentLevelId);
   if (net.connected && net.isHost()) net.sendStart(currentLevelId);
