@@ -436,17 +436,21 @@ function loop(now) {
 
   currentLevel.update(dt, frameInput);
 
-  // FIX: kamera sekarang pakai viewW (ukuran LOGIS layar, satuan CSS
-  // px) alih-alih canvas.width. Sebelumnya canvas.width bisa berisi
-  // resolusi device-pixel yang sudah dikali devicePixelRatio, jadi di
-  // HP retina kamera itungannya salah/nyangkut dan kelihatan "stuck"
-  // pas pemain jalan. Sekarang perhitungannya selalu konsisten sama
-  // apa yang benar-benar tampil di layar.
+  // FIX (scale-to-fit-height): level punya tinggi dunia tetap
+  // (biasanya 600px), sedangkan tinggi canvas asli (viewH) di HP
+  // biasanya jauh lebih besar. Tanpa scaling, dunia game cuma nongol
+  // sebagai sliver tipis di bagian bawah canvas dan sisanya kosong
+  // (karakter kelihatan "stuck" karena area geraknya kegencet di situ).
+  // Dengan scale ini, tinggi dunia level selalu di-fit pas ke tinggi
+  // canvas, baru di-pan horizontal seperti biasa berdasarkan posisi
+  // rata-rata kedua pemain.
+  const scale = viewH / currentLevel.height;
+  const viewWorldWidth = viewW / scale;
   const camX = Math.max(0, Math.min(
-    (currentLevel.player1.x + currentLevel.player2.x) / 2 - viewW / 2,
-    Math.max(0, currentLevel.width - viewW)
+    (currentLevel.player1.x + currentLevel.player2.x) / 2 - viewWorldWidth / 2,
+    Math.max(0, currentLevel.width - viewWorldWidth)
   ));
-  currentLevel.render(ctx, { x: camX });
+  currentLevel.render(ctx, { x: camX, scale });
 
   const secs = currentLevel.elapsedMs / 1000;
   hudTimer.textContent = `${secs.toFixed(1)}s`;
@@ -456,7 +460,7 @@ function loop(now) {
   if (net.connected && net.isHost()) {
     netSendCounter++;
     if (netSendCounter % 2 === 0) {
-      net.sendState(snapshotState(currentLevel, camX));
+      net.sendState(snapshotState(currentLevel, camX, scale));
     }
   }
 
@@ -497,7 +501,14 @@ function clientLoop() {
     applyStateToLevel(currentLevel, latestRemoteState);
     const secs = currentLevel.elapsedMs / 1000;
     hudTimer.textContent = `${secs.toFixed(1)}s`;
-    currentLevel.render(ctx, { x: latestRemoteState.camX || 0 });
+    // FIX (scale-to-fit-height): pakai scale yang dikirim host kalau
+    // ada; kalau belum ada (mis. snapshot pertama belum nyampe atau
+    // host versi lama), fallback hitung sendiri biar tetap konsisten
+    // dengan tinggi canvas device ini.
+    currentLevel.render(ctx, {
+      x: latestRemoteState.camX || 0,
+      scale: latestRemoteState.scale || (viewH / currentLevel.height),
+    });
 
     if (currentLevel.completed && !clientCompletedHandled) {
       clientCompletedHandled = true;
@@ -510,9 +521,10 @@ function clientLoop() {
   requestAnimationFrame(clientLoop);
 }
 
-function snapshotState(level, camX) {
+function snapshotState(level, camX, scale) {
   return {
     camX,
+    scale,
     elapsedMs: level.elapsedMs,
     completed: level.completed,
     player1: { x: level.player1.x, y: level.player1.y, facing: level.player1.facing },
