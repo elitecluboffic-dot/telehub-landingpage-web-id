@@ -55,22 +55,39 @@ const input = {
 // dan karena resize kadang telat/nggak ke-trigger pas address bar
 // HP nongol-ilang, ukurannya bisa nyangkut di nilai lama (kecil).
 //
-// Sekarang:
-// - viewW/viewH nyimpen ukuran LOGIS (CSS px) yang dipakai semua
-//   perhitungan game (kamera, klik, dsb).
-// - canvas.width/height (atribut, bukan style) di-set ke ukuran
-//   device pixel sebenarnya (viewW*dpr) biar tajam di layar retina.
-// - ctx di-scale otomatis pakai setTransform, jadi semua kode
-//   render di engine.js tetap gambar pakai satuan logis seperti
-//   biasa, nggak perlu diubah sama sekali.
-// - Pakai ResizeObserver + visualViewport supaya perubahan ukuran
-//   di HP (rotate, address bar collapse/expand, dsb) selalu
-//   kedeteksi, bukan cuma window resize (yang kadang nggak fire
-//   di banyak browser mobile).
+// FIX (canvas size limit — INI YANG BIKIN OBJEK "ILANG"):
+// canvas.width/height (buffer piksel device) sebelumnya dihitung
+// dari viewW*dpr / viewH*dpr TANPA batas atas sama sekali. Di device
+// dengan display scaling tinggi (Windows 150%/200%/250%, atau HP
+// dengan devicePixelRatio 2-3), buffer ini bisa melebihi batas
+// maksimum ukuran canvas yang didukung browser (beda-beda tiap
+// browser/GPU, biasanya sekitar 4096-16384px per sisi atau ada
+// batas total area piksel juga). Begitu limit itu terlampaui,
+// browser DIAM-DIAM tidak menggambar apa pun ke canvas — tidak ada
+// error di console, cuma layar kosong. Ini persis match dengan gejala
+// "objek nongol lagi kalau browser di-zoom ke 25%" — karena zoom
+// browser di Chrome ikut mengecilkan devicePixelRatio efektif,
+// sehingga buffer canvas ikut mengecil di bawah limit lagi.
+//
+// Sekarang devicePixelRatio DIBATASI (capped) ke maksimum aman, dan
+// hasil akhir width/height canvas juga di-clamp supaya tidak pernah
+// melebihi batas aman, sambil scale/pan yang dipakai untuk render()
+// tetap dihitung dari viewW/viewH (satuan logis / CSS px) seperti
+// biasa jadi tidak mempengaruhi gameplay sama sekali.
 // ============================================================
 let viewW = 0;
 let viewH = 0;
 let dpr = Math.max(1, window.devicePixelRatio || 1);
+
+// Dpr di atas 2 nyaris tidak menambah ketajaman yang kelihatan mata,
+// tapi risiko kena limit ukuran canvas naik drastis. 2 adalah nilai
+// aman yang dipakai kebanyakan game canvas 2D di web.
+const MAX_DPR = 2;
+
+// Batas aman total piksel buffer canvas (lebar x tinggi dalam device
+// pixel). 16,777,216 = setara 4096x4096. Ini jauh di bawah limit
+// hampir semua browser desktop maupun mobile modern, jadi aman.
+const MAX_CANVAS_AREA = 16 * 1024 * 1024;
 
 function resizeCanvas() {
   const wrap = canvas.parentElement;
@@ -80,16 +97,37 @@ function resizeCanvas() {
 
   viewW = w;
   viewH = h;
-  dpr = Math.max(1, window.devicePixelRatio || 1);
 
-  const pixelW = Math.round(viewW * dpr);
-  const pixelH = Math.round(viewH * dpr);
+  // Cap dpr ke MAX_DPR dulu.
+  let effectiveDpr = Math.min(Math.max(1, window.devicePixelRatio || 1), MAX_DPR);
+
+  let pixelW = Math.round(viewW * effectiveDpr);
+  let pixelH = Math.round(viewH * effectiveDpr);
+
+  // Kalau tetap kelewat batas area aman (mis. viewW/viewH sendiri
+  // sudah besar sebelum dikali dpr), turunkan effectiveDpr lebih jauh
+  // supaya buffer canvas selalu di bawah MAX_CANVAS_AREA. Ini jaring
+  // pengaman terakhir supaya canvas TIDAK PERNAH blank karena limit
+  // ukuran, apa pun kombinasi device scaling / ukuran layar user.
+  const area = pixelW * pixelH;
+  if (area > MAX_CANVAS_AREA) {
+    const shrink = Math.sqrt(MAX_CANVAS_AREA / area);
+    effectiveDpr = Math.max(1, effectiveDpr * shrink);
+    pixelW = Math.round(viewW * effectiveDpr);
+    pixelH = Math.round(viewH * effectiveDpr);
+  }
+
+  dpr = effectiveDpr;
 
   // Cuma sentuh atribut width/height kalau memang berubah, biar
   // nggak reset state canvas terus-terusan tanpa perlu.
   if (canvas.width !== pixelW || canvas.height !== pixelH) {
     canvas.width = pixelW;
     canvas.height = pixelH;
+    console.log(
+      `[resizeCanvas] viewport=${viewW}x${viewH} rawDpr=${(window.devicePixelRatio || 1).toFixed(2)} ` +
+      `effectiveDpr=${effectiveDpr.toFixed(2)} bufferPx=${pixelW}x${pixelH} (area=${pixelW * pixelH})`
+    );
   }
   canvas.style.width = viewW + "px";
   canvas.style.height = viewH + "px";
