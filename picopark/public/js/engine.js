@@ -2,6 +2,15 @@
 // Engine fisika + rendering sederhana buat game co-op 2 pemain.
 // Semua unit dalam pixel "logical" (canvas di-scale otomatis).
 // Karakter player digambar sebagai dino couple (bukan kotak lagi).
+//
+// FIX (scale-to-fit-height): sebelumnya render() menggambar dunia
+// game 1:1 piksel tanpa scaling sama sekali. Karena tinggi dunia
+// level (height, biasanya 600) jauh lebih pendek dari tinggi canvas
+// asli di HP (viewH bisa 600-1000+ px), area tanah/karakter cuma
+// nongol sebagai sliver tipis di bagian bawah canvas, sisanya kosong.
+// Sekarang render() menerima camera.scale (dihitung di game.js
+// sebagai viewH / level.height) supaya seluruh tinggi dunia selalu
+// pas mengisi tinggi canvas, baru di-pan horizontal seperti biasa.
 // ============================================================
 
 const GRAVITY = 1400; // px/s^2
@@ -261,15 +270,36 @@ export class GameLevel {
     }
   }
 
+  // ============================================================
+  // render(ctx, camera)
+  // camera = { x: <world-x kamera>, scale: <faktor zoom> }
+  // scale WAJIB diisi dari game.js sebagai viewH / level.height,
+  // supaya tinggi dunia level selalu pas mengisi tinggi canvas
+  // (tidak ada lagi area kosong di atas / konten kegencet di bawah).
+  // Kalau camera.scale tidak diisi, default 1 (perilaku lama).
+  // ============================================================
   render(ctx, camera) {
+    const scale = camera.scale || 1;
+
+    // Clear pakai koordinat device-pixel murni (reset transform dulu)
+    // supaya tidak salah kali dengan dpr transform yang sudah aktif
+    // dari resizeCanvas() di game.js.
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.restore();
 
     ctx.save();
-    ctx.translate(-camera.x, 0);
+    // Urutan: pan horizontal dulu (dalam satuan world, makanya dikali
+    // scale supaya konsisten dengan ctx.scale di bawah), baru zoom.
+    ctx.translate(-camera.x * scale, 0);
+    ctx.scale(scale, scale);
 
-    // Background grid ringan
+    // Background — dibuat jauh lebih besar dari area world manapun
+    // supaya selalu menutupi seluruh viewport terlepas dari posisi
+    // kamera / level width berapa pun.
     ctx.fillStyle = "#eef3fb";
-    ctx.fillRect(camera.x, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.fillRect(-50000, -50000, 200000, 200000);
 
     // Platforms
     ctx.fillStyle = "#4b5563";
