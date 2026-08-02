@@ -123,6 +123,31 @@
 //    syarat dan akan selalu, cepat atau lambat, menutup excess sampai 0
 //    -- cuma sekarang lajunya konsisten dengan seluruh sistem tarik tali
 //    yang lain, tidak ada lagi lompatan posisi mendadak.
+//
+// UPDATE (hazard creature di lubang/gap -- buaya/hiu/paus):
+//  - Setiap level di-scan otomatis buat nemuin "lubang" (gap horizontal
+//    antar platform tanah utama, y===520 & h===120) lewat detectGaps().
+//    Tidak perlu edit levels.json sama sekali -- posisi lubang dihitung
+//    langsung dari data platform yang sudah ada.
+//  - Tiap lubang dapat SATU HazardCreature yang bersiklus tetap:
+//    "muncul" (surfaced, berbahaya -- menutupi area lompatan) lalu
+//    "tenggelam" (submerged, aman buat lewat), berulang terus. Timing
+//    ini murni fungsi dari this.elapsedMs (yang sudah otomatis
+//    tersinkron ke client di mode multiplayer lewat snapshotState di
+//    game.js), jadi TIDAK butuh state tambahan apa pun buat disinkron --
+//    host & client menghitung fase yang sama persis dari elapsedMs yang
+//    sama.
+//  - Spesies berubah sesuai rentang level: level 1-33 = buaya (crocodile),
+//    34-66 = hiu (shark), 67-100 = paus (whale). Makin tinggi levelnya,
+//    makin cepat siklus muncul/tenggelamnya (lihat HazardCreature
+//    constructor) -- di level 1 muncul ~2s lalu tenggelam ~1.5s, di
+//    level 100 jauh lebih singkat & lebih sering muncul.
+//  - Gap yang sudah "dijembatani" moving platform (movingPlatforms di
+//    levels.json) SENGAJA dilewati (tidak dikasih creature), supaya
+//    tidak tabrakan/konflik sama mekanik moving-platform yang sudah ada.
+//  - Kena hazard creature saat surfaced = mati -> RESPAWN, tapi HANYA
+//    player yang kena (bukan reset seluruh level), persis seperti logika
+//    respawn PIT_Y yang sudah ada -- lihat checkCreatureHazards().
 // ============================================================
 
 import { buildTerrain, drawTerrain } from "./terrain-renderer.js";
@@ -145,6 +170,102 @@ const ROPE_VELOCITY_CORRECTION_CAP = 260; // px/s -- batas koreksi kecepatan HAN
 
 function aabbOverlap(a, b) {
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+// ============================================================
+// detectGaps(levelDef)
+// Nyari "lubang" (celah horizontal tanpa pijakan) di sepanjang jalur
+// tanah utama level ini, murni dari data levelDef.platforms yang sudah
+// ada -- tidak butuh field baru apa pun di levels.json.
+//
+// Cuma platform tanah UTAMA yang dihitung (y===520 & h===120, sesuai
+// konvensi seluruh level di levels.json saat ini) -- platform tipis
+// (h===20, jembatan/ledge) atau kolom penyangga (h besar tapi bukan
+// 120) diabaikan, supaya lubang yang terdeteksi memang benar-benar
+// jalur utama yang dilewati kaki pemain, bukan struktur dekoratif.
+//
+// Gap yang sudah dijembatani moving platform (movingPlatforms) di-skip
+// supaya tidak tabrakan sama mekanik moving-platform yang sudah ada.
+// ============================================================
+function detectGaps(levelDef) {
+  const ground = levelDef.platforms
+    .filter((p) => p.h === 120 && p.y === 520)
+    .slice()
+    .sort((a, b) => a.x - b.x);
+
+  const gaps = [];
+  for (let i = 0; i < ground.length - 1; i++) {
+    const cur = ground[i];
+    const next = ground[i + 1];
+    const curEnd = cur.x + cur.w;
+    if (next.x > curEnd + 2) {
+      gaps.push({ x0: curEnd, x1: next.x, y: cur.y });
+    }
+  }
+
+  const bridges = (levelDef.movingPlatforms || []).map((m) => {
+    const reach = m.axis === "x" ? (m.range || 0) : 0;
+    const lo = Math.min(m.x, m.x + reach);
+    const hi = Math.max(m.x + m.w, m.x + reach + m.w);
+    return { lo, hi };
+  });
+
+  return gaps.filter((g) => !bridges.some((b) => b.lo <= g.x0 + 10 && b.hi >= g.x1 - 10));
+}
+
+// ============================================================
+// HazardCreature
+// Satu makhluk penjaga lubang: bersiklus surfaced (muncul, berbahaya,
+// menutupi area lompatan) <-> submerged (tenggelam, aman lewat) terus
+// menerus, murni berdasarkan elapsedMs (lihat stateAt()) -- tidak
+// menyimpan state internal yang berubah tiap frame, jadi otomatis
+// selalu konsisten antara host & client di mode multiplayer (keduanya
+// menghitung elapsedMs yang sama lewat sinkronisasi yang sudah ada).
+// ============================================================
+class HazardCreature {
+  constructor(gap, levelId, index) {
+    this.x0 = gap.x0;
+    this.x1 = gap.x1;
+    this.groundY = gap.y;
+    this.index = index;
+
+    // Spesies berganti sesuai rentang level.
+    if (levelId <= 33) this.species = "crocodile";
+    else if (levelId <= 66) this.species = "shark";
+    else this.species = "whale";
+
+    // Progres kesulitan 0 (level 1) -> 1 (level 100), dipakai buat
+    // mempercepat siklus muncul/tenggelam makin tinggi levelnya.
+    const prog = Math.min(1, Math.max(0, (levelId - 1) / 99));
+    this.surfaceMs = 2000 - prog * 1300; // 2000ms (lvl1) -> 700ms (lvl100)
+    this.submergeMs = 1500 - prog * 600; // 1500ms (lvl1) -> 900ms (lvl100)
+    this.cycleMs = this.surfaceMs + this.submergeMs;
+
+    // Fase awal digeser per-creature & per-level supaya beberapa lubang
+    // di level yang sama tidak muncul/tenggelam serempak persis sama.
+    this.phaseOffset = (index * 733 + levelId * 191) % this.cycleMs;
+  }
+
+  // surfaced = true berarti sedang berbahaya (menutupi area lompatan).
+  // phaseT = progres 0..1 di dalam fase yang sedang aktif, dipakai buat
+  // animasi pop-up/submerge halus saat menggambar.
+  stateAt(elapsedMs) {
+    const t = (elapsedMs + this.phaseOffset) % this.cycleMs;
+    const surfaced = t < this.surfaceMs;
+    const phaseT = surfaced ? t / this.surfaceMs : (t - this.surfaceMs) / this.submergeMs;
+    return { surfaced, phaseT };
+  }
+
+  // Rect tabrakan (null kalau lagi tenggelam/aman).
+  hazardRect(elapsedMs) {
+    const { surfaced } = this.stateAt(elapsedMs);
+    if (!surfaced) return null;
+    const gw = this.x1 - this.x0;
+    const w = Math.min(140, Math.max(50, gw * 0.7));
+    const cx = (this.x0 + this.x1) / 2;
+    const h = 60;
+    return { x: cx - w / 2, y: this.groundY - h * 0.75, w, h: h * 0.85 };
+  }
 }
 
 class Entity {
@@ -212,6 +333,13 @@ export class GameLevel {
     this.boxes = levelDef.boxes.map((b) => new Box(b.x, b.y));
     this.movingPlatforms = levelDef.movingPlatforms.map((m) => new MovingPlatform(m));
 
+    // Makhluk penjaga lubang (buaya/hiu/paus) -- lihat detectGaps() dan
+    // HazardCreature di atas. Dihitung sekali di sini, murni dari data
+    // level (posisi platform), tidak butuh apa pun tambahan di JSON.
+    this.creatures = detectGaps(levelDef).map(
+      (gap, i) => new HazardCreature(gap, levelDef.id, i)
+    );
+
     // Data terrain visual (tema rumput/gurun/batu/salju/vulkanik sesuai
     // level.id, dihitung sekali di sini). Ini terpisah dari this.platforms
     // di atas -- this.platforms tetap dipakai apa adanya untuk collision,
@@ -272,6 +400,13 @@ export class GameLevel {
     // sedang menggantung).
     this.enforceRope(dt, input);
 
+    // Hazard creature (buaya/hiu/paus) di lubang: kalau lagi surfaced
+    // (muncul) dan overlap sama salah satu player, player itu mati ->
+    // respawn (cuma yang kena, bukan reset seluruh level). Dicek
+    // SEBELUM pengecekan PIT_Y di bawah supaya konsisten sama alur
+    // respawn tali di atas.
+    this.checkCreatureHazards();
+
     // Update plate state
     for (const plate of this.def.plates) {
       const zone = { x: plate.x, y: plate.y - 20, w: plate.w, h: plate.h + 20 };
@@ -307,6 +442,25 @@ export class GameLevel {
     const goal = this.def.goal;
     if (aabbOverlap(this.player1.rect, goal) && aabbOverlap(this.player2.rect, goal)) {
       this.completed = true;
+    }
+  }
+
+  // Cek tabrakan player <-> hazard creature yang sedang surfaced. Cuma
+  // player yang benar-benar overlap yang di-respawn ke titik spawn-nya
+  // sendiri (persis logika respawn PIT_Y), player satunya tidak
+  // terpengaruh sama sekali.
+  checkCreatureHazards() {
+    if (this.creatures.length === 0) return;
+    for (const c of this.creatures) {
+      const rect = c.hazardRect(this.elapsedMs);
+      if (!rect) continue;
+      for (const p of [this.player1, this.player2]) {
+        if (aabbOverlap(p.rect, rect)) {
+          p.x = p.spawnX; p.y = p.spawnY; p.vx = 0; p.vy = 0;
+          p.climbOffset = 0;
+          p.isTetheredFaller = false;
+        }
+      }
     }
   }
 
@@ -818,6 +972,11 @@ export class GameLevel {
     // dari kondisi kamera manapun.
     drawTerrain(ctx, this.terrain, camera.x, this.width);
 
+    // Hazard creature (buaya/hiu/paus) di lubang -- digambar SEBELUM
+    // doors/plates/dst supaya kelihatan "di dalam" jurang, bukan
+    // menimpa elemen lain di atas tanah.
+    this.drawCreatures(ctx);
+
     // Doors
     for (const d of this.def.doors) {
       if (this.isDoorOpen(d)) continue;
@@ -861,6 +1020,208 @@ export class GameLevel {
     this.drawPlayer(ctx, this.player2);
 
     ctx.restore();
+  }
+
+  // ============================================================
+  // drawCreatures(ctx)
+  // Menggambar setiap HazardCreature: backdrop "air/jurang" selalu
+  // terlihat sepanjang lubang, lalu tubuh makhluknya cuma digambar
+  // saat sedang surfaced (muncul/berbahaya), dengan animasi pop-up /
+  // submerge halus berdasarkan phaseT dari HazardCreature.stateAt().
+  // ============================================================
+  drawCreatures(ctx) {
+    for (const c of this.creatures) {
+      const { surfaced, phaseT } = c.stateAt(this.elapsedMs);
+      const cx = (c.x0 + c.x1) / 2;
+      const gy = c.groundY;
+      const gw = c.x1 - c.x0;
+
+      // Backdrop air/jurang -- selalu tampil sepanjang lubang, dari
+      // permukaan tanah turun ke bawah, supaya lubang tetap terbaca
+      // sebagai jurang/air walau makhluknya lagi tenggelam.
+      const pitGrad = ctx.createLinearGradient(0, gy, 0, gy + 100);
+      pitGrad.addColorStop(0, "#0b3d5c");
+      pitGrad.addColorStop(1, "#031b2b");
+      ctx.fillStyle = pitGrad;
+      ctx.fillRect(c.x0, gy, gw, 100);
+
+      // Riak permukaan air, selalu bergoyang halus (dekoratif).
+      ctx.strokeStyle = "rgba(255,255,255,0.25)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(c.x0, gy + 4);
+      for (let x = c.x0; x <= c.x1; x += 12) {
+        ctx.lineTo(x, gy + 4 + Math.sin(x * 0.15 + this.elapsedMs / 220) * 2);
+      }
+      ctx.stroke();
+
+      if (!surfaced) continue;
+
+      // Animasi pop-up/submerge: badan "tumbuh" cepat di awal fase
+      // surfaced, dan "menyusut" cepat lagi di akhir fase (sebelum
+      // tenggelam), supaya transisinya tidak muncul/hilang instan.
+      const growWindow = 0.18;
+      let bodyScale = 1;
+      if (phaseT < growWindow) bodyScale = phaseT / growWindow;
+      else if (phaseT > 1 - growWindow) bodyScale = (1 - phaseT) / growWindow;
+      bodyScale = Math.max(0.12, Math.min(1, bodyScale));
+
+      ctx.save();
+      ctx.translate(cx, gy);
+      ctx.scale(1, bodyScale);
+
+      if (c.species === "crocodile") this.drawCrocodile(ctx, gw);
+      else if (c.species === "shark") this.drawShark(ctx, gw);
+      else this.drawWhale(ctx, gw);
+
+      ctx.restore();
+    }
+  }
+
+  // Buaya: badan gempal hijau, moncong + gigi di sisi kiri, mata
+  // kuning di atas, punggung berduri.
+  drawCrocodile(ctx, gw) {
+    const w = Math.min(90, Math.max(50, gw * 0.6));
+    const h = 46;
+
+    ctx.fillStyle = "#3a7d3a";
+    ctx.beginPath();
+    ctx.ellipse(0, -h * 0.25, w * 0.5, h * 0.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // moncong
+    ctx.fillStyle = "#346f34";
+    ctx.beginPath();
+    ctx.moveTo(-w * 0.5, -h * 0.15);
+    ctx.lineTo(-w * 0.85, -h * 0.05);
+    ctx.lineTo(-w * 0.5, h * 0.05);
+    ctx.closePath();
+    ctx.fill();
+
+    // gigi
+    ctx.fillStyle = "#fff";
+    for (let i = 0; i < 4; i++) {
+      const tx = -w * 0.5 - i * (w * 0.08);
+      ctx.beginPath();
+      ctx.moveTo(tx, -h * 0.02);
+      ctx.lineTo(tx - w * 0.03, h * 0.06);
+      ctx.lineTo(tx + w * 0.02, -h * 0.02);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // mata
+    ctx.fillStyle = "#e8d24a";
+    ctx.beginPath();
+    ctx.arc(-w * 0.1, -h * 0.42, 5, 0, Math.PI * 2);
+    ctx.arc(w * 0.15, -h * 0.42, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#111";
+    ctx.beginPath();
+    ctx.arc(-w * 0.1, -h * 0.42, 2, 0, Math.PI * 2);
+    ctx.arc(w * 0.15, -h * 0.42, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // duri punggung
+    ctx.fillStyle = "#2f632f";
+    for (let i = 0; i < 3; i++) {
+      const rx = w * (0.1 + i * 0.15);
+      ctx.beginPath();
+      ctx.moveTo(rx - 6, -h * 0.5);
+      ctx.lineTo(rx, -h * 0.65);
+      ctx.lineTo(rx + 6, -h * 0.5);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  // Hiu: badan abu-abu ramping, sirip punggung segitiga menjulang,
+  // moncong dengan gigi tajam di sisi kiri.
+  drawShark(ctx, gw) {
+    const w = Math.min(90, Math.max(55, gw * 0.6));
+    const h = 60;
+
+    ctx.fillStyle = "#7b8a99";
+    ctx.beginPath();
+    ctx.ellipse(0, -h * 0.3, w * 0.45, h * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // sirip punggung
+    ctx.beginPath();
+    ctx.moveTo(-w * 0.05, -h * 0.7);
+    ctx.lineTo(w * 0.05, -h * 1.05);
+    ctx.lineTo(w * 0.18, -h * 0.65);
+    ctx.closePath();
+    ctx.fill();
+
+    // moncong
+    ctx.fillStyle = "#66707c";
+    ctx.beginPath();
+    ctx.ellipse(-w * 0.35, -h * 0.15, w * 0.18, h * 0.18, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // gigi
+    ctx.fillStyle = "#fff";
+    for (let i = 0; i < 5; i++) {
+      const tx = -w * 0.5 + i * (w * 0.08);
+      ctx.beginPath();
+      ctx.moveTo(tx, -h * 0.02);
+      ctx.lineTo(tx + w * 0.02, h * 0.1);
+      ctx.lineTo(tx + w * 0.05, -h * 0.02);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // mata
+    ctx.fillStyle = "#111";
+    ctx.beginPath();
+    ctx.arc(-w * 0.3, -h * 0.35, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Paus: badan besar biru, perut terang, sirip ekor, semburan air
+  // dari lubang napas.
+  drawWhale(ctx, gw) {
+    const w = Math.min(140, Math.max(80, gw * 0.7));
+    const h = 70;
+
+    ctx.fillStyle = "#3f6fa8";
+    ctx.beginPath();
+    ctx.ellipse(0, -h * 0.25, w * 0.5, h * 0.45, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // perut terang
+    ctx.fillStyle = "#c9dbe9";
+    ctx.beginPath();
+    ctx.ellipse(w * 0.02, -h * 0.05, w * 0.32, h * 0.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // sirip ekor
+    ctx.fillStyle = "#3f6fa8";
+    ctx.beginPath();
+    ctx.moveTo(w * 0.45, -h * 0.3);
+    ctx.lineTo(w * 0.7, -h * 0.55);
+    ctx.lineTo(w * 0.55, -h * 0.15);
+    ctx.closePath();
+    ctx.fill();
+
+    // mata
+    ctx.fillStyle = "#111";
+    ctx.beginPath();
+    ctx.arc(-w * 0.28, -h * 0.28, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // semburan air dari lubang napas
+    ctx.strokeStyle = "rgba(255,255,255,0.7)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-w * 0.05, -h * 0.7);
+    ctx.lineTo(-w * 0.08, -h * 0.95);
+    ctx.moveTo(-w * 0.02, -h * 0.7);
+    ctx.lineTo(0, -h * 1.0);
+    ctx.moveTo(w * 0.02, -h * 0.7);
+    ctx.lineTo(w * 0.06, -h * 0.9);
+    ctx.stroke();
   }
 
   // ============================================================
