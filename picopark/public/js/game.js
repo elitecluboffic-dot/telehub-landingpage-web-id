@@ -108,6 +108,37 @@ function applyControlVisibility() {
   });
 }
 
+// ---------------- VISIBILITY TOMBOL "MAIN BERDUA" ----------------
+// Tombol & badge status koneksi ini cuma relevan di layar PILIH LEVEL
+// (#select-screen). Begitu user masuk main level (#play-screen), kedua
+// elemen ini WAJIB disembunyikan supaya tidak numpang di atas area
+// game. Dipanggil manual di setiap transisi layar (startLevel,
+// startLevelAsClient, backToSelect) karena elemen ini di-inject lewat
+// JS langsung ke <body>, jadi tidak otomatis ikut ke-hide bareng
+// #select-screen lewat class "hidden".
+function hideMultiplayerUI() {
+  const btn = document.getElementById("mp-toggle-btn");
+  const badge = document.getElementById("mp-badge");
+  if (btn) btn.style.display = "none";
+  if (badge) badge.style.display = "none";
+}
+
+function restoreMultiplayerUI() {
+  const btn = document.getElementById("mp-toggle-btn");
+  const badge = document.getElementById("mp-badge");
+  // Invitee paksa (numpang sesi host) memang tidak pernah boleh lihat
+  // tombol ini sama sekali, apapun state-nya.
+  if (isForcedInviteeClient) return;
+
+  if (net.connected) {
+    // Sudah terhubung ke temen: yang muncul cukup badge status,
+    // tombol toggle tetap disembunyikan (perilaku aslinya).
+    if (badge) badge.style.display = "block";
+  } else {
+    if (btn) btn.style.display = "block";
+  }
+}
+
 // ---------------- API ----------------
 async function api(path, opts = {}) {
   const res = await fetch(path, {
@@ -165,6 +196,7 @@ async function init() {
     document.getElementById("select-screen").classList.remove("hidden");
     renderLevelSelect();
     initMultiplayerUI();
+    restoreMultiplayerUI();
   } catch (err) {
     if (err.status === 402) {
       gateOverlay.classList.remove("hidden");
@@ -205,6 +237,7 @@ function startLevel(id) {
   hudLevelName.textContent = `Level ${id}`;
   document.getElementById("select-screen").classList.add("hidden");
   document.getElementById("play-screen").classList.remove("hidden");
+  hideMultiplayerUI();
   resizeCanvas();
   running = true;
   lastTime = performance.now();
@@ -220,11 +253,13 @@ function backToSelect() {
   if (myRole === "client") {
     // Client tidak memilih level sendiri; balik ke layar "menunggu host".
     document.getElementById("mp-wait-screen").style.display = "flex";
+    hideMultiplayerUI();
     return;
   }
 
   document.getElementById("select-screen").classList.remove("hidden");
   renderLevelSelect();
+  restoreMultiplayerUI();
 }
 
 async function onLevelComplete() {
@@ -301,6 +336,7 @@ function startLevelAsClient(levelId) {
   document.getElementById("select-screen")?.classList.add("hidden");
   document.getElementById("mp-wait-screen").style.display = "none";
   document.getElementById("play-screen").classList.remove("hidden");
+  hideMultiplayerUI();
   resizeCanvas();
   clientCompletedHandled = false;
   clientRunning = true;
@@ -473,24 +509,31 @@ function initMultiplayerUI() {
   net.onPeerConnected = () => {
     myRole = net.role; // "host" atau "client"
     modal.style.display = "none";
-    badge.style.display = "block";
     badge.textContent = net.isHost() ? "🟢 Terhubung — kamu Host (P1)" : "🟢 Terhubung — kamu Player 2";
     btn.style.display = "none";
     applyControlVisibility();
+
+    // Badge status cuma dimunculkan kalau memang lagi di layar pilih
+    // level. Kalau koneksi ini kebentuk pas user udah di play-screen
+    // (mis. host baru selesai share kode di modal sambil level jalan),
+    // biarkan hideMultiplayerUI() yang sedang aktif tetap berlaku.
+    const inSelectScreen = !document.getElementById("select-screen")?.classList.contains("hidden");
+    badge.style.display = inSelectScreen ? "block" : "none";
 
     if (net.isClient()) {
       document.getElementById("select-screen")?.classList.add("hidden");
       document.getElementById("mp-wait-title").textContent = "Terhubung sebagai Player 2 🎮";
       document.getElementById("mp-wait-sub").textContent = "Menunggu host memilih level...";
       waitScreen.style.display = "flex";
+      badge.style.display = "none";
     }
   };
 
   net.onPeerDisconnected = () => {
     badge.style.display = "none";
-    btn.style.display = "block";
     waitScreen.style.display = "none";
     applyControlVisibility();
+    restoreMultiplayerUI();
 
     // Kalau device ini HOST dan sempat punya room aktif, anggap
     // temannya baru saja keluar/disconnect: hapus baris room di
