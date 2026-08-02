@@ -27,6 +27,12 @@ let clientRunning = false;
 let clientCompletedHandled = false;
 let netSendCounter = 0;
 
+// Kode room yang lagi aktif dipakai device ini (baik sebagai host yang
+// baru generate, maupun client yang baru join). Dipakai buat trigger
+// "leave" ke backend supaya baris room-nya kehapus permanen begitu
+// koneksi terputus / device ini keluar.
+let currentRoomCode = null;
+
 const input = {
   p1: { left: false, right: false, jump: false },
   p2: { left: false, right: false, jump: false },
@@ -113,7 +119,9 @@ async function init() {
   try {
     const me = await api("/api/me");
     if (!me.user) { window.location.href = "/"; return; }
-    if (!me.user.is_paid) {
+    // has_access = sudah bayar (is_paid) ATAU lagi jadi invitee aktif
+    // di room seorang host (akses gratis lewat kode undangan).
+    if (!me.user.has_access) {
       gateOverlay.classList.remove("hidden");
       window.PaymentGate?.refreshGateStatus?.();
       return;
@@ -348,7 +356,7 @@ function initMultiplayerUI() {
         <button id="mp-tab-join" style="flex:1;padding:8px;border-radius:8px;border:1px solid #372f52;background:#262040;color:#eeeaf7;cursor:pointer;">Join Room</button>
       </div>
       <div id="mp-pane-host">
-        <p style="font-size:13px;color:#a29dc2;margin:0 0 10px;">Bikin room, lalu kirim kode ini ke temen kamu.</p>
+        <p style="font-size:13px;color:#a29dc2;margin:0 0 10px;">Bikin room, lalu kirim kode ini ke temen kamu. Kode ini juga bisa dipakai temenmu buat main gratis tanpa bayar.</p>
         <button id="mp-btn-create" style="width:100%;padding:12px;border-radius:9px;border:none;background:#ff8c3b;color:#1a1200;font-weight:700;cursor:pointer;">BUAT ROOM</button>
         <div id="mp-room-code" style="display:none;text-align:center;margin-top:14px;padding:14px;border:1px dashed #ff8c3b;border-radius:10px;font-family:monospace;font-size:20px;letter-spacing:2px;color:#ff8c3b;"></div>
         <div id="mp-host-status" style="margin-top:10px;font-size:13px;color:#a29dc2;"></div>
@@ -402,21 +410,27 @@ function initMultiplayerUI() {
     const statusEl = document.getElementById("mp-host-status");
     statusEl.textContent = "Membuat room...";
     try {
-      const code = await net.hostRoom();
+      // Kode room sekarang di-generate & disimpan lewat backend (bukan
+      // random di client lagi), supaya invitee bisa redeem akses gratis
+      // lewat /api/room/join pakai kode yang sama persis.
+      const created = await api("/api/room/create", { method: "POST" });
+      currentRoomCode = created.code;
+      const code = await net.hostRoom(created.code);
       document.getElementById("mp-room-code").style.display = "block";
       document.getElementById("mp-room-code").textContent = code;
       statusEl.textContent = "Room siap. Menunggu temen connect...";
     } catch (e) {
-      statusEl.textContent = "Gagal membuat room, coba lagi.";
+      statusEl.textContent = e.error || "Gagal membuat room, coba lagi.";
     }
   });
 
   document.getElementById("mp-btn-join").addEventListener("click", async () => {
-    const code = document.getElementById("mp-join-input").value.trim();
+    const code = document.getElementById("mp-join-input").value.trim().toUpperCase();
     const statusEl = document.getElementById("mp-join-status");
     if (!code) { statusEl.textContent = "Isi kode room dulu."; return; }
     statusEl.textContent = "Menghubungkan...";
     try {
+      currentRoomCode = code;
       await net.joinRoom(code);
       statusEl.textContent = "Terhubung!";
     } catch (e) {
@@ -443,6 +457,18 @@ function initMultiplayerUI() {
     btn.style.display = "block";
     waitScreen.style.display = "none";
     applyControlVisibility();
+
+    // Kalau device ini HOST dan sempat punya room aktif, anggap
+    // temannya baru saja keluar/disconnect: hapus baris room di
+    // database secara permanen supaya kode itu otomatis hangus.
+    // Host wajib klik "Buat Room" lagi untuk dapat kode baru.
+    if (myRole === "host" && currentRoomCode) {
+      const codeToRevoke = currentRoomCode;
+      currentRoomCode = null;
+      document.getElementById("mp-room-code").style.display = "none";
+      document.getElementById("mp-host-status").textContent = "Temanmu keluar, kode room ini sudah hangus.";
+      api("/api/room/leave", { method: "POST", body: JSON.stringify({ code: codeToRevoke }) }).catch(() => {});
+    }
   };
 
   net.onStartReceived = (levelId) => {
@@ -453,6 +479,22 @@ function initMultiplayerUI() {
     latestRemoteState = state;
   };
 }
+
+// Fallback best-effort: kalau sisi CLIENT (invitee) yang nutup tab/
+// keluar duluan (bukan host yang mendeteksi disconnect), coba beri
+// tahu backend juga supaya room-nya kehapus lebih cepat. Ini cuma
+// jaring pengaman tambahan — jalur utama tetap lewat onPeerDisconnected
+// di sisi host.
+window.addEventListener("beforeunload", () => {
+  if (myRole === "client" && currentRoomCode) {
+    try {
+      navigator.sendBeacon(
+        "/api/room/leave",
+        new Blob([JSON.stringify({ code: currentRoomCode })], { type: "application/json" })
+      );
+    } catch (e) { /* abaikan, ini cuma best-effort */ }
+  }
+});
 
 btnBackToSelect.addEventListener("click", backToSelect);
 btnRestart.addEventListener("click", () => {
