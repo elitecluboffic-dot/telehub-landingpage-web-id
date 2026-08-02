@@ -637,6 +637,7 @@ function initResetProgressUI() {
 }
 
 
+btnBackToSelect.addEventListener("click", backToSelect);
 btnRestart.addEventListener("click", () => {
   victoryModal.classList.add("hidden");
   if (myRole === "client") return; // client menunggu host yang mulai ulang
