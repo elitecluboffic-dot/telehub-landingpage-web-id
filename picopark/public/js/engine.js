@@ -17,7 +17,17 @@
 // daun pintu kayu berukir + obor + bendera. Lihat drawGoalGate() dan
 // helper drawGateTower/drawGateFlag/drawGateTorch/roundRectPath di
 // bawah untuk detailnya.
+//
+// UPDATE (terrain bervariasi): platform abu-abu solid diganti terrain
+// prosedural (rumput/gurun/batu/salju/vulkanik) lewat terrain-renderer.js.
+// Tema dipilih otomatis per level (lihat biomeForLevel di file itu),
+// permukaan tanah digambar sebagai kurva menyambung supaya antar-platform
+// tidak terlihat terpotong-potong. Collision TIDAK berubah -- this.platforms
+// tetap array datar {x,y,w,h} yang sama seperti sebelumnya, cuma cara
+// gambarnya yang beda (this.terrain terpisah, khusus visual).
 // ============================================================
+
+import { buildTerrain, drawTerrain } from "./terrain-renderer.js";
 
 const GRAVITY = 1400; // px/s^2
 const MOVE_SPEED = 220; // px/s
@@ -88,6 +98,12 @@ export class GameLevel {
     this.platforms = levelDef.platforms.map((p) => ({ ...p }));
     this.boxes = levelDef.boxes.map((b) => new Box(b.x, b.y));
     this.movingPlatforms = levelDef.movingPlatforms.map((m) => new MovingPlatform(m));
+
+    // Data terrain visual (tema rumput/gurun/batu/salju/vulkanik sesuai
+    // level.id, dihitung sekali di sini). Ini terpisah dari this.platforms
+    // di atas -- this.platforms tetap dipakai apa adanya untuk collision,
+    // this.terrain cuma dipakai buat menggambar.
+    this.terrain = buildTerrain(levelDef);
 
     this.plateState = {}; // plateId -> weighted bool
     for (const p of levelDef.plates) this.plateState[p.id] = false;
@@ -307,9 +323,12 @@ export class GameLevel {
     ctx.fillStyle = "#eef3fb";
     ctx.fillRect(-50000, -50000, 200000, 200000);
 
-    // Platforms
-    ctx.fillStyle = "#4b5563";
-    for (const p of this.platforms) ctx.fillRect(p.x, p.y, p.w, p.h);
+    // Platforms — terrain bervariasi (rumput/gurun/batu/salju/vulkanik
+    // sesuai tema level, lihat biomeForLevel di terrain-renderer.js).
+    // viewW dipakai cuma buat culling performa; kita kasih this.width
+    // penuh supaya tidak ada platform yang salah kepotong pas dipanggil
+    // dari kondisi kamera manapun.
+    drawTerrain(ctx, this.terrain, camera.x, this.width);
 
     // Doors
     for (const d of this.def.doors) {
