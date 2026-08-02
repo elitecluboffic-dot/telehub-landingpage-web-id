@@ -331,7 +331,7 @@ function initMultiplayerUI() {
   btn.id = "mp-toggle-btn";
   btn.textContent = "🔗 Main Berdua";
   Object.assign(btn.style, {
-    position: "fixed", top: "14px", right: "14px", zIndex: "9999",
+    position: "fixed", top: "64px", right: "14px", zIndex: "9999",
     padding: "10px 16px", borderRadius: "10px", border: "none",
     background: "#ff8c3b", color: "#1a1200", fontWeight: "700",
     fontFamily: "sans-serif", fontSize: "13px", cursor: "pointer",
@@ -374,7 +374,7 @@ function initMultiplayerUI() {
   const badge = document.createElement("div");
   badge.id = "mp-badge";
   Object.assign(badge.style, {
-    position: "fixed", top: "14px", right: "14px", zIndex: "9999",
+    position: "fixed", top: "64px", right: "14px", zIndex: "9999",
     display: "none", padding: "10px 16px", borderRadius: "10px",
     background: "#201c33", border: "1px solid #372f52", color: "#7ee08a",
     fontFamily: "monospace", fontSize: "12.5px",
