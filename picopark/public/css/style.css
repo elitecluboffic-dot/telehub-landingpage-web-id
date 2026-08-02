@@ -222,6 +222,15 @@ a { color: inherit; }
 .touch-controls {
   position: absolute; inset: 0; display:flex; justify-content:space-between; pointer-events:none;
 }
+
+/* Kontrol sentuh (◀ ▲ ▶) cuma untuk device touchscreen (HP/tablet).
+   Di PC/laptop (mouse + keyboard) disembunyikan total supaya tidak
+   numpang/menutupi area canvas game — kontrol tetap lewat keyboard. */
+@media not all and (hover: none) and (pointer: coarse) {
+  .touch-controls {
+    display: none !important;
+  }
+}
 .touch-side { display:flex; align-items:flex-end; gap:10px; padding: 18px; pointer-events:none; }
 .touch-side button {
   pointer-events: auto; width: 58px; height: 58px; border-radius: 50%; border: none;
