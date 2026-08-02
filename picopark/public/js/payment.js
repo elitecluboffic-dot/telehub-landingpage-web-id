@@ -81,15 +81,47 @@ function showGateState(state) {
   gateRejected.classList.toggle("hidden", state !== "rejected");
 }
 
+// ---------------------------------------------------------------
+// PENTING: fungsi ini TIDAK dipanggil otomatis lagi di bagian bawah
+// file ini. Sebelumnya ada `refreshGateStatus();` di baris terakhir
+// yang jalan setiap kali script di-load (termasuk setelah reload),
+// dan begitu is_paid true dia reload() lagi -> reload lagi -> infinite
+// loop. Sekarang pemanggilannya dipindah supaya cuma terjadi:
+//   1. Saat user klik tombol "Cek status" (listener di atas), atau
+//   2. Sekali, dan HANYA ketika gate overlay memang sedang
+//      ditampilkan (dipanggil dari game.js lewat window.PaymentGate).
+//
+// Ditambahin juga circuit breaker berbasis sessionStorage: kalaupun
+// suatu saat ada bug lain yang memicu reload berulang, ini membatasi
+// jumlah auto-reload jadi maksimal 1x per tab/session, jadi tidak
+// akan pernah lagi sampai ribuan request seperti kemarin.
+// ---------------------------------------------------------------
+const RELOAD_GUARD_KEY = "tali_gate_auto_reload_done";
+
 async function refreshGateStatus() {
   try {
     const res = await papi("/api/payment/status");
+
     if (res.is_paid) {
+      const alreadyReloaded = sessionStorage.getItem(RELOAD_GUARD_KEY) === "1";
+      if (alreadyReloaded) {
+        // Sudah pernah auto-reload sekali di session ini tapi is_paid
+        // masih true dan kita masih di halaman gate — berarti ada
+        // masalah lain (misal game.js belum sempat baca status baru).
+        // Jangan reload lagi, biar tidak infinite loop; cukup
+        // sembunyikan overlay manual lewat reload biasa oleh user
+        // via tombol, atau tampilkan pesan.
+        console.warn("[PaymentGate] is_paid=true tapi sudah pernah auto-reload sebelumnya. Reload dihentikan untuk cegah loop.");
+        return;
+      }
+      sessionStorage.setItem(RELOAD_GUARD_KEY, "1");
       window.location.reload();
       return;
     }
-    if (res.latest_payment?.status === "pending") showGateState("pending");
-    else if (res.latest_payment?.status === "rejected") {
+
+    if (res.latest_payment?.status === "pending") {
+      showGateState("pending");
+    } else if (res.latest_payment?.status === "rejected") {
       document.getElementById("reject-note").textContent = res.latest_payment.admin_note
         ? `Catatan admin: ${res.latest_payment.admin_note}`
         : "Bukti pembayaran tidak valid, silakan upload ulang.";
@@ -97,8 +129,12 @@ async function refreshGateStatus() {
     } else {
       showGateState("form");
     }
-  } catch (e) { /* belum login atau error lain, biarkan game.js yang handle redirect */ }
+  } catch (e) {
+    /* belum login atau error lain, biarkan game.js yang handle redirect */
+  }
 }
 
-// Cek status begitu halaman dimuat (kalau overlay memang tampil)
-refreshGateStatus();
+// Dipakai oleh game.js: hanya dipanggil sekali, dan hanya ketika
+// gate overlay memang sedang ditampilkan (user belum bayar / status
+// belum jelas). Lihat catatan integrasi di bawah.
+window.PaymentGate = { refreshGateStatus, showGateState };
