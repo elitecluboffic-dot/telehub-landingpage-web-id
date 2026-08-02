@@ -6,12 +6,19 @@
  *
  * THEME STRATEGY
  * Each level gets ONE primary biome, assigned by a "world" grouping so
- * the game feels like it progresses through distinct zones:
- *   Level   1–20  -> grass    (green plains)
- *   Level  21–40  -> desert   (sand / dunes)
- *   Level  41–60  -> rock     (gray mountains)
- *   Level  61–80  -> snow     (white peaks)
- *   Level  81–100 -> volcanic (red-black, final stretch)
+ * the game feels like it progresses through distinct zones. With
+ * WORLD_SIZE = 10 and 10 biomes defined, every block of 10 levels gets
+ * its own fully distinct look:
+ *   Level    1–10  -> grass     (green plains)
+ *   Level   11–20  -> forest    (deep woodland floor)
+ *   Level   21–30  -> desert    (sand / dunes)
+ *   Level   31–40  -> canyon    (red sandstone)
+ *   Level   41–50  -> rock      (gray mountains)
+ *   Level   51–60  -> swamp     (murky bog)
+ *   Level   61–70  -> snow      (white peaks)
+ *   Level   71–80  -> tundra    (blue ice)
+ *   Level   81–90  -> volcanic  (red-black)
+ *   Level   91–100 -> void      (final stretch, cosmic purple-black)
  * Within a single level, platforms don't switch biome — they only get
  * subtle shade variation (base/alt) so it stays cohesive, while the
  * ground silhouette is still one continuous curve so every platform
@@ -46,19 +53,39 @@ const BIOMES = {
     alt:  { top: '#7ea15e', topEdge: '#5c8446', body: '#93764f', bodyDark: '#7d6242' },
     detail: 'tufts',
   },
+  forest: {
+    base: { top: '#3f6b3a', topEdge: '#2c4d29', body: '#5a4531', bodyDark: '#473627' },
+    alt:  { top: '#4c7a45', topEdge: '#375c33', body: '#63503a', bodyDark: '#4f3f2d' },
+    detail: 'tufts',
+  },
   desert: {
     base: { top: '#c9a45c', topEdge: '#a9813f', body: '#b78f52', bodyDark: '#96733d' },
     alt:  { top: '#d4b06c', topEdge: '#b3904d', body: '#c39c5f', bodyDark: '#a17f47' },
     detail: 'pebbles',
+  },
+  canyon: {
+    base: { top: '#b1552f', topEdge: '#8c3f20', body: '#8f4530', bodyDark: '#733523' },
+    alt:  { top: '#c1653c', topEdge: '#9c4b28', body: '#9c5138', bodyDark: '#7f3d29' },
+    detail: 'cracks',
   },
   rock: {
     base: { top: '#8a8f96', topEdge: '#6b7280', body: '#6b7280', bodyDark: '#565c66' },
     alt:  { top: '#9a9fa6', topEdge: '#7b828c', body: '#7b828c', bodyDark: '#656c76' },
     detail: 'cracks',
   },
+  swamp: {
+    base: { top: '#5c6b3a', topEdge: '#414c29', body: '#4a4530', bodyDark: '#38341f' },
+    alt:  { top: '#6a7a44', topEdge: '#4d5a30', body: '#544f38', bodyDark: '#413d26' },
+    detail: 'pebbles',
+  },
   snow: {
     base: { top: '#e7edf2', topEdge: '#b9c6d1', body: '#8a8f96', bodyDark: '#6b7280' },
     alt:  { top: '#f2f6f9', topEdge: '#c9d4dd', body: '#9aa0a8', bodyDark: '#7b828c' },
+    detail: 'cracks',
+  },
+  tundra: {
+    base: { top: '#cfe7f2', topEdge: '#9dc3d9', body: '#5f7d8c', bodyDark: '#4b6470' },
+    alt:  { top: '#ddf0f8', topEdge: '#aed2e6', body: '#6c8c9c', bodyDark: '#57727e' },
     detail: 'cracks',
   },
   volcanic: {
@@ -66,10 +93,18 @@ const BIOMES = {
     alt:  { top: '#8f3a25', topEdge: '#6b281a', body: '#4a3d3a', bodyDark: '#362d29' },
     detail: 'cracks',
   },
+  void: {
+    base: { top: '#4b2e73', topEdge: '#331f52', body: '#241a33', bodyDark: '#181225' },
+    alt:  { top: '#5c3a89', topEdge: '#402963', body: '#2d2140', bodyDark: '#20182e' },
+    detail: 'cracks',
+  },
 };
 
-const BIOME_ORDER = ['grass', 'desert', 'rock', 'snow', 'volcanic'];
-const WORLD_SIZE = 20; // levels per biome -- 5 biomes x 20 levels = 100
+const BIOME_ORDER = [
+  'grass', 'forest', 'desert', 'canyon', 'rock',
+  'swamp', 'snow', 'tundra', 'volcanic', 'void',
+];
+const WORLD_SIZE = 10; // levels per biome -- 10 biomes x 10 levels = 100
 
 export function biomeForLevel(levelId) {
   const idx = Math.min(
@@ -95,14 +130,21 @@ function ridgeOffset(worldX, seed) {
   );
 }
 
-// Extra amplitude for jagged peaks -- used for rock / snow / volcanic biomes.
+// Extra amplitude for jagged peaks -- used for rugged/mountainous biomes.
 function peakOffset(worldX, seed) {
   const s = seed * 0.0091;
   return Math.max(0, Math.sin(worldX * 0.004 + s) * 34 - 10);
 }
 
 function usesPeaks(biomeName) {
-  return biomeName === 'rock' || biomeName === 'snow' || biomeName === 'volcanic';
+  return (
+    biomeName === 'rock' ||
+    biomeName === 'snow' ||
+    biomeName === 'tundra' ||
+    biomeName === 'volcanic' ||
+    biomeName === 'canyon' ||
+    biomeName === 'void'
+  );
 }
 
 // ---------------------------------------------------------------------
