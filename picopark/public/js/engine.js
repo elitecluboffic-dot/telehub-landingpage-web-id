@@ -11,6 +11,12 @@
 // Sekarang render() menerima camera.scale (dihitung di game.js
 // sebagai viewH / level.height) supaya seluruh tinggi dunia selalu
 // pas mengisi tinggi canvas, baru di-pan horizontal seperti biasa.
+//
+// UPDATE (goal jadi gerbang kerajaan): kotak biru polos "GOAL" diganti
+// drawGoalGate() -- gerbang batu dengan dua menara + lengkungan +
+// daun pintu kayu berukir + obor + bendera. Lihat drawGoalGate() dan
+// helper drawGateTower/drawGateFlag/drawGateTorch/roundRectPath di
+// bawah untuk detailnya.
 // ============================================================
 
 const GRAVITY = 1400; // px/s^2
@@ -335,19 +341,285 @@ export class GameLevel {
     ctx.fillStyle = "#c2410c";
     for (const box of this.boxes) ctx.fillRect(box.x, box.y, box.w, box.h);
 
-    // Goal
-    const g = this.def.goal;
-    ctx.fillStyle = this.completed ? "#16a34a" : "#0ea5e9";
-    ctx.fillRect(g.x, g.y, g.w, g.h);
-    ctx.fillStyle = "#fff";
-    ctx.font = "12px sans-serif";
-    ctx.fillText("GOAL", g.x + 6, g.y + g.h / 2);
+    // Goal — gerbang kerajaan (menara + lengkungan + daun pintu + obor + bendera)
+    this.drawGoalGate(ctx, this.def.goal, this.completed);
 
     // Players (dino couple)
     this.drawPlayer(ctx, this.player1);
     this.drawPlayer(ctx, this.player2);
 
     ctx.restore();
+  }
+
+  // ============================================================
+  // drawGoalGate(ctx, g, completed)
+  // Menggambar goal sebagai gerbang kerajaan: dua menara batu bata
+  // dengan merlon (gerigi benteng), lengkungan batu penghubung
+  // dengan batu kunci di puncak, daun pintu kayu berukir + paku besi
+  // yang sedikit terkuak (kesan "gerbang terbuka mengundang"), obor
+  // menyala di kedua menara, bendera di puncak, dan cahaya ambient
+  // di belakangnya. g = {x,y,w,h} tetap dipakai persis sebagai area
+  // trigger goal (collision TIDAK berubah), gerbang cuma digambar
+  // meluas ke atas/samping dari area itu secara visual.
+  // ============================================================
+  drawGoalGate(ctx, g, completed) {
+    const x = g.x, y = g.y, w = g.w, h = g.h;
+    const pillarW = Math.max(10, w * 0.26);
+    const towerH = h * 1.6;
+    const topY = y + h - towerH;
+    const leftPillarX = x - pillarW * 0.12;
+    const rightPillarX = x + w - pillarW * 0.88;
+
+    const stoneLight = "#aab0bd";
+    const stoneMid = "#7c8291";
+    const stoneDark = "#575d6b";
+    const mortar = "#454b57";
+
+    ctx.save();
+
+    // --- Cahaya ambient di belakang gerbang ---
+    const glowColor = completed ? "rgba(250,204,21,0.5)" : "rgba(56,189,248,0.3)";
+    const gcx = x + w / 2, gcy = y + h * 0.55;
+    const glow = ctx.createRadialGradient(gcx, gcy, w * 0.05, gcx, gcy, w * 1.7);
+    glow.addColorStop(0, glowColor);
+    glow.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(x - w * 1.3, topY - h * 0.7, w * 3.6, h * 2.8);
+
+    // --- Menara kiri & kanan ---
+    this.drawGateTower(ctx, leftPillarX, topY, pillarW, towerH, stoneLight, stoneMid, stoneDark, mortar);
+    this.drawGateTower(ctx, rightPillarX, topY, pillarW, towerH, stoneLight, stoneMid, stoneDark, mortar);
+
+    // --- Lengkungan atas menghubungkan dua menara ---
+    const archLeft = leftPillarX;
+    const archRight = rightPillarX + pillarW;
+    const archBaseY = topY + h * 0.14;
+    const archTopY = topY - w * 0.2;
+    ctx.fillStyle = stoneMid;
+    ctx.beginPath();
+    ctx.moveTo(archLeft, archBaseY);
+    ctx.lineTo(archLeft, topY + h * 0.02);
+    ctx.quadraticCurveTo((archLeft + archRight) / 2, archTopY, archRight, topY + h * 0.02);
+    ctx.lineTo(archRight, archBaseY);
+    ctx.quadraticCurveTo((archLeft + archRight) / 2, archTopY + h * 0.18, archLeft, archBaseY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = mortar;
+    ctx.lineWidth = Math.max(1, w * 0.015);
+    ctx.stroke();
+
+    // batu kunci (keystone) di puncak lengkungan
+    ctx.fillStyle = stoneDark;
+    const kcx = (archLeft + archRight) / 2;
+    ctx.beginPath();
+    ctx.moveTo(kcx - w * 0.07, archTopY + h * 0.05);
+    ctx.lineTo(kcx + w * 0.07, archTopY + h * 0.05);
+    ctx.lineTo(kcx + w * 0.045, archTopY + h * 0.2);
+    ctx.lineTo(kcx - w * 0.045, archTopY + h * 0.2);
+    ctx.closePath();
+    ctx.fill();
+
+    // --- Lubang pintu (portal bercahaya) ---
+    const doorGrad = ctx.createLinearGradient(x, y, x, y + h);
+    if (completed) {
+      doorGrad.addColorStop(0, "#fff7d6");
+      doorGrad.addColorStop(1, "#f4b93f");
+    } else {
+      doorGrad.addColorStop(0, "#dff6ff");
+      doorGrad.addColorStop(1, "#0ea5e9");
+    }
+    ctx.fillStyle = doorGrad;
+    this.roundRectPath(ctx, x, y, w, h, w * 0.18);
+    ctx.fill();
+
+    // --- Daun pintu kayu berukir dengan paku besi, sedikit terkuak ---
+    const leafW = w / 2;
+    const openGap = w * 0.06;
+    ctx.save();
+    ctx.beginPath();
+    this.roundRectPath(ctx, x, y, w, h, w * 0.18);
+    ctx.clip();
+
+    for (let side = 0; side < 2; side++) {
+      const lx = side === 0 ? x : x + leafW + openGap * 0;
+      const leafX = side === 0 ? x : x + leafW;
+      const drawX = side === 0 ? leafX - (leafW - openGap) : leafX + openGap;
+      const woodGrad = ctx.createLinearGradient(drawX, y, drawX + (leafW - openGap), y);
+      if (completed) {
+        woodGrad.addColorStop(0, "#e8a63a");
+        woodGrad.addColorStop(1, "#c97f1d");
+      } else {
+        woodGrad.addColorStop(0, "#9a6a34");
+        woodGrad.addColorStop(1, "#6b4420");
+      }
+      ctx.fillStyle = woodGrad;
+      const actualX = side === 0 ? x : x + leafW + openGap;
+      ctx.fillRect(actualX, y, leafW - openGap, h);
+
+      // garis serat kayu vertikal
+      ctx.strokeStyle = "rgba(0,0,0,0.18)";
+      ctx.lineWidth = Math.max(1, w * 0.01);
+      for (let i = 1; i < 3; i++) {
+        const px = actualX + (leafW - openGap) * (i / 3);
+        ctx.beginPath();
+        ctx.moveTo(px, y + h * 0.05);
+        ctx.lineTo(px, y + h * 0.95);
+        ctx.stroke();
+      }
+
+      // bingkai tepi daun pintu
+      ctx.strokeStyle = "rgba(0,0,0,0.28)";
+      ctx.lineWidth = Math.max(1, w * 0.02);
+      ctx.strokeRect(actualX + w * 0.03, y + h * 0.04, (leafW - openGap) - w * 0.06, h * 0.92);
+
+      // paku-paku besi (studs)
+      ctx.fillStyle = "#2b2b2b";
+      const studCols = 2, studRows = 3;
+      for (let r = 0; r < studRows; r++) {
+        for (let c = 0; c < studCols; c++) {
+          const sx = actualX + (leafW - openGap) * ((c + 1) / (studCols + 1));
+          const sy = y + h * ((r + 1) / (studRows + 1));
+          ctx.beginPath();
+          ctx.arc(sx, sy, Math.max(1, w * 0.02), 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#5a5a5a";
+          ctx.beginPath();
+          ctx.arc(sx - w * 0.005, sy - w * 0.005, Math.max(0.5, w * 0.007), 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#2b2b2b";
+        }
+      }
+    }
+    ctx.restore();
+
+    // --- Bendera di puncak masing-masing menara ---
+    const flagColor = completed ? "#facc15" : "#38bdf8";
+    this.drawGateFlag(ctx, leftPillarX + pillarW / 2, topY, flagColor);
+    this.drawGateFlag(ctx, rightPillarX + pillarW / 2, topY, flagColor);
+
+    // --- Obor menyala di kedua menara ---
+    this.drawGateTorch(ctx, leftPillarX + pillarW * 0.5, topY + h * 0.6, w);
+    this.drawGateTorch(ctx, rightPillarX + pillarW * 0.5, topY + h * 0.6, w);
+
+    // --- Label teks ---
+    ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = "rgba(0,0,0,0.4)";
+    ctx.lineWidth = Math.max(1, w * 0.035);
+    ctx.font = `bold ${Math.max(9, Math.round(w * 0.17))}px sans-serif`;
+    ctx.textAlign = "center";
+    const label = completed ? "SELESAI!" : "GOAL";
+    const labelY = topY - h * 0.14;
+    ctx.strokeText(label, x + w / 2, labelY);
+    ctx.fillText(label, x + w / 2, labelY);
+    ctx.textAlign = "left";
+
+    ctx.restore();
+  }
+
+  // Menara gerbang: badan batu bata bertekstur (garis mortar) + shading
+  // kiri-terang/kanan-gelap biar ada kesan volume + merlon (gerigi
+  // benteng) di puncaknya.
+  drawGateTower(ctx, x, topY, w, h, light, mid, dark, mortar) {
+    ctx.fillStyle = mid;
+    ctx.fillRect(x, topY, w, h);
+
+    // garis batu bata horizontal
+    ctx.strokeStyle = mortar;
+    ctx.lineWidth = Math.max(1, w * 0.05);
+    const rows = 6;
+    for (let i = 1; i < rows; i++) {
+      const ly = topY + (h / rows) * i;
+      ctx.beginPath();
+      ctx.moveTo(x, ly);
+      ctx.lineTo(x + w, ly);
+      ctx.stroke();
+    }
+
+    // shading kiri terang / kanan gelap biar ada volume 3D semu
+    ctx.fillStyle = light;
+    ctx.globalAlpha = 0.55;
+    ctx.fillRect(x, topY, w * 0.26, h);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = dark;
+    ctx.globalAlpha = 0.5;
+    ctx.fillRect(x + w * 0.76, topY, w * 0.24, h);
+    ctx.globalAlpha = 1;
+
+    // merlon (gerigi benteng) di puncak menara
+    const merlonCount = 3;
+    const merlonW = w / (merlonCount * 2 - 1);
+    ctx.fillStyle = mid;
+    for (let i = 0; i < merlonCount; i++) {
+      const mx = x + i * merlonW * 2;
+      ctx.fillRect(mx, topY - merlonW * 1.15, merlonW, merlonW * 1.15);
+    }
+    ctx.strokeStyle = mortar;
+    ctx.lineWidth = Math.max(1, w * 0.03);
+    ctx.strokeRect(x, topY, w, h);
+  }
+
+  // Bendera segitiga kecil di ujung tiang, dipasang di puncak menara.
+  drawGateFlag(ctx, poleX, topY, color) {
+    const poleH = 22;
+    const poleTopY = topY - poleH - 6;
+    ctx.strokeStyle = "#4b5563";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(poleX, topY - 6);
+    ctx.lineTo(poleX, poleTopY);
+    ctx.stroke();
+
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(poleX, poleTopY);
+    ctx.lineTo(poleX + 16, poleTopY + 5);
+    ctx.lineTo(poleX, poleTopY + 10);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Obor menyala nempel di dinding menara, apinya sedikit "flicker"
+  // (pakai this.elapsedMs supaya tiap obor punya fase berbeda tapi
+  // tetap deterministik, tanpa butuh Math.random per-frame).
+  drawGateTorch(ctx, tx, ty, w) {
+    // Tangkai obor
+    ctx.fillStyle = "#3f3f46";
+    ctx.fillRect(tx - w * 0.02, ty, w * 0.04, w * 0.22);
+    // Mangkuk obor
+    ctx.fillStyle = "#57534e";
+    ctx.beginPath();
+    ctx.moveTo(tx - w * 0.05, ty);
+    ctx.lineTo(tx + w * 0.05, ty);
+    ctx.lineTo(tx + w * 0.03, ty - w * 0.06);
+    ctx.lineTo(tx - w * 0.03, ty - w * 0.06);
+    ctx.closePath();
+    ctx.fill();
+    // Api (flicker halus berdasarkan waktu, beda fase tiap obor)
+    const flick = Math.sin(this.elapsedMs / 120 + tx) * 0.15;
+    const flameGrad = ctx.createRadialGradient(tx, ty - w * 0.14, 1, tx, ty - w * 0.14, w * 0.13);
+    flameGrad.addColorStop(0, "#fff7c2");
+    flameGrad.addColorStop(0.5, "#fbbf24");
+    flameGrad.addColorStop(1, "rgba(249,115,22,0)");
+    ctx.fillStyle = flameGrad;
+    ctx.beginPath();
+    ctx.ellipse(tx, ty - w * (0.14 + flick), w * 0.065, w * 0.12, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Helper: path persegi dengan sudut membulat (dipakai buat lubang
+  // pintu gerbang supaya terasa lebih "arsitektural" daripada kotak
+  // tajam biasa).
+  roundRectPath(ctx, x, y, w, h, r) {
+    const rr = Math.max(0, Math.min(r, w / 2, h / 2));
+    ctx.beginPath();
+    ctx.moveTo(x + rr, y);
+    ctx.lineTo(x + w - rr, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + rr);
+    ctx.lineTo(x + w, y + h);
+    ctx.lineTo(x, y + h);
+    ctx.lineTo(x, y + rr);
+    ctx.quadraticCurveTo(x, y, x + rr, y);
+    ctx.closePath();
   }
 
   // ============================================================
