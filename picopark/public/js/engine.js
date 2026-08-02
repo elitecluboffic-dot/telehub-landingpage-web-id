@@ -25,9 +25,20 @@
 // tidak terlihat terpotong-potong. Collision TIDAK berubah -- this.platforms
 // tetap array datar {x,y,w,h} yang sama seperti sebelumnya, cuma cara
 // gambarnya yang beda (this.terrain terpisah, khusus visual).
+//
+// UPDATE (langit dinamis): background flat putih/biru muda polos
+// (fillRect "#eef3fb") diganti drawSky() dari sky-renderer.js -- gradasi
+// langit + matahari/bulan + awan melayang, tema mengikuti biome level
+// yang sama persis dengan terrain (grass/forest/desert/canyon/rock/
+// swamp/snow/tundra/volcanic/void). Sky digambar di screen-space
+// SEBELUM transform pan+zoom kamera diterapkan (makanya drawSky
+// dipanggil di luar blok ctx.translate/ctx.scale), supaya langit selalu
+// menutupi seluruh viewport dan awan punya parallax halus terhadap
+// pergerakan kamera, bukan ikut ter-scale/pan sama seperti terrain.
 // ============================================================
 
 import { buildTerrain, drawTerrain } from "./terrain-renderer.js";
+import { buildSky, drawSky } from "./sky-renderer.js";
 
 const GRAVITY = 1400; // px/s^2
 const MOVE_SPEED = 220; // px/s
@@ -104,6 +115,11 @@ export class GameLevel {
     // di atas -- this.platforms tetap dipakai apa adanya untuk collision,
     // this.terrain cuma dipakai buat menggambar.
     this.terrain = buildTerrain(levelDef);
+
+    // Data langit visual (gradasi + matahari/bulan + awan, tema mengikuti
+    // biome yang sama dengan this.terrain di atas). Dihitung sekali di
+    // sini juga, dipakai tiap frame lewat render() -> drawSky().
+    this.sky = buildSky(levelDef);
 
     this.plateState = {}; // plateId -> weighted bool
     for (const p of levelDef.plates) this.plateState[p.id] = false;
@@ -309,6 +325,15 @@ export class GameLevel {
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+    // Langit (background) -- digambar di screen-space MURNI, sebelum
+    // pan/zoom kamera diterapkan. Ini disengaja: langit harus selalu
+    // menutupi seluruh viewport apa pun posisi kamera/level width-nya,
+    // dan awan di dalamnya punya parallax sendiri (lebih lambat dari
+    // dunia game) yang dihitung manual dari camera.x di dalam drawSky,
+    // bukan lewat ctx.translate seperti layer dunia game di bawah.
+    drawSky(ctx, this.sky, ctx.canvas.width, ctx.canvas.height, this.elapsedMs, camera.x * scale);
+
     ctx.restore();
 
     ctx.save();
@@ -316,12 +341,6 @@ export class GameLevel {
     // scale supaya konsisten dengan ctx.scale di bawah), baru zoom.
     ctx.translate(-camera.x * scale, 0);
     ctx.scale(scale, scale);
-
-    // Background — dibuat jauh lebih besar dari area world manapun
-    // supaya selalu menutupi seluruh viewport terlepas dari posisi
-    // kamera / level width berapa pun.
-    ctx.fillStyle = "#eef3fb";
-    ctx.fillRect(-50000, -50000, 200000, 200000);
 
     // Platforms — terrain bervariasi (rumput/gurun/batu/salju/vulkanik
     // sesuai tema level, lihat biomeForLevel di terrain-renderer.js).
