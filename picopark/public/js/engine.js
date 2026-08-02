@@ -616,6 +616,60 @@ export class GameLevel {
         p2.x -= nx * pull; p2.y -= ny * pull;
       }
     }
+
+    // ============================================================
+    // JARING PENGAMAN TERAKHIR (fix definitif #2 buat "melar"):
+    // Semua branch di atas (anchor-faller / simetris / dua-duanya
+    // grounded) MESTINYA sudah cukup buat jaga jarak <= ROPE_MAX_LENGTH,
+    // tapi state machine anchor/faller di atas ada banyak kondisi
+    // (onGround berubah-ubah, climb, respawn, dll) yang gampang punya
+    // celah kasus yang kelewat -- terbukti dari laporan tali masih
+    // "melar" jauh di atas 190px walau fix role-persisten sebelumnya
+    // sudah dipasang.
+    //
+    // Daripada terus nambal kasus per kasus, blok ini jalan TERAKHIR,
+    // TANPA SYARAT, tiap frame, dan cuma punya satu tugas: pastikan
+    // jarak P1<->P2 tidak PERNAH lebih dari ROPE_MAX_LENGTH begitu
+    // fungsi ini selesai -- apapun yang terjadi/kelewat di branch di
+    // atas. Beda dengan resolveRopeConstraint() yang gerakannya
+    // dihaluskan (dibatasi ROPE_PULL_SPEED per frame), blok ini
+    // langsung KLEM PENUH ke radius maksimum dalam SATU frame kalau
+    // masih ada excess tersisa -- supaya tidak ada celah waktu sama
+    // sekali di mana tali kelihatan lebih panjang dari seharusnya.
+    //
+    // Bobot koreksi: kalau salah satu sisi berpijak dan sisi lain
+    // tidak, SELURUH koreksi dibebankan ke sisi yang tidak berpijak
+    // (si jangkar tidak digeser sama sekali, supaya tidak kelihatan
+    // ketarik balik). Kalau dua-duanya berpijak atau dua-duanya tidak,
+    // dibagi rata 50/50. Kecepatan radial (komponen yang bikin makin
+    // menjauh) juga dibuang tuntas dari sisi yang digeser, konsisten
+    // dengan resolveRopeConstraint(), supaya begitu diklem di sini,
+    // jarak tidak langsung menjauh lagi di frame berikutnya.
+    // ============================================================
+    const hax = p1.x + p1.w / 2, hay = p1.y + p1.h / 2;
+    const hbx = p2.x + p2.w / 2, hby = p2.y + p2.h / 2;
+    const hdx = hbx - hax, hdy = hby - hay;
+    const hdist = Math.hypot(hdx, hdy);
+    if (hdist > ROPE_MAX_LENGTH && hdist > 0) {
+      const hnx = hdx / hdist, hny = hdy / hdist;
+      const hexcess = hdist - ROPE_MAX_LENGTH;
+
+      let wA = 0.5, wB = 0.5; // wA = porsi geser p1 (menuju p2), wB = porsi geser p2 (menuju p1)
+      if (p1.onGround && !p2.onGround) { wA = 0; wB = 1; }
+      else if (p2.onGround && !p1.onGround) { wA = 1; wB = 0; }
+
+      if (wA > 0) { p1.x += hnx * hexcess * wA; p1.y += hny * hexcess * wA; }
+      if (wB > 0) { p2.x -= hnx * hexcess * wB; p2.y -= hny * hexcess * wB; }
+
+      if (wB > 0) {
+        const vB = p2.vx * hnx + p2.vy * hny;
+        if (vB > 0) { p2.vx -= vB * hnx; p2.vy -= vB * hny; }
+      }
+      if (wA > 0) {
+        const vA = -(p1.vx * hnx + p1.vy * hny);
+        if (vA > 0) { p1.vx += vA * hnx; p1.vy += vA * hny; }
+      }
+    }
   }
 
   // Naik/turunnya panjang tali efektif untuk faller yang sedang
