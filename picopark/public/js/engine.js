@@ -107,6 +107,31 @@
 //  - Kedua kasus simetris (dua-duanya jatuh bareng, dan dua-duanya
 //    grounded tapi kejauhan) juga dibatasi kecepatan tariknya dengan
 //    ROPE_PULL_SPEED yang sama, konsisten dengan kasus anchor+faller.
+//
+// UPDATE (fix: P1 kesentak ke atas kayak teleport pas P2 loncat-loncat
+// buat "menyelamatkan"):
+//  - Root cause: begitu partner yang tadinya jadi jangkar (grounded)
+//    ikut menekan jump, di frame itu juga onGround-nya langsung jadi
+//    false (di-set di updatePlayer). Karena si faller juga !onGround,
+//    enforceRope() salah mengklasifikasikan situasi ini sebagai "dua-
+//    duanya jatuh bareng" (branch simetris) -- padahal si jangkar bukan
+//    lagi jatuh, dia lagi SENGAJA meloncat (JUMP_VELOCITY=-560px/s).
+//  - Di branch simetris itu, ada koreksi kecepatan:
+//      const relDotN = rvx * nx + rvy * ny;
+//      if (relDotN > 0) { p1.vy += ny * relDotN * 0.5; ... }
+//    relDotN dihitung dari SELISIH KECEPATAN MENTAH kedua player. Begitu
+//    partner nyentak lompat, relDotN ikut jadi besar (karena JUMP_VELOCITY
+//    jauh lebih besar dari kecepatan jatuh normal), dan seluruh angka
+//    besar itu langsung "ditransfer" utuh ke kecepatan si faller dalam
+//    SATU frame -- inilah yang kelihatan seperti disentak/teleport ke
+//    atas, beda dengan koreksi posisi yang sudah dibatasi bertahap lewat
+//    ROPE_PULL_SPEED.
+//  - Fix: tambah ROPE_VELOCITY_CORRECTION_CAP -- besaran koreksi
+//    kecepatan yang boleh "dipindahkan" lewat tali di branch simetris
+//    ini sekarang DIBATASI juga (bukan cuma posisi), persis seperti
+//    ROPE_PULL_SPEED membatasi posisi. Jadi walau partner nyentak lompat
+//    kenceng, faller cuma kebagian dorongan kecil yang wajar dari
+//    ketegangan tali, bukan seluruh momentum loncatan partner-nya.
 // ============================================================
 
 import { buildTerrain, drawTerrain } from "./terrain-renderer.js";
@@ -125,6 +150,7 @@ const ROPE_MIN_LENGTH = 40; // px -- sedekat apapun manjat, faller tidak akan sa
 const CLIMB_SPEED = 95; // px/s -- seberapa cepat panjang tali efektif mengecil selama tombol jump ditahan (manjat naik)
 const CLIMB_SLIP_SPEED = 40; // px/s -- seberapa cepat merosot balik kalau tombol jump dilepas saat masih menggantung
 const ROPE_PULL_SPEED = 320; // px/s -- batas kecepatan tarikan tali (posisi tidak pernah "teleport" instan ke titik target, selalu bertahap semirip mungkin dengan ditarik beneran)
+const ROPE_VELOCITY_CORRECTION_CAP = 260; // px/s -- batas maksimum berapa besar kecepatan yang boleh "dipindahkan" lewat tali per frame di mode simetris (dua-duanya di udara). Tanpa batas ini, kalau salah satu sisi punya kecepatan besar yang disengaja (mis. baru saja menekan jump, JUMP_VELOCITY=-560px/s), seluruh kecepatan itu bisa "nular" ke sisi lain lewat tali dalam satu frame -- kelihatan kayak disentak/di-teleport tiba-tiba. Dengan cap ini, koreksi kecepatan dibatasi sama seperti koreksi posisi (ROPE_PULL_SPEED), jadi selalu bertahap & wajar.
 
 function aabbOverlap(a, b) {
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
@@ -416,7 +442,12 @@ export class GameLevel {
   //    demi sedikit (manjat naik); kalau dilepas, merosot balik pelan.
   //  - Dua-duanya jatuh bareng (tidak ada jangkar) -> soft constraint
   //    simetris, jarak tidak boleh melebihi ROPE_MAX_LENGTH, komponen
-  //    kecepatan relatif yang searah menjauh dibuang sebagian.
+  //    kecepatan relatif yang searah menjauh dibuang sebagian -- TAPI
+  //    besaran yang dibuang/dipindahkan ini sekarang dibatasi
+  //    ROPE_VELOCITY_CORRECTION_CAP (lihat catatan fix di atas file),
+  //    supaya kalau salah satu sisi baru saja menekan jump (kecepatan
+  //    besar yang disengaja), momentumnya tidak "nular" utuh ke sisi
+  //    lain dalam satu frame.
   //  - Dua-duanya grounded -> kalau kebetulan sudah lebih jauh dari
   //    ROPE_MAX_LENGTH (misal jalan berlawanan arah), ditarik pelan
   //    50/50 tanpa mempengaruhi kecepatan (mereka toh sedang berjalan
@@ -440,11 +471,14 @@ export class GameLevel {
       const ropeLen = ROPE_MAX_LENGTH - p1.climbOffset;
       this.resolveRopeConstraint(p1, bx, by, ropeLen, dt);
     } else if (!p1.onGround && !p2.onGround) {
-      // Dua-duanya jatuh bareng: tidak ada jangkar buat dipegang/dipanjat,
-      // cuma jaga jarak supaya tidak melar tanpa batas. Tarikannya juga
-      // dibatasi kecepatannya (ROPE_PULL_SPEED) -- bukan langsung
-      // dipindah setengah jarak lebih instan, biar kelihatan beneran
-      // "saling tarik", bukan lompat posisi.
+      // Dua-duanya jatuh bareng (ATAU salah satu baru saja menekan jump
+      // dari kondisi grounded, yang untuk satu frame juga bikin
+      // onGround-nya false -- lihat catatan fix di atas file): tidak
+      // ada jangkar buat dipegang/dipanjat, cuma jaga jarak supaya
+      // tidak melar tanpa batas. Tarikannya juga dibatasi kecepatannya
+      // (ROPE_PULL_SPEED) -- bukan langsung dipindah setengah jarak
+      // lebih instan, biar kelihatan beneran "saling tarik", bukan
+      // lompat posisi.
       const dx = bx - ax, dy = by - ay;
       const dist = Math.hypot(dx, dy);
       if (dist > ROPE_MAX_LENGTH && dist > 0) {
@@ -457,11 +491,24 @@ export class GameLevel {
         // Buang sebagian komponen kecepatan RELATIF yang searah menjauh
         // (bukan mematikan kecepatan masing-masing individu), supaya
         // jatuhnya tetap terasa penuh tenaga, cuma tidak makin melar.
+        //
+        // FIX: relDotN di sini dihitung dari selisih kecepatan MENTAH
+        // kedua player -- kalau salah satu baru saja menekan jump
+        // (JUMP_VELOCITY=-560px/s, jauh lebih besar dari kecepatan
+        // jatuh biasa), relDotN bisa jadi sangat besar. Dulu SELURUH
+        // angka itu langsung dipindahkan ke player yang satunya dalam
+        // satu frame -- itulah yang kelihatan seperti disentak/
+        // di-teleport ke atas tiba-tiba. Sekarang correction (besaran
+        // yang benar-benar dipindahkan) dibatasi ROPE_VELOCITY_CORRECTION_CAP,
+        // konsisten dengan ROPE_PULL_SPEED yang membatasi posisi --
+        // jadi walau partner nyentak lompat kenceng, sisi lain cuma
+        // kebagian dorongan kecil yang wajar dari ketegangan tali.
         const rvx = p2.vx - p1.vx, rvy = p2.vy - p1.vy;
         const relDotN = rvx * nx + rvy * ny;
         if (relDotN > 0) {
-          p1.vx += nx * relDotN * 0.5; p1.vy += ny * relDotN * 0.5;
-          p2.vx -= nx * relDotN * 0.5; p2.vy -= ny * relDotN * 0.5;
+          const correction = Math.min(relDotN, ROPE_VELOCITY_CORRECTION_CAP);
+          p1.vx += nx * correction * 0.5; p1.vy += ny * correction * 0.5;
+          p2.vx -= nx * correction * 0.5; p2.vy -= ny * correction * 0.5;
         }
       }
     } else {
@@ -518,7 +565,10 @@ export class GameLevel {
   //
   // Komponen kecepatan yang dibuang tetap hanya yang radial (menjauhi
   // jangkar) -- tangensialnya (ayunan bandul) dibiarkan utuh, supaya
-  // jatuh & tertahan tali tetap terasa natural & bertenaga penuh.
+  // jatuh & tertahan tali tetap terasa natural & bertenaga penuh. Ini
+  // hanya membuang kecepatan MILIK faller sendiri (bukan memindahkan
+  // kecepatan dari anchor), jadi aman dari masalah "nular momentum"
+  // yang terjadi di branch simetris.
   resolveRopeConstraint(faller, anchorX, anchorY, ropeLen, dt) {
     const fx = faller.x + faller.w / 2;
     const fy = faller.y + faller.h / 2;
