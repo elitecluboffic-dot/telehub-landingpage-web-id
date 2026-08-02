@@ -7,10 +7,12 @@ import {
   getUserFromSession,
   json,
 } from "./auth.js";
+import { sendResetEmail } from "./mailer.js";
 
 const SESSION_DAYS = 30;
 const MAX_PAYMENT_IMAGE_BASE64_LENGTH = 2_000_000; // ~1.5MB gambar asli, cukup untuk foto bukti transfer
 const ROOM_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 jam
 
 export default {
   async fetch(request, env, ctx) {
@@ -38,6 +40,8 @@ async function handleApi(request, env, path) {
   if (path === "/api/login" && method === "POST") return handleLogin(request, env);
   if (path === "/api/logout" && method === "POST") return handleLogout(request, env);
   if (path === "/api/me" && method === "GET") return handleMe(request, env);
+  if (path === "/api/request-reset" && method === "POST") return handleRequestReset(request, env);
+  if (path === "/api/reset-password" && method === "POST") return handleResetPasswordEndpoint(request, env);
 
   // ---------- PAYMENT ----------
   if (path === "/api/payment/upload" && method === "POST") return handlePaymentUpload(request, env);
@@ -75,6 +79,7 @@ async function handleRegister(request, env) {
   const body = await safeJson(request);
   const username = (body?.username || "").trim();
   const password = body?.password || "";
+  const email = (body?.email || "").trim().toLowerCase() || null;
 
   if (username.length < 3 || username.length > 32) {
     return json({ error: "Username harus 3-32 karakter" }, 400);
@@ -82,17 +87,27 @@ async function handleRegister(request, env) {
   if (password.length < 6) {
     return json({ error: "Password minimal 6 karakter" }, 400);
   }
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return json({ error: "Format email tidak valid" }, 400);
+  }
 
   const existing = await env.DB.prepare("SELECT id FROM users WHERE username = ?")
     .bind(username)
     .first();
   if (existing) return json({ error: "Username sudah dipakai" }, 409);
 
+  if (email) {
+    const existingEmail = await env.DB.prepare("SELECT id FROM users WHERE email = ?")
+      .bind(email)
+      .first();
+    if (existingEmail) return json({ error: "Email sudah dipakai" }, 409);
+  }
+
   const { hash, salt } = await hashPassword(password);
   const result = await env.DB.prepare(
-    "INSERT INTO users (username, password_hash, password_salt) VALUES (?, ?, ?)"
+    "INSERT INTO users (username, password_hash, password_salt, email) VALUES (?, ?, ?, ?)"
   )
-    .bind(username, hash, salt)
+    .bind(username, hash, salt, email)
     .run();
 
   const userId = result.meta.last_row_id;
@@ -161,6 +176,80 @@ async function handleMe(request, env) {
       levels_completed: user.levels_completed,
     },
   });
+}
+
+// ============================================================
+// PASSWORD RESET HANDLERS
+// ============================================================
+
+// POST /api/request-reset  { email }
+// Selalu balas sukses meskipun email tidak ditemukan, supaya tidak
+// bisa dipakai untuk menebak-nebak email mana saja yang terdaftar.
+async function handleRequestReset(request, env) {
+  const body = await safeJson(request);
+  const email = (body?.email || "").trim().toLowerCase();
+  if (!email) return json({ error: "Email wajib diisi" }, 400);
+
+  const user = await env.DB.prepare("SELECT id FROM users WHERE email = ?")
+    .bind(email)
+    .first();
+
+  if (user) {
+    const token = randomToken();
+    const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS).toISOString();
+
+    await env.DB.prepare(
+      "INSERT INTO password_resets (token, user_id, expires_at) VALUES (?, ?, ?)"
+    )
+      .bind(token, user.id, expiresAt)
+      .run();
+
+    const resetLink = `https://picopark.telehub.web.id/reset-password.html?token=${token}`;
+    try {
+      await sendResetEmail(env, email, resetLink);
+    } catch (err) {
+      console.error("Gagal kirim email reset:", err);
+      // Tetap balas sukses ke client supaya tidak bocorkan info internal,
+      // tapi error tercatat di log Worker untuk debugging.
+    }
+  }
+
+  return json({ ok: true, message: "Jika email terdaftar, link reset sudah dikirim." });
+}
+
+// POST /api/reset-password  { token, new_password }
+async function handleResetPasswordEndpoint(request, env) {
+  const body = await safeJson(request);
+  const token = body?.token || "";
+  const newPassword = body?.new_password || "";
+
+  if (!token || !newPassword) return json({ error: "Data tidak lengkap" }, 400);
+  if (newPassword.length < 6) return json({ error: "Password minimal 6 karakter" }, 400);
+
+  const reset = await env.DB.prepare(
+    "SELECT * FROM password_resets WHERE token = ? AND used = 0"
+  )
+    .bind(token)
+    .first();
+
+  if (!reset || new Date(reset.expires_at) < new Date()) {
+    return json({ error: "Token tidak valid atau sudah kadaluarsa" }, 400);
+  }
+
+  const { hash, salt } = await hashPassword(newPassword);
+
+  await env.DB.prepare("UPDATE users SET password_hash = ?, password_salt = ? WHERE id = ?")
+    .bind(hash, salt, reset.user_id)
+    .run();
+
+  await env.DB.prepare("UPDATE password_resets SET used = 1 WHERE token = ?")
+    .bind(token)
+    .run();
+
+  // Paksa logout semua sesi lama user ini demi keamanan
+  await env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(reset.user_id).run();
+
+  return json({ ok: true, message: "Password berhasil direset, silakan login." });
 }
 
 // ============================================================
