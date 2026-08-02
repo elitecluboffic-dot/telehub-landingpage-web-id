@@ -164,7 +164,47 @@ const KEY_MAP = {
   KeyA: ["p1", "left"], KeyD: ["p1", "right"], KeyW: ["p1", "jump"], Space: ["p1", "jump"],
   ArrowLeft: ["p2", "left"], ArrowRight: ["p2", "right"], ArrowUp: ["p2", "jump"],
 };
+
+// ============================================================
+// FIX (huruf "a"/"d" hilang saat ngetik di form, mis. field
+// "Catatan" di gate pembayaran atau kolom kode undangan):
+// ------------------------------------------------------------
+// Root cause: listener keydown/keyup di bawah ini dipasang di
+// `window` secara GLOBAL, dan sebelumnya langsung memproses +
+// e.preventDefault() setiap kali tombol match KEY_MAP tertekan,
+// TANPA pernah mengecek apakah user sedang fokus mengetik di
+// sebuah <input>/<textarea>. Karena KeyA & KeyD dipakai untuk
+// kontrol P1 (kiri/kanan), setiap kali user mengetik huruf "a"
+// atau "d" di form APA PUN di halaman ini (termasuk kolom
+// "Catatan" pembayaran atau kolom kode undangan), keystroke itu
+// langsung "ditelan" jadi input game dan preventDefault() membuat
+// karakternya tidak pernah benar-benar masuk ke field tersebut.
+// Ini kenapa hasilnya konsisten kehilangan huruf "a" dan "d" saja,
+// bukan huruf acak.
+//
+// Fix: tambah isTypingInFormField() -- kalau elemen yang sedang
+// fokus (document.activeElement) adalah input/textarea/select atau
+// elemen contenteditable, listener ini langsung `return` di awal
+// TANPA memproses apa pun dan TANPA memanggil preventDefault(),
+// jadi keystroke dibiarkan lewat normal ke field yang sedang diisi.
+// Kontrol game jadi otomatis "nonaktif sementara" selama user fokus
+// mengetik di form mana pun, dan otomatis aktif lagi begitu fokus
+// pindah balik ke halaman/canvas.
+// ============================================================
+function isTypingInFormField() {
+  const el = document.activeElement;
+  if (!el) return false;
+  const tag = el.tagName;
+  return (
+    tag === "INPUT" ||
+    tag === "TEXTAREA" ||
+    tag === "SELECT" ||
+    el.isContentEditable
+  );
+}
+
 window.addEventListener("keydown", (e) => {
+  if (isTypingInFormField()) return;
   const m = KEY_MAP[e.code];
   if (!m) return;
   const player = myRole === "client" ? "p2" : m[0];
@@ -172,6 +212,7 @@ window.addEventListener("keydown", (e) => {
   e.preventDefault();
 });
 window.addEventListener("keyup", (e) => {
+  if (isTypingInFormField()) return;
   const m = KEY_MAP[e.code];
   if (!m) return;
   const player = myRole === "client" ? "p2" : m[0];
