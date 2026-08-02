@@ -115,6 +115,55 @@ export function biomeForLevel(levelId) {
 }
 
 // ---------------------------------------------------------------------
+// 1b. HAZARD ZONE THEME (creature species & jurang/water color per biome)
+// ---------------------------------------------------------------------
+// Dipakai oleh engine.js supaya pemilihan spesies HazardCreature
+// (buaya/hiu/paus) DAN warna air/jurang tempat mereka tinggal SAMA-SAMA
+// mengikuti biome resmi di atas -- bukan lagi tebak-tebakan lewat
+// cutoff angka level manual (mis. dulu "level <= 33 = buaya"), yang
+// batasnya bisa jatuh di TENGAH satu biome (level 33 & 34 dua-duanya
+// masih zona canyon, tapi dulu dapat spesies berbeda). Sekarang batas
+// spesies SELALU persis di batas biome, karena diambil langsung dari
+// biomeForLevel() -- satu sumber kebenaran yang sama dipakai terrain,
+// langit, DAN hazard creature.
+//
+// Progresi kasar sengaja tetap dijaga mirip skema lama (buaya di zona
+// awal/hangat, hiu di zona pertengahan, paus di zona akhir/ekstrem)
+// supaya kurva "makin menakutkan" makin tinggi levelnya tetap terasa
+// serupa, cuma batasnya sekarang rapi per-biome:
+//   grass, forest, desert, canyon   -> crocodile  (level 1-40)
+//   rock, swamp, snow               -> shark       (level 41-70)
+//   tundra, volcanic, void          -> whale       (level 71-100)
+//
+// Warna air (waterTop/waterBottom) juga tidak lagi satu gradasi biru
+// generik yang dipakai sama rata di semua 100 level -- tiap biome
+// sekarang dapat gradasi air sendiri yang senada sama palet biome-nya
+// di atas (mis. desert = air oasis coklat-keemasan keruh, volcanic =
+// air gelap kemerahan dekat lava, void = jurang kosmik keunguan),
+// supaya jurang tetap terasa "menyatu" sama tema visual zona itu,
+// bukan cuma tempelan kolam biru yang sama persis di semua tempat.
+const HAZARD_THEME = {
+  grass:    { species: 'crocodile', waterTop: '#1f5c42', waterBottom: '#0b2e1e', ripple: 'rgba(210,255,220,0.25)' },
+  forest:   { species: 'crocodile', waterTop: '#1b4a36', waterBottom: '#0a231a', ripple: 'rgba(200,255,210,0.22)' },
+  desert:   { species: 'crocodile', waterTop: '#6e5726', waterBottom: '#31260f', ripple: 'rgba(255,240,190,0.30)' },
+  canyon:   { species: 'crocodile', waterTop: '#5c2c1c', waterBottom: '#2a130b', ripple: 'rgba(255,200,170,0.25)' },
+  rock:     { species: 'shark',     waterTop: '#26495c', waterBottom: '#0e1f28', ripple: 'rgba(220,235,255,0.25)' },
+  swamp:    { species: 'shark',     waterTop: '#2c3a1e', waterBottom: '#12180b', ripple: 'rgba(210,225,180,0.20)' },
+  snow:     { species: 'shark',     waterTop: '#2f6b8c', waterBottom: '#0f2a38', ripple: 'rgba(255,255,255,0.35)' },
+  tundra:   { species: 'whale',     waterTop: '#1f5c78', waterBottom: '#0a2530', ripple: 'rgba(230,250,255,0.30)' },
+  volcanic: { species: 'whale',     waterTop: '#5c1a12', waterBottom: '#210805', ripple: 'rgba(255,180,120,0.30)' },
+  void:     { species: 'whale',     waterTop: '#3a2159', waterBottom: '#120b1e', ripple: 'rgba(200,170,255,0.25)' },
+};
+
+// Satu-satunya titik yang perlu dipanggil dari engine.js: kasih levelId,
+// dapat balik { species, waterTop, waterBottom, ripple } yang sudah
+// konsisten sama biome level itu (biomeForLevel dipanggil di dalam sini
+// juga, jadi engine.js tidak perlu tahu apa-apa soal urutan biome).
+export function hazardThemeForLevel(levelId) {
+  return HAZARD_THEME[biomeForLevel(levelId)];
+}
+
+// ---------------------------------------------------------------------
 // 2. CONTINUOUS GROUND-LINE NOISE
 // ---------------------------------------------------------------------
 // Cheap smooth pseudo-noise (sum of sine waves) so the top surface
@@ -349,3 +398,9 @@ function drawCrack(ctx, x, y, r) {
 //   ctx.translate(-cameraX, 0);
 //   drawTerrain(ctx, terrain, cameraX, canvas.width);
 //   ctx.restore();
+//
+// For hazard creatures (buaya/hiu/paus di lubang, lihat engine.js),
+// call hazardThemeForLevel(level.id) instead of hand-rolling your own
+// level-number cutoffs -- it reads off the exact same BIOME_ORDER/
+// WORLD_SIZE above, so creature species & pit water color always
+// change in lockstep with the ground/sky theme, never out of sync.
