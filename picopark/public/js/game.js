@@ -1,4 +1,5 @@
 import { GameLevel } from "./engine.js";
+import { NetSession } from "./net.js";
 
 const canvas = document.getElementById("game-canvas");
 const ctx = canvas.getContext("2d");
@@ -18,6 +19,14 @@ let progressMap = {};
 let running = false;
 let lastTime = 0;
 
+// ---------------- MULTIPLAYER (WebRTC, 2 device beda) ----------------
+const net = new NetSession();
+let myRole = null; // null = solo/local co-op, "host" = P1 di device ini, "client" = P2 di device ini
+let latestRemoteState = null; // dipakai oleh client, diisi tiap kali host kirim state
+let clientRunning = false;
+let clientCompletedHandled = false;
+let netSendCounter = 0;
+
 const input = {
   p1: { left: false, right: false, jump: false },
   p2: { left: false, right: false, jump: false },
@@ -30,23 +39,31 @@ function resizeCanvas() {
 }
 window.addEventListener("resize", resizeCanvas);
 
-// ---------------- KEYBOARD INPUT (2 pemain berbagi 1 keyboard) ----------------
-// Player 1: A / D gerak, W / Space lompat
-// Player 2: Panah kiri/kanan gerak, Panah atas lompat
+// ---------------- KEYBOARD INPUT ----------------
+// Mode solo (1 device, 2 pemain): Player 1 = A/D/W/Space, Player 2 = panah.
+// Mode multiplayer sebagai CLIENT (device ini cuma kontrol P2): SEMUA
+// tombol (A/D/W/Space ATAU panah) otomatis diarahkan ke P2, karena di
+// device ini cuma ada 1 pemain yang perlu dikontrol.
 const KEY_MAP = {
   KeyA: ["p1", "left"], KeyD: ["p1", "right"], KeyW: ["p1", "jump"], Space: ["p1", "jump"],
   ArrowLeft: ["p2", "left"], ArrowRight: ["p2", "right"], ArrowUp: ["p2", "jump"],
 };
 window.addEventListener("keydown", (e) => {
   const m = KEY_MAP[e.code];
-  if (m) { input[m[0]][m[1]] = true; e.preventDefault(); }
+  if (!m) return;
+  const player = myRole === "client" ? "p2" : m[0];
+  input[player][m[1]] = true;
+  e.preventDefault();
 });
 window.addEventListener("keyup", (e) => {
   const m = KEY_MAP[e.code];
-  if (m) { input[m[0]][m[1]] = false; e.preventDefault(); }
+  if (!m) return;
+  const player = myRole === "client" ? "p2" : m[0];
+  input[player][m[1]] = false;
+  e.preventDefault();
 });
 
-// ---------------- TOUCH INPUT (layar dibagi 2: kiri = P1, kanan = P2) ----------------
+// ---------------- TOUCH INPUT ----------------
 function bindTouchButton(id, player, key) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -61,6 +78,23 @@ function bindTouchButton(id, player, key) {
   const [player, key] = id.startsWith("p1") ? ["p1", id.split("-")[1]] : ["p2", id.split("-")[1]];
   bindTouchButton(id, player, key);
 });
+
+// Sembunyikan tombol yang bukan tanggung jawab device ini:
+// - Client (device ini = P2): tombol P1 disembunyikan.
+// - Host yang sudah terhubung ke client (device ini = P1, P2 dikontrol jarak jauh): tombol P2 disembunyikan.
+// - Solo/local co-op (belum connect siapa-siapa): dua-duanya tetap tampil, seperti semula.
+function applyControlVisibility() {
+  const showP1 = myRole !== "client";
+  const showP2 = !(myRole === "host" && net.connected);
+  ["p1-left", "p1-right", "p1-jump"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = showP1 ? "" : "none";
+  });
+  ["p2-left", "p2-right", "p2-jump"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = showP2 ? "" : "none";
+  });
+}
 
 // ---------------- API ----------------
 async function api(path, opts = {}) {
@@ -81,10 +115,6 @@ async function init() {
     if (!me.user) { window.location.href = "/"; return; }
     if (!me.user.is_paid) {
       gateOverlay.classList.remove("hidden");
-      // Panggil pengecekan status SEKALI di sini, dan hanya di jalur ini
-      // (yaitu ketika gate overlay memang sedang ditampilkan karena user
-      // belum bayar). payment.js tidak lagi memanggil ini otomatis saat
-      // di-load, jadi tidak ada lagi reload-loop tak berujung.
       window.PaymentGate?.refreshGateStatus?.();
       return;
     }
@@ -94,6 +124,7 @@ async function init() {
     levelsData = await res.json();
     document.getElementById("select-screen").classList.remove("hidden");
     renderLevelSelect();
+    initMultiplayerUI();
   } catch (err) {
     if (err.status === 402) {
       gateOverlay.classList.remove("hidden");
@@ -117,7 +148,12 @@ function renderLevelSelect() {
     btn.className = "level-btn" + (completed ? " completed" : "") + (locked ? " locked" : "");
     btn.textContent = i;
     btn.disabled = locked;
-    btn.addEventListener("click", () => startLevel(i));
+    btn.addEventListener("click", () => {
+      startLevel(i);
+      // Kalau device ini Host dan sudah terhubung ke temen, kasih tau
+      // dia harus mulai level yang sama juga di device-nya.
+      if (net.connected && net.isHost()) net.sendStart(i);
+    });
     levelSelectEl.appendChild(btn);
   }
 }
@@ -137,21 +173,38 @@ function startLevel(id) {
 
 function backToSelect() {
   running = false;
+  clientRunning = false;
   victoryModal.classList.add("hidden");
   document.getElementById("play-screen").classList.add("hidden");
+
+  if (myRole === "client") {
+    // Client tidak memilih level sendiri; balik ke layar "menunggu host".
+    document.getElementById("mp-wait-screen").style.display = "flex";
+    return;
+  }
+
   document.getElementById("select-screen").classList.remove("hidden");
   renderLevelSelect();
 }
 
 async function onLevelComplete() {
   running = false;
+  clientRunning = false;
   try {
-    const res = await api("/api/progress", {
+    await api("/api/progress", {
       method: "POST",
       body: JSON.stringify({ level_id: currentLevelId, time_ms: Math.round(currentLevel.elapsedMs) }),
     });
     progressMap[currentLevelId] = { completed: 1, best_time_ms: Math.round(currentLevel.elapsedMs) };
   } catch (e) { /* biar tetap bisa lanjut walau gagal simpan progress */ }
+
+  // Di mode multiplayer, cuma Host yang boleh pilih "ulang" / "level
+  // berikutnya" (biar levelnya tetap sinkron buat berdua). Client
+  // tinggal menunggu Host memulai level berikutnya.
+  const isClient = myRole === "client";
+  btnNextLevel.disabled = isClient;
+  btnRestart.disabled = isClient;
+
   victoryModal.classList.remove("hidden");
 }
 
@@ -160,7 +213,15 @@ function loop(now) {
   const dt = Math.min((now - lastTime) / 1000, 1 / 30);
   lastTime = now;
 
-  currentLevel.update(dt, input);
+  // Kalau device ini Host dan sudah terhubung, input P2 diambil dari
+  // data yang dikirim client lewat WebRTC (bukan dari tombol lokal),
+  // supaya P2 beneran dikontrol dari device lain.
+  const frameInput = {
+    p1: input.p1,
+    p2: (net.connected && net.isHost()) ? net.remoteInput : input.p2,
+  };
+
+  currentLevel.update(dt, frameInput);
 
   const camX = Math.max(0, Math.min(
     (currentLevel.player1.x + currentLevel.player2.x) / 2 - canvas.width / 2,
@@ -171,6 +232,15 @@ function loop(now) {
   const secs = currentLevel.elapsedMs / 1000;
   hudTimer.textContent = `${secs.toFixed(1)}s`;
 
+  // Host mengirim snapshot posisi ke client sekitar 30x/detik
+  // (dibagi 2 dari rAF 60fps) supaya hemat bandwidth tapi tetap halus.
+  if (net.connected && net.isHost()) {
+    netSendCounter++;
+    if (netSendCounter % 2 === 0) {
+      net.sendState(snapshotState(currentLevel, camX));
+    }
+  }
+
   if (currentLevel.completed) {
     onLevelComplete();
     return;
@@ -178,12 +248,224 @@ function loop(now) {
   requestAnimationFrame(loop);
 }
 
+// ---------------- CLIENT-SIDE RENDER LOOP (device P2) ----------------
+// Client TIDAK menjalankan currentLevel.update() sendiri (supaya tidak
+// selisih/drift dengan host). Client cuma: kirim input lokalnya ke host,
+// lalu render ulang berdasarkan snapshot posisi yang diterima dari host.
+
+function startLevelAsClient(levelId) {
+  currentLevelId = levelId;
+  const def = levelsData.find((l) => l.id === levelId);
+  currentLevel = new GameLevel(def);
+  hudLevelName.textContent = `Level ${levelId}`;
+  document.getElementById("select-screen")?.classList.add("hidden");
+  document.getElementById("mp-wait-screen").style.display = "none";
+  document.getElementById("play-screen").classList.remove("hidden");
+  resizeCanvas();
+  clientCompletedHandled = false;
+  clientRunning = true;
+  requestAnimationFrame(clientLoop);
+}
+
+function clientLoop() {
+  if (!clientRunning) return;
+
+  // Kirim input lokal device ini (selalu berperan sebagai P2) ke host.
+  net.sendInput(input.p2);
+
+  if (latestRemoteState) {
+    applyStateToLevel(currentLevel, latestRemoteState);
+    const secs = currentLevel.elapsedMs / 1000;
+    hudTimer.textContent = `${secs.toFixed(1)}s`;
+    currentLevel.render(ctx, { x: latestRemoteState.camX || 0 });
+
+    if (currentLevel.completed && !clientCompletedHandled) {
+      clientCompletedHandled = true;
+      clientRunning = false;
+      onLevelComplete();
+      return;
+    }
+  }
+
+  requestAnimationFrame(clientLoop);
+}
+
+function snapshotState(level, camX) {
+  return {
+    camX,
+    elapsedMs: level.elapsedMs,
+    completed: level.completed,
+    player1: { x: level.player1.x, y: level.player1.y, facing: level.player1.facing },
+    player2: { x: level.player2.x, y: level.player2.y, facing: level.player2.facing },
+    boxes: level.boxes.map((b) => ({ x: b.x, y: b.y })),
+    movingPlatforms: level.movingPlatforms.map((m) => ({ x: m.x, y: m.y })),
+    plateState: level.plateState,
+    keysCollected: Array.from(level.keysCollected),
+    doorOpenOverride: Array.from(level.doorOpenOverride),
+  };
+}
+
+function applyStateToLevel(level, state) {
+  level.player1.x = state.player1.x; level.player1.y = state.player1.y; level.player1.facing = state.player1.facing;
+  level.player2.x = state.player2.x; level.player2.y = state.player2.y; level.player2.facing = state.player2.facing;
+  state.boxes.forEach((b, i) => { if (level.boxes[i]) { level.boxes[i].x = b.x; level.boxes[i].y = b.y; } });
+  state.movingPlatforms.forEach((m, i) => { if (level.movingPlatforms[i]) { level.movingPlatforms[i].x = m.x; level.movingPlatforms[i].y = m.y; } });
+  level.plateState = state.plateState;
+  level.keysCollected = new Set(state.keysCollected);
+  level.doorOpenOverride = new Set(state.doorOpenOverride);
+  level.elapsedMs = state.elapsedMs;
+  level.completed = state.completed;
+}
+
+// ---------------- UI MULTIPLAYER (dibuat lewat JS, tanpa perlu ubah HTML) ----------------
+function initMultiplayerUI() {
+  const btn = document.createElement("button");
+  btn.id = "mp-toggle-btn";
+  btn.textContent = "🔗 Main Berdua";
+  Object.assign(btn.style, {
+    position: "fixed", top: "14px", right: "14px", zIndex: "9999",
+    padding: "10px 16px", borderRadius: "10px", border: "none",
+    background: "#ff8c3b", color: "#1a1200", fontWeight: "700",
+    fontFamily: "sans-serif", fontSize: "13px", cursor: "pointer",
+    boxShadow: "0 6px 18px rgba(0,0,0,.25)",
+  });
+  document.body.appendChild(btn);
+
+  const modal = document.createElement("div");
+  modal.id = "mp-modal";
+  Object.assign(modal.style, {
+    position: "fixed", inset: "0", background: "rgba(10,8,16,.72)",
+    display: "none", alignItems: "center", justifyContent: "center", zIndex: "10000",
+  });
+  modal.innerHTML = `
+    <div style="background:#201c33;border:1px solid #372f52;border-radius:14px;padding:24px;max-width:360px;width:90vw;font-family:sans-serif;color:#eeeaf7;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <b style="font-size:15px;">Main Berdua (beda device)</b>
+        <span id="mp-close" style="cursor:pointer;color:#a29dc2;">✕</span>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <button id="mp-tab-host" style="flex:1;padding:8px;border-radius:8px;border:1px solid #372f52;background:#262040;color:#eeeaf7;cursor:pointer;">Buat Room</button>
+        <button id="mp-tab-join" style="flex:1;padding:8px;border-radius:8px;border:1px solid #372f52;background:#262040;color:#eeeaf7;cursor:pointer;">Join Room</button>
+      </div>
+      <div id="mp-pane-host">
+        <p style="font-size:13px;color:#a29dc2;margin:0 0 10px;">Bikin room, lalu kirim kode ini ke temen kamu.</p>
+        <button id="mp-btn-create" style="width:100%;padding:12px;border-radius:9px;border:none;background:#ff8c3b;color:#1a1200;font-weight:700;cursor:pointer;">BUAT ROOM</button>
+        <div id="mp-room-code" style="display:none;text-align:center;margin-top:14px;padding:14px;border:1px dashed #ff8c3b;border-radius:10px;font-family:monospace;font-size:20px;letter-spacing:2px;color:#ff8c3b;"></div>
+        <div id="mp-host-status" style="margin-top:10px;font-size:13px;color:#a29dc2;"></div>
+      </div>
+      <div id="mp-pane-join" style="display:none;">
+        <p style="font-size:13px;color:#a29dc2;margin:0 0 10px;">Masukin kode room dari temen kamu.</p>
+        <input id="mp-join-input" placeholder="DUO-XXXX" style="width:100%;padding:12px;border-radius:9px;border:1px solid #372f52;background:#12101c;color:#eeeaf7;font-family:monospace;font-size:14px;box-sizing:border-box;">
+        <button id="mp-btn-join" style="width:100%;margin-top:10px;padding:12px;border-radius:9px;border:none;background:#ff8c3b;color:#1a1200;font-weight:700;cursor:pointer;">CONNECT</button>
+        <div id="mp-join-status" style="margin-top:10px;font-size:13px;color:#a29dc2;"></div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  const badge = document.createElement("div");
+  badge.id = "mp-badge";
+  Object.assign(badge.style, {
+    position: "fixed", top: "14px", right: "14px", zIndex: "9999",
+    display: "none", padding: "10px 16px", borderRadius: "10px",
+    background: "#201c33", border: "1px solid #372f52", color: "#7ee08a",
+    fontFamily: "monospace", fontSize: "12.5px",
+  });
+  document.body.appendChild(badge);
+
+  const waitScreen = document.createElement("div");
+  waitScreen.id = "mp-wait-screen";
+  Object.assign(waitScreen.style, {
+    display: "none", position: "fixed", inset: "0", background: "#12101c",
+    color: "#eeeaf7", alignItems: "center", justifyContent: "center",
+    flexDirection: "column", fontFamily: "sans-serif", zIndex: "500",
+    textAlign: "center", padding: "20px",
+  });
+  waitScreen.innerHTML = `
+    <div style="font-size:16px;margin-bottom:8px;">Terhubung sebagai Player 2 🎮</div>
+    <div style="color:#a29dc2;font-size:13px;">Menunggu host memilih level...</div>
+  `;
+  document.body.appendChild(waitScreen);
+
+  btn.addEventListener("click", () => { modal.style.display = "flex"; });
+  document.getElementById("mp-close").addEventListener("click", () => { modal.style.display = "none"; });
+  document.getElementById("mp-tab-host").addEventListener("click", () => {
+    document.getElementById("mp-pane-host").style.display = "block";
+    document.getElementById("mp-pane-join").style.display = "none";
+  });
+  document.getElementById("mp-tab-join").addEventListener("click", () => {
+    document.getElementById("mp-pane-host").style.display = "none";
+    document.getElementById("mp-pane-join").style.display = "block";
+  });
+
+  document.getElementById("mp-btn-create").addEventListener("click", async () => {
+    const statusEl = document.getElementById("mp-host-status");
+    statusEl.textContent = "Membuat room...";
+    try {
+      const code = await net.hostRoom();
+      document.getElementById("mp-room-code").style.display = "block";
+      document.getElementById("mp-room-code").textContent = code;
+      statusEl.textContent = "Room siap. Menunggu temen connect...";
+    } catch (e) {
+      statusEl.textContent = "Gagal membuat room, coba lagi.";
+    }
+  });
+
+  document.getElementById("mp-btn-join").addEventListener("click", async () => {
+    const code = document.getElementById("mp-join-input").value.trim();
+    const statusEl = document.getElementById("mp-join-status");
+    if (!code) { statusEl.textContent = "Isi kode room dulu."; return; }
+    statusEl.textContent = "Menghubungkan...";
+    try {
+      await net.joinRoom(code);
+      statusEl.textContent = "Terhubung!";
+    } catch (e) {
+      statusEl.textContent = "Gagal connect. Cek lagi kode room-nya.";
+    }
+  });
+
+  net.onPeerConnected = () => {
+    myRole = net.role; // "host" atau "client"
+    modal.style.display = "none";
+    badge.style.display = "block";
+    badge.textContent = net.isHost() ? "🟢 Terhubung — kamu Host (P1)" : "🟢 Terhubung — kamu Player 2";
+    btn.style.display = "none";
+    applyControlVisibility();
+
+    if (net.isClient()) {
+      document.getElementById("select-screen")?.classList.add("hidden");
+      waitScreen.style.display = "flex";
+    }
+  };
+
+  net.onPeerDisconnected = () => {
+    badge.style.display = "none";
+    btn.style.display = "block";
+    waitScreen.style.display = "none";
+    applyControlVisibility();
+  };
+
+  net.onStartReceived = (levelId) => {
+    startLevelAsClient(levelId);
+  };
+
+  net.onStateReceived = (state) => {
+    latestRemoteState = state;
+  };
+}
+
 btnBackToSelect.addEventListener("click", backToSelect);
-btnRestart.addEventListener("click", () => startLevel(currentLevelId));
+btnRestart.addEventListener("click", () => {
+  if (myRole === "client") return; // client menunggu host yang mulai ulang
+  startLevel(currentLevelId);
+  if (net.connected && net.isHost()) net.sendStart(currentLevelId);
+});
 btnNextLevel.addEventListener("click", () => {
   victoryModal.classList.add("hidden");
+  if (myRole === "client") return; // client menunggu host yang pilih level berikutnya
   const next = Math.min(currentLevelId + 1, 100);
   startLevel(next);
+  if (net.connected && net.isHost()) net.sendStart(next);
 });
 
 init();
