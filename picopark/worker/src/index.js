@@ -10,6 +10,7 @@ import {
 
 const SESSION_DAYS = 30;
 const MAX_PAYMENT_IMAGE_BASE64_LENGTH = 2_000_000; // ~1.5MB gambar asli, cukup untuk foto bukti transfer
+const ROOM_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 export default {
   async fetch(request, env, ctx) {
@@ -41,6 +42,12 @@ async function handleApi(request, env, path) {
   // ---------- PAYMENT ----------
   if (path === "/api/payment/upload" && method === "POST") return handlePaymentUpload(request, env);
   if (path === "/api/payment/status" && method === "GET") return handlePaymentStatus(request, env);
+
+  // ---------- ROOM INVITE (akses gratis lewat kode host) ----------
+  if (path === "/api/room/create" && method === "POST") return handleRoomCreate(request, env);
+  if (path === "/api/room/join" && method === "POST") return handleRoomJoin(request, env);
+  if (path === "/api/room/leave" && method === "POST") return handleRoomLeave(request, env);
+  if (path === "/api/room/mine" && method === "GET") return handleRoomMine(request, env);
 
   // ---------- ADMIN ----------
   if (path === "/api/admin/payments" && method === "GET") return handleAdminListPayments(request, env);
@@ -139,15 +146,39 @@ function getCookieRaw(request) {
 async function handleMe(request, env) {
   const user = await getUserFromSession(request, env);
   if (!user) return json({ user: null }, 200);
+
+  const { hasAccess, viaRoom } = await checkAccess(env, user);
+
   return json({
     user: {
       username: user.username,
       role: user.role,
       is_paid: !!user.is_paid,
+      has_access: hasAccess,
+      free_room_code: viaRoom,
       current_level: user.current_level,
       levels_completed: user.levels_completed,
     },
   });
+}
+
+// ============================================================
+// ACCESS HELPER
+// ============================================================
+// User punya akses main kalau:
+//  (a) sudah bayar (is_paid = 1, lifetime), ATAU
+//  (b) lagi jadi invitee AKTIF di sebuah room (diundang host, gratis
+//      selama room itu masih hidup / belum ditinggal / belum dihapus)
+async function checkAccess(env, user) {
+  if (user.is_paid) return { hasAccess: true, viaRoom: null };
+
+  const room = await env.DB.prepare(
+    "SELECT code FROM rooms WHERE invitee_user_id = ? AND status = 'active'"
+  )
+    .bind(user.id)
+    .first();
+
+  return { hasAccess: !!room, viaRoom: room ? room.code : null };
 }
 
 // ============================================================
@@ -196,7 +227,121 @@ async function handlePaymentStatus(request, env) {
     .bind(user.id)
     .first();
 
-  return json({ is_paid: !!user.is_paid, latest_payment: latest || null });
+  const { hasAccess } = await checkAccess(env, user);
+
+  return json({ is_paid: !!user.is_paid, has_access: hasAccess, latest_payment: latest || null });
+}
+
+// ============================================================
+// ROOM INVITE HANDLERS
+// ============================================================
+
+function generateRoomCode() {
+  let s = "";
+  for (let i = 0; i < 4; i++) s += ROOM_CODE_CHARS[Math.floor(Math.random() * ROOM_CODE_CHARS.length)];
+  return "DUO-" + s;
+}
+
+// Host (harus is_paid) bikin kode room baru. Room lama milik host ini
+// (kalau ada, status apapun) langsung dihapus dulu, jadi kode lama
+// otomatis hangus begitu host generate kode baru.
+async function handleRoomCreate(request, env) {
+  const user = await getUserFromSession(request, env);
+  if (!user) return json({ error: "Harus login dulu" }, 401);
+  if (!user.is_paid) {
+    return json({ error: "Cuma akun yang sudah aktif (bayar) yang bisa bikin room undangan" }, 403);
+  }
+
+  await env.DB.prepare("DELETE FROM rooms WHERE host_user_id = ?").bind(user.id).run();
+
+  let code = null;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const candidate = generateRoomCode();
+    const exists = await env.DB.prepare("SELECT code FROM rooms WHERE code = ?").bind(candidate).first();
+    if (!exists) {
+      code = candidate;
+      break;
+    }
+  }
+  if (!code) return json({ error: "Gagal membuat kode room, coba lagi" }, 500);
+
+  await env.DB.prepare("INSERT INTO rooms (code, host_user_id, status) VALUES (?, ?, 'waiting')")
+    .bind(code, user.id)
+    .run();
+
+  return json({ ok: true, code });
+}
+
+// Invitee masukin kode -> kalau valid, dia langsung dapat akses gratis
+// (has_access = true) selama room ini masih 'active'. Tidak mengubah
+// kolom is_paid sama sekali.
+async function handleRoomJoin(request, env) {
+  const user = await getUserFromSession(request, env);
+  if (!user) return json({ error: "Harus login dulu" }, 401);
+
+  const body = await safeJson(request);
+  const code = (body?.code || "").trim().toUpperCase();
+  if (!code) return json({ error: "Kode room wajib diisi" }, 400);
+
+  const room = await env.DB.prepare(
+    "SELECT code, host_user_id, invitee_user_id, status FROM rooms WHERE code = ?"
+  )
+    .bind(code)
+    .first();
+
+  if (!room) return json({ error: "Kode room tidak ditemukan atau sudah hangus" }, 404);
+  if (room.host_user_id === user.id) return json({ error: "Tidak bisa join room sendiri" }, 400);
+  if (room.status === "active" && room.invitee_user_id !== user.id) {
+    return json({ error: "Room ini sudah dipakai orang lain" }, 409);
+  }
+
+  await env.DB.prepare(
+    "UPDATE rooms SET invitee_user_id = ?, status = 'active', joined_at = datetime('now') WHERE code = ?"
+  )
+    .bind(user.id, code)
+    .run();
+
+  return json({ ok: true, code });
+}
+
+// Dipanggil ketika koneksi WebRTC host<->invitee putus (invitee keluar/
+// disconnect). Baris room DIHAPUS PERMANEN dari DB (bukan soft-delete)
+// supaya kode itu otomatis hangus dan tidak jadi sampah. Host perlu
+// generate kode baru lewat /api/room/create untuk lanjut main lagi.
+async function handleRoomLeave(request, env) {
+  const user = await getUserFromSession(request, env);
+  if (!user) return json({ error: "Harus login dulu" }, 401);
+
+  const body = await safeJson(request);
+  const code = (body?.code || "").trim().toUpperCase();
+  if (!code) return json({ error: "Kode room wajib diisi" }, 400);
+
+  const room = await env.DB.prepare("SELECT code, host_user_id, invitee_user_id FROM rooms WHERE code = ?")
+    .bind(code)
+    .first();
+  if (!room) return json({ ok: true }); // sudah tidak ada, anggap sukses (idempotent)
+
+  // Cuma host room itu sendiri atau invitee-nya sendiri yang boleh trigger leave
+  if (room.host_user_id !== user.id && room.invitee_user_id !== user.id) {
+    return json({ error: "Forbidden" }, 403);
+  }
+
+  await env.DB.prepare("DELETE FROM rooms WHERE code = ?").bind(code).run();
+  return json({ ok: true });
+}
+
+// Host cek kode room miliknya yang masih tersimpan (misal setelah reload halaman)
+async function handleRoomMine(request, env) {
+  const user = await getUserFromSession(request, env);
+  if (!user) return json({ error: "Harus login dulu" }, 401);
+
+  const room = await env.DB.prepare(
+    "SELECT code, status, invitee_user_id FROM rooms WHERE host_user_id = ?"
+  )
+    .bind(user.id)
+    .first();
+
+  return json({ room: room || null });
 }
 
 // ============================================================
@@ -282,7 +427,9 @@ async function handleAdminDeletePayment(request, env, path) {
 async function handleGetLevelsMeta(request, env) {
   const user = await getUserFromSession(request, env);
   if (!user) return json({ error: "Harus login dulu" }, 401);
-  if (!user.is_paid) return json({ error: "Akun belum aktif, selesaikan pembayaran dulu" }, 402);
+
+  const { hasAccess } = await checkAccess(env, user);
+  if (!hasAccess) return json({ error: "Akun belum aktif, selesaikan pembayaran dulu" }, 402);
 
   const { results } = await env.DB.prepare(
     "SELECT level_id, completed, best_time_ms FROM level_progress WHERE user_id = ?"
@@ -299,7 +446,9 @@ async function handleGetLevelsMeta(request, env) {
 async function handleGetLevel(request, env, path) {
   const user = await getUserFromSession(request, env);
   if (!user) return json({ error: "Harus login dulu" }, 401);
-  if (!user.is_paid) return json({ error: "Akun belum aktif, selesaikan pembayaran dulu" }, 402);
+
+  const { hasAccess } = await checkAccess(env, user);
+  if (!hasAccess) return json({ error: "Akun belum aktif, selesaikan pembayaran dulu" }, 402);
 
   // Level data sendiri disajikan statis dari /public/js/levels.json di frontend
   // supaya tidak perlu round-trip berat lewat Worker. Endpoint ini cuma validasi akses.
@@ -312,7 +461,9 @@ async function handleGetLevel(request, env, path) {
 async function handleSaveProgress(request, env) {
   const user = await getUserFromSession(request, env);
   if (!user) return json({ error: "Harus login dulu" }, 401);
-  if (!user.is_paid) return json({ error: "Akun belum aktif" }, 402);
+
+  const { hasAccess } = await checkAccess(env, user);
+  if (!hasAccess) return json({ error: "Akun belum aktif" }, 402);
 
   const body = await safeJson(request);
   const levelId = parseInt(body?.level_id, 10);
@@ -352,4 +503,4 @@ async function safeJson(request) {
   } catch {
     return {};
   }
-    }
+}
