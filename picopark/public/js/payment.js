@@ -87,40 +87,35 @@ function showGateState(state) {
 // SELALU tampil di gate overlay, apapun state form/pending/rejected
 // di atasnya, karena user yang punya kode dari temannya harus bisa
 // langsung masuk gratis kapan saja tanpa nunggu approval admin.
+//
+// CATATAN FIX (sebelumnya `position:fixed` + `92vw`):
+// Fixed positioning bikin kotak ini lepas total dari alur .gate-card
+// dan nempel di koordinat viewport tetap — begitu tinggi konten
+// gate-card berubah, kotak ini malah numpuk/overlap di atas konten
+// lain (itu penyebab tampilan kepotong & bertabrakan di HP kemarin,
+// diperparah `92vw` yang di beberapa in-app browser dihitung dari
+// layout viewport, bukan visual viewport, jadi lebih lebar dari layar).
+// Sekarang di-append sebagai elemen statis di DALAM .gate-card, ikut
+// alur dokumen normal, dan styling-nya dipindah ke style.css
+// (#invite-box) supaya konsisten & gampang di-maintain.
 // ---------------------------------------------------------------
 function injectInviteBox() {
-  const gateOverlay = document.getElementById("gate-overlay");
-  if (!gateOverlay || document.getElementById("invite-box")) return;
+  const gateCard = document.querySelector("#gate-overlay .gate-card");
+  if (!gateCard || document.getElementById("invite-box")) return;
 
   const box = document.createElement("div");
   box.id = "invite-box";
-  // PENTING: posisi "fixed" + width dalam % (bukan ikut layout flex/grid
-  // punya gate-overlay yang aslinya). Ini sengaja dilepas total dari
-  // struktur layout halaman supaya TIDAK ikut numpang/rusak kalau
-  // gate-overlay pakai flex-row tanpa wrap (penyebab overflow horizontal
-  // di HP kemarin). Selalu jadi 1 baris terpisah, mengambang di bawah,
-  // dan lebarnya dibatasi max-width supaya rapi juga di desktop.
-  box.style.cssText =
-    "position:fixed;left:50%;bottom:14px;transform:translateX(-50%);" +
-    "width:92vw;max-width:420px;box-sizing:border-box;z-index:99999;" +
-    "padding:14px;border:1px dashed #ff8c3b;border-radius:10px;" +
-    "background:#151225;font-family:sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.35);";
   box.innerHTML = `
-    <div style="font-size:13px;color:#a29dc2;margin-bottom:8px;">
+    <div class="invite-desc">
       Punya kode undangan dari temen? Masukin di sini, main gratis tanpa bayar.
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <input id="invite-code-input" placeholder="DUO-XXXX" maxlength="20"
-        style="flex:1 1 160px;min-width:0;padding:10px;border-radius:8px;border:1px solid #372f52;
-        background:#12101c;color:#eeeaf7;font-family:monospace;font-size:14px;
-        box-sizing:border-box;text-transform:uppercase;">
-      <button id="invite-code-submit"
-        style="flex:0 0 auto;padding:10px 16px;border-radius:8px;border:none;background:#ff8c3b;
-        color:#1a1200;font-weight:700;cursor:pointer;white-space:nowrap;">Masuk</button>
+    <div class="invite-row">
+      <input id="invite-code-input" placeholder="DUO-XXXX" maxlength="20">
+      <button id="invite-code-submit">Masuk</button>
     </div>
-    <div id="invite-code-error" style="margin-top:6px;font-size:12.5px;color:#ff6b6b;"></div>
+    <div id="invite-code-error"></div>
   `;
-  gateOverlay.appendChild(box);
+  gateCard.appendChild(box);
 
   const input = document.getElementById("invite-code-input");
   const errEl = document.getElementById("invite-code-error");
