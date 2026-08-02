@@ -87,6 +87,26 @@
 //    tetap dijaga jaraknya lewat soft constraint simetris, tapi versi
 //    baru ini juga membuang komponen kecepatan RELATIF yang searah
 //    menjauh (bukan sekadar redam angka), supaya tetap terasa fisikal.
+//
+// UPDATE (tarikan tali gradual + collision-aware, bukan teleport):
+//  - resolveRopeConstraint() dulu langsung SET posisi faller persis di
+//    radius tali tiap frame -- kalau titik itu kebetulan jatuh pas di
+//    gundukan tanah, faller kelihatan "muncul tiba-tiba"/loncat nangkring
+//    di atasnya, bukan proses ditarik/manjat yang kelihatan wajar.
+//  - Sekarang ditambah ROPE_PULL_SPEED: jarak yang boleh dikoreksi per
+//    frame dibatasi (px/s), jadi kalau excess jaraknya besar (mis. tali
+//    baru kencang abis jatuh cepat), butuh beberapa frame buat sampai ke
+//    radius tali -- kelihatan beneran ditarik, bukan sim salto instan.
+//  - Pergerakan hasil tarikan itu juga dicek tabrakan ke solidRects()/
+//    boxes (persis kayak collision player biasa, dicoba per-sumbu X lalu
+//    Y), jadi kalau arah tarikannya nabrak sisi gundukan tanah/platform,
+//    faller cuma mentok di situ seperti nabrak tembok -- TIDAK ditembus
+//    lalu dilontar ke atas gundukan itu. Untuk naik ke atas gundukan,
+//    tetap harus lewat manjat (climbOffset, tombol jump) atau gerak
+//    jalan/lompat normal, bukan hasil "efek samping" tarikan tali.
+//  - Kedua kasus simetris (dua-duanya jatuh bareng, dan dua-duanya
+//    grounded tapi kejauhan) juga dibatasi kecepatan tariknya dengan
+//    ROPE_PULL_SPEED yang sama, konsisten dengan kasus anchor+faller.
 // ============================================================
 
 import { buildTerrain, drawTerrain } from "./terrain-renderer.js";
@@ -104,6 +124,7 @@ const ROPE_MAX_LENGTH = 190; // px -- jarak maksimum "tali" antara P1 dan P2 (di
 const ROPE_MIN_LENGTH = 40; // px -- sedekat apapun manjat, faller tidak akan sampai menempel pas di jangkar
 const CLIMB_SPEED = 95; // px/s -- seberapa cepat panjang tali efektif mengecil selama tombol jump ditahan (manjat naik)
 const CLIMB_SLIP_SPEED = 40; // px/s -- seberapa cepat merosot balik kalau tombol jump dilepas saat masih menggantung
+const ROPE_PULL_SPEED = 320; // px/s -- batas kecepatan tarikan tali (posisi tidak pernah "teleport" instan ke titik target, selalu bertahap semirip mungkin dengan ditarik beneran)
 
 function aabbOverlap(a, b) {
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
@@ -412,23 +433,26 @@ export class GameLevel {
       // P1 jadi jangkar, P2 menggantung -- bisa manjat balik lewat jump
       this.updateClimb(p2, dt, !!(input.p2 && input.p2.jump));
       const ropeLen = ROPE_MAX_LENGTH - p2.climbOffset;
-      this.resolveRopeConstraint(p2, ax, ay, ropeLen);
+      this.resolveRopeConstraint(p2, ax, ay, ropeLen, dt);
     } else if (p2.onGround && !p1.onGround) {
       // P2 jadi jangkar, P1 menggantung -- bisa manjat balik lewat jump
       this.updateClimb(p1, dt, !!(input.p1 && input.p1.jump));
       const ropeLen = ROPE_MAX_LENGTH - p1.climbOffset;
-      this.resolveRopeConstraint(p1, bx, by, ropeLen);
+      this.resolveRopeConstraint(p1, bx, by, ropeLen, dt);
     } else if (!p1.onGround && !p2.onGround) {
       // Dua-duanya jatuh bareng: tidak ada jangkar buat dipegang/dipanjat,
-      // cuma jaga jarak supaya tidak melar tanpa batas.
+      // cuma jaga jarak supaya tidak melar tanpa batas. Tarikannya juga
+      // dibatasi kecepatannya (ROPE_PULL_SPEED) -- bukan langsung
+      // dipindah setengah jarak lebih instan, biar kelihatan beneran
+      // "saling tarik", bukan lompat posisi.
       const dx = bx - ax, dy = by - ay;
       const dist = Math.hypot(dx, dy);
       if (dist > ROPE_MAX_LENGTH && dist > 0) {
         const nx = dx / dist, ny = dy / dist;
         const excess = dist - ROPE_MAX_LENGTH;
-        const half = excess / 2;
-        p1.x += nx * half; p1.y += ny * half;
-        p2.x -= nx * half; p2.y -= ny * half;
+        const pull = Math.min(excess, ROPE_PULL_SPEED * dt) / 2;
+        p1.x += nx * pull; p1.y += ny * pull;
+        p2.x -= nx * pull; p2.y -= ny * pull;
 
         // Buang sebagian komponen kecepatan RELATIF yang searah menjauh
         // (bukan mematikan kecepatan masing-masing individu), supaya
@@ -441,15 +465,16 @@ export class GameLevel {
         }
       }
     } else {
-      // Dua-duanya grounded -- tali cuma dijaga jangan sampai kepanjangan.
+      // Dua-duanya grounded -- tali cuma dijaga jangan sampai kepanjangan,
+      // ditarik bertahap juga (bukan instan) sesuai ROPE_PULL_SPEED.
       const dx = bx - ax, dy = by - ay;
       const dist = Math.hypot(dx, dy);
       if (dist > ROPE_MAX_LENGTH && dist > 0) {
         const nx = dx / dist, ny = dy / dist;
         const excess = dist - ROPE_MAX_LENGTH;
-        const half = excess / 2;
-        p1.x += nx * half; p1.y += ny * half;
-        p2.x -= nx * half; p2.y -= ny * half;
+        const pull = Math.min(excess, ROPE_PULL_SPEED * dt) / 2;
+        p1.x += nx * pull; p1.y += ny * pull;
+        p2.x -= nx * pull; p2.y -= ny * pull;
       }
     }
   }
@@ -472,14 +497,29 @@ export class GameLevel {
 
   // Menahan `faller` supaya tidak pernah lebih jauh dari `ropeLen` dari
   // titik jangkar (anchorX, anchorY). Ini KONSTRAIN FISIK, bukan damping
-  // buatan: posisi diklem persis ke lingkaran radius ropeLen (supaya
-  // tali tidak pernah "melar" dan faller tidak pernah lewat PIT_Y lewat
-  // jangkar yang berpijak), tapi kecepatan HANYA dibuang komponen
-  // radialnya (bagian yang menjauhi jangkar) -- komponen tangensialnya
-  // (yang bikin faller berayun ke kiri/kanan seperti bandul) dibiarkan
-  // utuh sepenuhnya. Makanya jatuh & tertahan tali terasa natural &
-  // bertenaga penuh, bukan macet/lambat kayak slow-motion.
-  resolveRopeConstraint(faller, anchorX, anchorY, ropeLen) {
+  // buatan.
+  //
+  // PENTING (kenapa tidak lagi teleport instan ke titik target): versi
+  // sebelumnya langsung set faller.x/y persis di radius ropeLen tiap
+  // frame -- kalau kebetulan titik itu jatuh pas di atas/dalam gundukan
+  // tanah, faller kelihatan "muncul tiba-tiba" nangkring di atasnya,
+  // bukan kelihatan proses manjat/ditarik. Sekarang koreksi posisi
+  // dibatasi kecepatannya (ROPE_PULL_SPEED px/s) supaya faller bergerak
+  // BERTAHAP menuju radius tali -- kelihatan beneran "ditarik", butuh
+  // beberapa frame kalau excess jaraknya besar, bukan sekali lompat.
+  //
+  // Pergerakan hasil tarikan ini juga di-cek tabrakan (sama seperti
+  // collision player biasa): kalau arah tarikan itu nabrak platform/box
+  // padat (misalnya sisi gundukan tanah), faller cuma mentok di situ
+  // (persis kayak nabrak tembok), TIDAK dipaksa nembus lalu "dilontar"
+  // ke atas gundukan. Dicoba per-sumbu (X dulu, lalu Y) supaya kalau
+  // cuma satu sumbu yang ketutup, faller masih bisa "ngesot" nempel
+  // di sisi gundukan itu -- bukan macet total di titik yang sama.
+  //
+  // Komponen kecepatan yang dibuang tetap hanya yang radial (menjauhi
+  // jangkar) -- tangensialnya (ayunan bandul) dibiarkan utuh, supaya
+  // jatuh & tertahan tali tetap terasa natural & bertenaga penuh.
+  resolveRopeConstraint(faller, anchorX, anchorY, ropeLen, dt) {
     const fx = faller.x + faller.w / 2;
     const fy = faller.y + faller.h / 2;
     const dx = fx - anchorX;
@@ -488,12 +528,53 @@ export class GameLevel {
     if (dist <= ropeLen || dist === 0) return;
 
     const nx = dx / dist, ny = dy / dist;
+    const excess = dist - ropeLen;
 
-    // Klem posisi ke radius tali efektif
-    const targetX = anchorX + nx * ropeLen;
-    const targetY = anchorY + ny * ropeLen;
-    faller.x = targetX - faller.w / 2;
-    faller.y = targetY - faller.h / 2;
+    // Jarak tarikan frame ini, dibatasi ROPE_PULL_SPEED -- tidak pernah
+    // langsung menutup seluruh excess dalam satu frame kalau excess-nya
+    // besar (mis. tali baru saja kencang setelah jatuh cepat).
+    const pull = Math.min(excess, ROPE_PULL_SPEED * dt);
+    const moveX = -nx * pull;
+    const moveY = -ny * pull;
+
+    const blockedAt = (testX, testY) => {
+      const testRect = { x: testX, y: testY, w: faller.w, h: faller.h };
+      for (const r of this.solidRects()) {
+        if (aabbOverlap(testRect, r)) return true;
+      }
+      for (const box of this.boxes) {
+        if (aabbOverlap(testRect, box.rect)) return true;
+      }
+      return false;
+    };
+
+    // Coba gerak penuh (X+Y sekaligus) dulu -- kalau bebas, langsung pakai.
+    if (!blockedAt(faller.x + moveX, faller.y + moveY)) {
+      faller.x += moveX;
+      faller.y += moveY;
+    } else {
+      // Nabrak sesuatu (mis. sisi gundukan tanah) -- coba per-sumbu,
+      // biar bisa tetap "ngesot" di sumbu yang masih bebas alih-alih
+      // macet total atau (parahnya) nembus ke sumbu yang ketutup.
+      let movedX = false, movedY = false;
+      if (!blockedAt(faller.x + moveX, faller.y)) {
+        faller.x += moveX;
+        movedX = true;
+      }
+      if (!blockedAt(faller.x, faller.y + moveY)) {
+        faller.y += moveY;
+        movedY = true;
+      }
+      // Kalau sumbu vertikal mentok (nabrak dari samping/bawah gundukan),
+      // matikan vy biar tidak numpuk kecepatan jatuh yang percuma dorong
+      // terus ke tembok yang sama.
+      if (!movedY && pull !== 0) faller.vy = 0;
+      if (!movedX && !movedY) {
+        // Kedua sumbu mentok bareng (kejepit pas di sudut) -- diamkan
+        // saja frame ini, biarkan gravitasi/climb frame berikutnya yang
+        // menentukan arah gerak berikutnya.
+      }
+    }
 
     // Buang cuma komponen kecepatan yang searah radial keluar (menjauhi
     // jangkar); sisanya (tangensial, buat ayunan) tetap utuh.
