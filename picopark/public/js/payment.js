@@ -94,20 +94,28 @@ function injectInviteBox() {
 
   const box = document.createElement("div");
   box.id = "invite-box";
+  // PENTING: posisi "fixed" + width dalam % (bukan ikut layout flex/grid
+  // punya gate-overlay yang aslinya). Ini sengaja dilepas total dari
+  // struktur layout halaman supaya TIDAK ikut numpang/rusak kalau
+  // gate-overlay pakai flex-row tanpa wrap (penyebab overflow horizontal
+  // di HP kemarin). Selalu jadi 1 baris terpisah, mengambang di bawah,
+  // dan lebarnya dibatasi max-width supaya rapi juga di desktop.
   box.style.cssText =
-    "margin-top:18px;padding:14px;border:1px dashed #ff8c3b;border-radius:10px;" +
-    "font-family:sans-serif;background:rgba(255,140,59,0.06);";
+    "position:fixed;left:50%;bottom:14px;transform:translateX(-50%);" +
+    "width:92vw;max-width:420px;box-sizing:border-box;z-index:99999;" +
+    "padding:14px;border:1px dashed #ff8c3b;border-radius:10px;" +
+    "background:#151225;font-family:sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.35);";
   box.innerHTML = `
     <div style="font-size:13px;color:#a29dc2;margin-bottom:8px;">
       Punya kode undangan dari temen? Masukin di sini, main gratis tanpa bayar.
     </div>
-    <div style="display:flex;gap:8px;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <input id="invite-code-input" placeholder="DUO-XXXX" maxlength="20"
-        style="flex:1;padding:10px;border-radius:8px;border:1px solid #372f52;
+        style="flex:1 1 160px;min-width:0;padding:10px;border-radius:8px;border:1px solid #372f52;
         background:#12101c;color:#eeeaf7;font-family:monospace;font-size:14px;
         box-sizing:border-box;text-transform:uppercase;">
       <button id="invite-code-submit"
-        style="padding:10px 16px;border-radius:8px;border:none;background:#ff8c3b;
+        style="flex:0 0 auto;padding:10px 16px;border-radius:8px;border:none;background:#ff8c3b;
         color:#1a1200;font-weight:700;cursor:pointer;white-space:nowrap;">Masuk</button>
     </div>
     <div id="invite-code-error" style="margin-top:6px;font-size:12.5px;color:#ff6b6b;"></div>
