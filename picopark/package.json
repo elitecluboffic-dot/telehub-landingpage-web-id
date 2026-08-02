@@ -9,6 +9,9 @@
     "db:migrate": "wrangler d1 execute picopark-db --remote --file=./schema.sql",
     "db:migrate:local": "wrangler d1 execute picopark-db --local --file=./schema.sql"
   },
+  "dependencies": {
+    "smtp-client": "^0.4.0"
+  },
   "devDependencies": {
     "wrangler": "^3.90.0"
   }
