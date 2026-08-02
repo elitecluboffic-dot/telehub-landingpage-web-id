@@ -81,6 +81,11 @@ async function init() {
     if (!me.user) { window.location.href = "/"; return; }
     if (!me.user.is_paid) {
       gateOverlay.classList.remove("hidden");
+      // Panggil pengecekan status SEKALI di sini, dan hanya di jalur ini
+      // (yaitu ketika gate overlay memang sedang ditampilkan karena user
+      // belum bayar). payment.js tidak lagi memanggil ini otomatis saat
+      // di-load, jadi tidak ada lagi reload-loop tak berujung.
+      window.PaymentGate?.refreshGateStatus?.();
       return;
     }
     const levelsRes = await api("/api/levels");
@@ -92,6 +97,7 @@ async function init() {
   } catch (err) {
     if (err.status === 402) {
       gateOverlay.classList.remove("hidden");
+      window.PaymentGate?.refreshGateStatus?.();
     } else {
       window.location.href = "/";
     }
