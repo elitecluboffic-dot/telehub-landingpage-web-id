@@ -148,9 +148,37 @@
 //  - Kena hazard creature saat surfaced = mati -> RESPAWN, tapi HANYA
 //    player yang kena (bukan reset seluruh level), persis seperti logika
 //    respawn PIT_Y yang sudah ada -- lihat checkCreatureHazards().
+//
+// UPDATE (spesies creature & warna air jurang ikut biome RESMI, bukan
+// tebakan level manual):
+//  - Sebelumnya spesies (buaya/hiu/paus) ditentukan lewat cutoff angka
+//    level yang di-hardcode terpisah di sini (level<=33/<=66/>100), dan
+//    warna air jurang (pitGrad di drawCreatures) SATU gradasi biru yang
+//    sama dipakai rata untuk semua 100 level -- dua-duanya tidak tahu
+//    menahu soal biome yang sebenarnya sudah dihitung terrain-renderer.js
+//    buat tanah & langit. Akibatnya cutoff spesies bisa jatuh di TENGAH
+//    satu biome (level 33 vs 34 sama-sama zona canyon, tapi dulu dapat
+//    creature beda), dan warna air jurang sama sekali tidak nyambung ke
+//    tema visual zona (mis. jurang di gurun/vulkanik/void tetap biru
+//    polos yang sama kayak di grass).
+//  - Sekarang dua-duanya diambil dari SATU sumber: hazardThemeForLevel()
+//    yang diekspor terrain-renderer.js (baca biomeForLevel() yang sama
+//    persis dipakai buildTerrain()/buildSky()). HazardCreature tidak lagi
+//    punya if/else level manual sendiri -- constructor-nya cuma minta
+//    theme = hazardThemeForLevel(levelId) lalu pakai theme.species buat
+//    spesies dan theme.waterTop/waterBottom/ripple buat warna jurang di
+//    drawCreatures(). Batas spesies sekarang otomatis selalu presis di
+//    batas biome (grass/forest/desert/canyon -> buaya, rock/swamp/snow
+//    -> hiu, tundra/volcanic/void -> paus), dan warna jurang tiap zona
+//    ikut senada palet biome-nya (mis. oasis coklat-emas keruh di
+//    desert, air kemerahan dekat lava di volcanic, jurang keunguan di
+//    void) -- bukan lagi tempelan biru generik yang sama di semua tempat.
+//    Timing siklus muncul/tenggelam (surfaceMs/submergeMs berdasarkan
+//    progres level 1->100) TIDAK berubah, cuma sumber spesies & warnanya
+//    yang dirombak.
 // ============================================================
 
-import { buildTerrain, drawTerrain } from "./terrain-renderer.js";
+import { buildTerrain, drawTerrain, hazardThemeForLevel } from "./terrain-renderer.js";
 import { buildSky, drawSky } from "./sky-renderer.js";
 
 const GRAVITY = 1400; // px/s^2
@@ -221,6 +249,11 @@ function detectGaps(levelDef) {
 // menyimpan state internal yang berubah tiap frame, jadi otomatis
 // selalu konsisten antara host & client di mode multiplayer (keduanya
 // menghitung elapsedMs yang sama lewat sinkronisasi yang sudah ada).
+//
+// Spesies DAN warna air (waterTop/waterBottom/ripple) diambil dari
+// hazardThemeForLevel(levelId) di terrain-renderer.js -- satu sumber
+// yang sama dengan tema tanah (buildTerrain) & langit (buildSky),
+// bukan cutoff angka level yang dihitung sendiri di sini.
 // ============================================================
 class HazardCreature {
   constructor(gap, levelId, index) {
@@ -229,10 +262,14 @@ class HazardCreature {
     this.groundY = gap.y;
     this.index = index;
 
-    // Spesies berganti sesuai rentang level.
-    if (levelId <= 33) this.species = "crocodile";
-    else if (levelId <= 66) this.species = "shark";
-    else this.species = "whale";
+    // Spesies & warna air jurang -- ikut biome resmi levelnya (lihat
+    // catatan UPDATE besar di atas file ini dan hazardThemeForLevel()
+    // di terrain-renderer.js).
+    const theme = hazardThemeForLevel(levelId);
+    this.species = theme.species;
+    this.waterTop = theme.waterTop;
+    this.waterBottom = theme.waterBottom;
+    this.ripple = theme.ripple;
 
     // Progres kesulitan 0 (level 1) -> 1 (level 100), dipakai buat
     // mempercepat siklus muncul/tenggelam makin tinggi levelnya.
@@ -1028,6 +1065,13 @@ export class GameLevel {
   // terlihat sepanjang lubang, lalu tubuh makhluknya cuma digambar
   // saat sedang surfaced (muncul/berbahaya), dengan animasi pop-up /
   // submerge halus berdasarkan phaseT dari HazardCreature.stateAt().
+  //
+  // Warna backdrop air (waterTop/waterBottom) dan warna riak
+  // permukaan (ripple) diambil dari c.waterTop/c.waterBottom/c.ripple
+  // -- sudah ditentukan per-creature di constructor HazardCreature
+  // lewat hazardThemeForLevel(), jadi ikut biome zona itu (mis. oasis
+  // coklat-emas di desert, kemerahan dekat lava di volcanic), bukan
+  // gradasi biru generik yang sama di semua level.
   // ============================================================
   drawCreatures(ctx) {
     for (const c of this.creatures) {
@@ -1038,15 +1082,17 @@ export class GameLevel {
 
       // Backdrop air/jurang -- selalu tampil sepanjang lubang, dari
       // permukaan tanah turun ke bawah, supaya lubang tetap terbaca
-      // sebagai jurang/air walau makhluknya lagi tenggelam.
+      // sebagai jurang/air walau makhluknya lagi tenggelam. Warnanya
+      // ikut tema biome zona ini (c.waterTop/c.waterBottom).
       const pitGrad = ctx.createLinearGradient(0, gy, 0, gy + 100);
-      pitGrad.addColorStop(0, "#0b3d5c");
-      pitGrad.addColorStop(1, "#031b2b");
+      pitGrad.addColorStop(0, c.waterTop);
+      pitGrad.addColorStop(1, c.waterBottom);
       ctx.fillStyle = pitGrad;
       ctx.fillRect(c.x0, gy, gw, 100);
 
-      // Riak permukaan air, selalu bergoyang halus (dekoratif).
-      ctx.strokeStyle = "rgba(255,255,255,0.25)";
+      // Riak permukaan air, selalu bergoyang halus (dekoratif), warna
+      // ikut c.ripple (senada tema biome, bukan putih generik).
+      ctx.strokeStyle = c.ripple;
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(c.x0, gy + 4);
