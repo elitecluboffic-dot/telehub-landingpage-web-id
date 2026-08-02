@@ -495,6 +495,10 @@ function loop(now) {
 
   // Host mengirim snapshot posisi ke client sekitar 30x/detik
   // (dibagi 2 dari rAF 60fps) supaya hemat bandwidth tapi tetap halus.
+  // NOTE: camX & scale tetap dikirim di snapshot untuk kompatibilitas /
+  // debugging, TAPI client versi terbaru (lihat clientLoop di bawah)
+  // TIDAK lagi memakai dua field ini untuk render -- client menghitung
+  // kamera miliknya sendiri berdasarkan ukuran layarnya sendiri.
   if (net.connected && net.isHost()) {
     netSendCounter++;
     if (netSendCounter % 2 === 0) {
@@ -539,14 +543,36 @@ function clientLoop() {
     applyStateToLevel(currentLevel, latestRemoteState);
     const secs = currentLevel.elapsedMs / 1000;
     hudTimer.textContent = `${secs.toFixed(1)}s`;
-    // FIX (scale-to-fit-height): pakai scale yang dikirim host kalau
-    // ada; kalau belum ada (mis. snapshot pertama belum nyampe atau
-    // host versi lama), fallback hitung sendiri biar tetap konsisten
-    // dengan tinggi canvas device ini.
-    currentLevel.render(ctx, {
-      x: latestRemoteState.camX || 0,
-      scale: latestRemoteState.scale || (viewH / currentLevel.height),
-    });
+
+    // ============================================================
+    // FIX (kamera client ikut layar sendiri, BUKAN layar host):
+    // ------------------------------------------------------------
+    // Sebelumnya client langsung pakai camX/scale KIRIMAN HOST
+    // (latestRemoteState.camX / .scale). Itu dihitung host memakai
+    // viewW/viewH milik HOST (mis. laptop layar lebar). Kalau device
+    // client (mis. HP, portrait, jauh lebih sempit) punya rasio
+    // aspek beda, framing kamera "pas" untuk host itu BISA SAJA
+    // sama sekali tidak mencakup posisi karakter di layar client --
+    // hasilnya layar client kelihatan kosong/statis padahal data
+    // posisi (player1/player2) yang diterima sebenarnya valid dan
+    // terus diperbarui (makanya timer tetap jalan normal).
+    //
+    // applyStateToLevel() di atas sudah menaruh posisi player1/2
+    // yang benar ke currentLevel milik device ini. Jadi sekarang
+    // kamera dihitung ULANG secara lokal, persis memakai rumus yang
+    // sama seperti host di loop(), tapi dengan viewW/viewH milik
+    // device client sendiri. Ini juga otomatis membereskan kasus
+    // P1 & P2 terpisah jauh -- karena tiap device selalu framing
+    // berdasarkan posisi kedua pemain dan ukuran layarnya sendiri.
+    // ============================================================
+    const scale = viewH / currentLevel.height;
+    const viewWorldWidth = viewW / scale;
+    const camX = Math.max(0, Math.min(
+      (currentLevel.player1.x + currentLevel.player2.x) / 2 - viewWorldWidth / 2,
+      Math.max(0, currentLevel.width - viewWorldWidth)
+    ));
+
+    currentLevel.render(ctx, { x: camX, scale });
 
     if (currentLevel.completed && !clientCompletedHandled) {
       clientCompletedHandled = true;
