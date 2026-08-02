@@ -214,7 +214,10 @@ async function handleRequestReset(request, env) {
     }
   }
 
-  return json({ ok: true, message: "Jika email terdaftar, link reset sudah dikirim." });
+  return json({
+    ok: true,
+    message: "Jika email terdaftar, link reset sudah dikirim. Cek inbox atau folder spam/promosi kamu.",
+  });
 }
 
 // POST /api/reset-password  { token, new_password }
