@@ -325,6 +325,28 @@ export class GameLevel {
 
     p.vy += GRAVITY * dt;
 
+    // FIX (teleport/snap pas climb-back nyentuh platform): selama player
+    // berstatus isTetheredFaller (lagi digantung/manjat balik lewat tali),
+    // resolveRopeConstraint() di enforceRope() HANYA membuang komponen
+    // kecepatan radial pas dist > ropeLen -- selama masih di DALAM radius
+    // tali (dist <= ropeLen, mis. lagi ayun-ayun bebas sebelum ropeLen-nya
+    // sendiri mengecil karena climbOffset bertambah), fungsi itu tidak
+    // menyentuh vy sama sekali, jadi gravitasi bebas menumpuk vy tanpa
+    // batas. Begitu posisi (yang ditarik pelan-pelan tiap frame oleh tali)
+    // akhirnya overlap AABB dengan platform, kode landing NORMAL di bawah
+    // ini (aabbOverlap -> newY = r.y - p.h) langsung nge-snap ke permukaan
+    // SEKETIKA, tanpa cap kecepatan apapun -- beda sama seluruh sistem
+    // tali yang sudah dibatasi ROPE_PULL_SPEED. Kalau vy sempat menumpuk
+    // besar sebelum overlap itu kejadian, jarak snap-nya bisa jauh dalam
+    // SATU frame -- itu yang kelihatan sebagai "disentak naik tiba-tiba"
+    // pas climb-back. Fix: vy khusus faller yang sedang digantung dibatasi
+    // (clamp) di sini, supaya berapa pun overlap yang nanti kejadian saat
+    // landing, jaraknya selalu kecil/halus -- tidak akan pernah snap jauh.
+    if (p.isTetheredFaller) {
+      const MAX_FALLER_VY = 500; // px/s -- cukup buat tetap terasa jatuh wajar, tapi tidak sampai numpuk ekstrem
+      if (p.vy > MAX_FALLER_VY) p.vy = MAX_FALLER_VY;
+    }
+
     // Horizontal move + collision + dorong box
     let newX = p.x + p.vx * dt;
     const testRectX = { x: newX, y: p.y, w: p.w, h: p.h };
