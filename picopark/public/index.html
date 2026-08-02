@@ -7,14 +7,12 @@
 <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
-
 <div class="center-screen">
   <div class="auth-wrap">
     <div class="mascots">
       <div class="blob p1"></div>
       <div class="blob p2"></div>
     </div>
-
     <div class="auth-card">
       <div id="login-form">
         <h1>DuoJump</h1>
@@ -29,15 +27,21 @@
         </div>
         <button class="btn btn-primary" id="btn-login">Masuk</button>
         <div class="error-msg" id="login-error"></div>
+        <div class="toggle-row">
+          <a href="/lupa-password.html">Lupa password?</a>
+        </div>
         <div class="toggle-row">Belum punya akun? <button id="show-register">Daftar</button></div>
       </div>
-
       <div id="register-form" class="hidden">
         <h1>Buat Akun</h1>
         <p class="sub">Satu akun, satu kali bayar, main selamanya.</p>
         <div class="field">
           <label for="reg-username">Username</label>
           <input id="reg-username" autocomplete="username" />
+        </div>
+        <div class="field">
+          <label for="reg-email">Email (opsional, buat jaga-jaga kalau lupa password)</label>
+          <input id="reg-email" type="email" autocomplete="email" />
         </div>
         <div class="field">
           <label for="reg-password">Password</label>
@@ -50,7 +54,6 @@
     </div>
   </div>
 </div>
-
 <script src="/js/auth.js"></script>
 </body>
 </html>
