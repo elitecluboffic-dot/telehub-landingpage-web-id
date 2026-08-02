@@ -11,6 +11,7 @@ const btnBackToSelect = document.getElementById("btn-back-select");
 const btnNextLevel = document.getElementById("btn-next-level");
 const btnRestart = document.getElementById("btn-restart");
 const gateOverlay = document.getElementById("gate-overlay");
+const btnResetProgress = document.getElementById("btn-reset-progress");
 
 let levelsData = [];
 let currentLevel = null;
@@ -197,6 +198,7 @@ async function init() {
     renderLevelSelect();
     initMultiplayerUI();
     restoreMultiplayerUI();
+    initResetProgressUI();
   } catch (err) {
     if (err.status === 402) {
       gateOverlay.classList.remove("hidden");
@@ -581,7 +583,60 @@ window.addEventListener("beforeunload", () => {
   }
 });
 
-btnBackToSelect.addEventListener("click", backToSelect);
+// ---------------- RESET SEMUA LEVEL ----------------
+// Konfirmasi pakai modal custom (bukan confirm() bawaan browser) biar
+// konsisten sama tampilan lain di halaman ini. Endpoint yang dipanggil:
+// POST /api/progress/reset — HARUS ada di backend, efeknya hapus semua
+// baris progress milik user yang lagi login. Kalau backend belum punya
+// endpoint ini, sesuaikan URL/method di bawah.
+function initResetProgressUI() {
+  if (!btnResetProgress || document.getElementById("reset-confirm-modal")) return;
+
+  const modal = document.createElement("div");
+  modal.id = "reset-confirm-modal";
+  modal.className = "modal-overlay hidden";
+  modal.innerHTML = `
+    <div class="modal-card">
+      <h2>⚠️ Reset Semua Level?</h2>
+      <p style="color:var(--text-dim)">Semua progress level yang udah kamu selesaikan bakal dihapus dan gak bisa dibalikin lagi. Yakin mau lanjut?</p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="reset-confirm-cancel">Batal</button>
+        <button class="btn btn-danger" id="reset-confirm-ok">Ya, Reset</button>
+      </div>
+      <div class="error-msg" id="reset-confirm-error"></div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  const errEl = document.getElementById("reset-confirm-error");
+
+  btnResetProgress.addEventListener("click", () => {
+    errEl.textContent = "";
+    modal.classList.remove("hidden");
+  });
+
+  document.getElementById("reset-confirm-cancel").addEventListener("click", () => {
+    modal.classList.add("hidden");
+  });
+
+  document.getElementById("reset-confirm-ok").addEventListener("click", async () => {
+    const okBtn = document.getElementById("reset-confirm-ok");
+    okBtn.disabled = true;
+    errEl.textContent = "";
+    try {
+      await api("/api/progress/reset", { method: "POST" });
+      progressMap = {};
+      modal.classList.add("hidden");
+      renderLevelSelect();
+    } catch (e) {
+      errEl.textContent = e.error || "Gagal reset progress, coba lagi.";
+    } finally {
+      okBtn.disabled = false;
+    }
+  });
+}
+
+
 btnRestart.addEventListener("click", () => {
   victoryModal.classList.add("hidden");
   if (myRole === "client") return; // client menunggu host yang mulai ulang
