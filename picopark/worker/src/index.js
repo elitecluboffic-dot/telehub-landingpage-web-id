@@ -62,6 +62,7 @@ async function handleApi(request, env, path) {
   if (path === "/api/levels" && method === "GET") return handleGetLevelsMeta(request, env);
   if (path.match(/^\/api\/levels\/\d+$/) && method === "GET") return handleGetLevel(request, env, path);
   if (path === "/api/progress" && method === "POST") return handleSaveProgress(request, env);
+  if (path === "/api/progress/reset" && method === "POST") return handleResetProgress(request, env);
 
   return json({ error: "Not found" }, 404);
 }
@@ -491,6 +492,25 @@ async function handleSaveProgress(request, env) {
     .run();
 
   return json({ ok: true, next_level: nextLevel });
+}
+
+// Hapus SEMUA progress level milik user yang lagi login (permanen,
+// tidak bisa dibatalkan). Dipakai tombol "Reset Semua Level" di layar
+// pilih level. Cuma butuh login — tidak wajib hasAccess, supaya user
+// yang aksesnya lagi non-aktif pun tetap bisa bersih-bersih progress
+// lamanya kalau mau.
+async function handleResetProgress(request, env) {
+  const user = await getUserFromSession(request, env);
+  if (!user) return json({ error: "Harus login dulu" }, 401);
+
+  await env.DB.prepare("DELETE FROM level_progress WHERE user_id = ?").bind(user.id).run();
+  await env.DB.prepare(
+    "UPDATE users SET current_level = 1, levels_completed = 0 WHERE id = ?"
+  )
+    .bind(user.id)
+    .run();
+
+  return json({ ok: true });
 }
 
 // ============================================================
