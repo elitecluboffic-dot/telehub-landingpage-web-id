@@ -45,12 +45,77 @@ const input = {
   p2: { left: false, right: false, jump: false },
 };
 
+// ============================================================
+// CANVAS SCALING (FIX: layar HP kepotong / cuma keliatan segitu)
+// ------------------------------------------------------------
+// Sebelumnya canvas.width/height langsung disamain sama ukuran
+// elemen pembungkus (dalam device pixel campur-aduk sama CSS
+// pixel), jadi di HP yang punya devicePixelRatio tinggi (2x, 3x)
+// hasilnya nge-blur / area gambar jadi nggak sesuai layar asli,
+// dan karena resize kadang telat/nggak ke-trigger pas address bar
+// HP nongol-ilang, ukurannya bisa nyangkut di nilai lama (kecil).
+//
+// Sekarang:
+// - viewW/viewH nyimpen ukuran LOGIS (CSS px) yang dipakai semua
+//   perhitungan game (kamera, klik, dsb).
+// - canvas.width/height (atribut, bukan style) di-set ke ukuran
+//   device pixel sebenarnya (viewW*dpr) biar tajam di layar retina.
+// - ctx di-scale otomatis pakai setTransform, jadi semua kode
+//   render di engine.js tetap gambar pakai satuan logis seperti
+//   biasa, nggak perlu diubah sama sekali.
+// - Pakai ResizeObserver + visualViewport supaya perubahan ukuran
+//   di HP (rotate, address bar collapse/expand, dsb) selalu
+//   kedeteksi, bukan cuma window resize (yang kadang nggak fire
+//   di banyak browser mobile).
+// ============================================================
+let viewW = 0;
+let viewH = 0;
+let dpr = Math.max(1, window.devicePixelRatio || 1);
+
 function resizeCanvas() {
   const wrap = canvas.parentElement;
-  canvas.width = wrap.clientWidth;
-  canvas.height = wrap.clientHeight;
+  const w = wrap.clientWidth;
+  const h = wrap.clientHeight;
+  if (w <= 0 || h <= 0) return; // layout belum siap, tunggu observer trigger lagi
+
+  viewW = w;
+  viewH = h;
+  dpr = Math.max(1, window.devicePixelRatio || 1);
+
+  const pixelW = Math.round(viewW * dpr);
+  const pixelH = Math.round(viewH * dpr);
+
+  // Cuma sentuh atribut width/height kalau memang berubah, biar
+  // nggak reset state canvas terus-terusan tanpa perlu.
+  if (canvas.width !== pixelW || canvas.height !== pixelH) {
+    canvas.width = pixelW;
+    canvas.height = pixelH;
+  }
+  canvas.style.width = viewW + "px";
+  canvas.style.height = viewH + "px";
+
+  // Semua ctx.fillRect/arc/dst di engine.js jalan di satuan logis (CSS px)
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
+
+// window resize tetap dipasang buat browser desktop/lama...
 window.addEventListener("resize", resizeCanvas);
+window.addEventListener("orientationchange", () => {
+  // kasih sedikit delay, di banyak HP ukuran viewport baru settle
+  // beberapa ms setelah event orientationchange ditembak
+  setTimeout(resizeCanvas, 50);
+  setTimeout(resizeCanvas, 300);
+});
+// ...tapi di HP, ResizeObserver + visualViewport jauh lebih diandalkan
+// buat nangkep perubahan tinggi viewport pas address bar muncul/ilang.
+if (window.ResizeObserver) {
+  const ro = new ResizeObserver(() => resizeCanvas());
+  ro.observe(canvas.parentElement);
+}
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", resizeCanvas);
+  window.visualViewport.addEventListener("scroll", resizeCanvas);
+}
 
 // ---------------- KEYBOARD INPUT ----------------
 // Mode solo (1 device, 2 pemain): Player 1 = A/D/W/Space, Player 2 = panah.
@@ -83,6 +148,7 @@ function bindTouchButton(id, player, key) {
   const set = (v) => (input[player][key] = v);
   el.addEventListener("touchstart", (e) => { e.preventDefault(); set(true); }, { passive: false });
   el.addEventListener("touchend", (e) => { e.preventDefault(); set(false); }, { passive: false });
+  el.addEventListener("touchcancel", (e) => { e.preventDefault(); set(false); }, { passive: false });
   el.addEventListener("mousedown", () => set(true));
   el.addEventListener("mouseup", () => set(false));
   el.addEventListener("mouseleave", () => set(false));
@@ -91,6 +157,70 @@ function bindTouchButton(id, player, key) {
   const [player, key] = id.startsWith("p1") ? ["p1", id.split("-")[1]] : ["p2", id.split("-")[1]];
   bindTouchButton(id, player, key);
 });
+
+// ============================================================
+// LAYOUT ULANG TOMBOL SENTUH DI HP
+// ------------------------------------------------------------
+// Permintaan: jangan taruh kiri-tengah(loncat)-kanan berjejer jadi
+// satu (susah dipencet pakai 1 jempol). Sekarang:
+// - Tombol LONCAT (jump) -> pojok KIRI bawah, sendirian, ukuran
+//   lebih besar biar gampang dijempol kiri.
+// - Tombol KIRI & KANAN -> pojok KANAN bawah, berdampingan, biar
+//   jempol kanan tinggal geser dikit buat gerak dua arah.
+// Diterapkan lewat <style> yang di-inject (pakai !important) biar
+// override CSS lama apapun struktur HTML aslinya, dan cuma aktif
+// di device yang mendukung touch (nggak ganggu tampilan desktop).
+// ============================================================
+function applyMobileControlLayout() {
+  const isTouchDevice = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
+  if (!isTouchDevice) return;
+  if (document.getElementById("mobile-control-layout-style")) return;
+
+  const style = document.createElement("style");
+  style.id = "mobile-control-layout-style";
+  style.textContent = `
+    #p1-jump, #p2-jump,
+    #p1-left, #p1-right,
+    #p2-left, #p2-right {
+      position: fixed !important;
+      top: auto !important;
+      margin: 0 !important;
+      width: 66px !important;
+      height: 66px !important;
+      border-radius: 50% !important;
+      z-index: 4000 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      touch-action: none !important;
+      -webkit-user-select: none !important;
+      user-select: none !important;
+    }
+
+    /* --- Tombol LONCAT: pojok kiri bawah --- */
+    #p1-jump, #p2-jump {
+      left: 22px !important;
+      right: auto !important;
+      bottom: 28px !important;
+      width: 76px !important;
+      height: 76px !important;
+    }
+    /* Kalau P1 & P2 dua-duanya aktif (co-op 1 device), tumpuk jangan nindih */
+    #p2-jump { bottom: 118px !important; }
+
+    /* --- Tombol KIRI/KANAN: pojok kanan bawah, berdampingan --- */
+    #p1-left, #p1-right, #p2-left, #p2-right {
+      left: auto !important;
+      bottom: 34px !important;
+    }
+    #p1-right { right: 22px !important; }
+    #p1-left  { right: 96px !important; }
+    #p2-right { right: 22px !important; bottom: 124px !important; }
+    #p2-left  { right: 96px !important; bottom: 124px !important; }
+  `;
+  document.head.appendChild(style);
+}
+applyMobileControlLayout();
 
 // Sembunyikan tombol yang bukan tanggung jawab device ini:
 // - Client (device ini = P2): tombol P1 disembunyikan.
@@ -300,9 +430,15 @@ function loop(now) {
 
   currentLevel.update(dt, frameInput);
 
+  // FIX: kamera sekarang pakai viewW (ukuran LOGIS layar, satuan CSS
+  // px) alih-alih canvas.width. Sebelumnya canvas.width bisa berisi
+  // resolusi device-pixel yang sudah dikali devicePixelRatio, jadi di
+  // HP retina kamera itungannya salah/nyangkut dan kelihatan "stuck"
+  // pas pemain jalan. Sekarang perhitungannya selalu konsisten sama
+  // apa yang benar-benar tampil di layar.
   const camX = Math.max(0, Math.min(
-    (currentLevel.player1.x + currentLevel.player2.x) / 2 - canvas.width / 2,
-    currentLevel.width - canvas.width
+    (currentLevel.player1.x + currentLevel.player2.x) / 2 - viewW / 2,
+    Math.max(0, currentLevel.width - viewW)
   ));
   currentLevel.render(ctx, { x: camX });
 
