@@ -191,12 +191,22 @@ function drawPlatform(ctx, p, seed, biomeName) {
   const peaked = usesPeaks(biomeName);
   const points = [];
 
+  // IMPORTANT: ridge is clamped to <= 0 (never dips below the flat
+  // collision line at p.y). Collision (this.platforms in engine.js)
+  // stays a flat rectangle at p.y -- it is NOT changed. If the visual
+  // ridge were allowed to dip below p.y, the ground would visually sink
+  // away from a standing player's feet at that x, making them look like
+  // they're floating over a gap even though they're still solidly on
+  // the (invisible, flat) collision surface. Clamping to <= 0 means the
+  // grass/rock skin only ever bulges UP into small hills, or sits
+  // exactly at the collision line -- so a player's feet always touch or
+  // sink slightly into visible ground, never hover above empty space.
   for (let x = p.x; x <= p.x + p.w; x += STEP) {
-    const ridge = ridgeOffset(x, seed);
+    const ridge = Math.min(0, ridgeOffset(x, seed));
     const peak = peaked ? peakOffset(x, seed) : 0;
     points.push({ x, y: p.y + ridge - peak });
   }
-  const lastRidge = ridgeOffset(p.x + p.w, seed);
+  const lastRidge = Math.min(0, ridgeOffset(p.x + p.w, seed));
   points.push({ x: p.x + p.w, y: p.y + lastRidge });
 
   // --- body fill ---
@@ -210,6 +220,13 @@ function drawPlatform(ctx, p, seed, biomeName) {
   ctx.fill();
 
   if (!isTall) {
+    // --- flat baseline strip exactly at the collision line (p.y) ---
+    // Even with the ridge clamp above, this makes doubly sure there is
+    // always solid-looking ground drawn right at the height a standing
+    // player's feet sit at -- no reliance on the curve alone.
+    ctx.fillStyle = shadeAt(p.x + p.w / 2, biomeName, 'top', seed);
+    ctx.fillRect(p.x, p.y - 2, p.w, 6);
+
     // --- thin cap layer (grass/snow/sand/ash skin) ---
     const capH = 16;
     ctx.beginPath();
