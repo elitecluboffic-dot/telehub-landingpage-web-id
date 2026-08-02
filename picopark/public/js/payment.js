@@ -82,6 +82,62 @@ function showGateState(state) {
 }
 
 // ---------------------------------------------------------------
+// KOTAK "PUNYA KODE UNDANGAN?" — dibuat lewat JS (tanpa perlu ubah
+// HTML), sama seperti pola tombol "Main Berdua" di game.js. Ini
+// SELALU tampil di gate overlay, apapun state form/pending/rejected
+// di atasnya, karena user yang punya kode dari temannya harus bisa
+// langsung masuk gratis kapan saja tanpa nunggu approval admin.
+// ---------------------------------------------------------------
+function injectInviteBox() {
+  const gateOverlay = document.getElementById("gate-overlay");
+  if (!gateOverlay || document.getElementById("invite-box")) return;
+
+  const box = document.createElement("div");
+  box.id = "invite-box";
+  box.style.cssText =
+    "margin-top:18px;padding:14px;border:1px dashed #ff8c3b;border-radius:10px;" +
+    "font-family:sans-serif;background:rgba(255,140,59,0.06);";
+  box.innerHTML = `
+    <div style="font-size:13px;color:#a29dc2;margin-bottom:8px;">
+      Punya kode undangan dari temen? Masukin di sini, main gratis tanpa bayar.
+    </div>
+    <div style="display:flex;gap:8px;">
+      <input id="invite-code-input" placeholder="DUO-XXXX" maxlength="20"
+        style="flex:1;padding:10px;border-radius:8px;border:1px solid #372f52;
+        background:#12101c;color:#eeeaf7;font-family:monospace;font-size:14px;
+        box-sizing:border-box;text-transform:uppercase;">
+      <button id="invite-code-submit"
+        style="padding:10px 16px;border-radius:8px;border:none;background:#ff8c3b;
+        color:#1a1200;font-weight:700;cursor:pointer;white-space:nowrap;">Masuk</button>
+    </div>
+    <div id="invite-code-error" style="margin-top:6px;font-size:12.5px;color:#ff6b6b;"></div>
+  `;
+  gateOverlay.appendChild(box);
+
+  const input = document.getElementById("invite-code-input");
+  const errEl = document.getElementById("invite-code-error");
+
+  const submit = async () => {
+    errEl.textContent = "";
+    const code = input.value.trim().toUpperCase();
+    if (!code) { errEl.textContent = "Isi kode dulu"; return; }
+    try {
+      await papi("/api/room/join", { method: "POST", body: JSON.stringify({ code }) });
+      window.location.reload();
+    } catch (e) {
+      errEl.textContent = e.error || "Kode tidak valid atau sudah hangus";
+    }
+  };
+
+  document.getElementById("invite-code-submit").addEventListener("click", submit);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") submit();
+  });
+}
+
+injectInviteBox();
+
+// ---------------------------------------------------------------
 // PENTING: fungsi ini TIDAK dipanggil otomatis lagi di bagian bawah
 // file ini. Sebelumnya ada `refreshGateStatus();` di baris terakhir
 // yang jalan setiap kali script di-load (termasuk setelah reload),
@@ -102,16 +158,18 @@ async function refreshGateStatus() {
   try {
     const res = await papi("/api/payment/status");
 
-    if (res.is_paid) {
+    // has_access mencakup is_paid=1 ATAU sedang jadi invitee aktif di
+    // sebuah room (akses gratis lewat kode host).
+    if (res.has_access) {
       const alreadyReloaded = sessionStorage.getItem(RELOAD_GUARD_KEY) === "1";
       if (alreadyReloaded) {
-        // Sudah pernah auto-reload sekali di session ini tapi is_paid
+        // Sudah pernah auto-reload sekali di session ini tapi has_access
         // masih true dan kita masih di halaman gate — berarti ada
         // masalah lain (misal game.js belum sempat baca status baru).
         // Jangan reload lagi, biar tidak infinite loop; cukup
         // sembunyikan overlay manual lewat reload biasa oleh user
         // via tombol, atau tampilkan pesan.
-        console.warn("[PaymentGate] is_paid=true tapi sudah pernah auto-reload sebelumnya. Reload dihentikan untuk cegah loop.");
+        console.warn("[PaymentGate] has_access=true tapi sudah pernah auto-reload sebelumnya. Reload dihentikan untuk cegah loop.");
         return;
       }
       sessionStorage.setItem(RELOAD_GUARD_KEY, "1");
