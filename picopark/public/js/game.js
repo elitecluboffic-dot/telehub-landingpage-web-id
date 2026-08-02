@@ -189,7 +189,13 @@ function applyMobileControlLayout() {
       height: 66px !important;
       border-radius: 50% !important;
       z-index: 4000 !important;
-      display: flex !important;
+      /* PENTING: "display" SENGAJA tidak dikasih !important. Kalau
+         dipaksa !important, dia bakal override style.display="none"
+         yang di-set applyControlVisibility() buat nyembunyiin tombol
+         P1 pas kita jadi client (P2) — itu penyebab bug tombol P1
+         ikut nongol padahal harusnya cuma tombol P2 yang tampil.
+         Tanpa !important, inline style dari JS tetap menang. */
+      display: flex;
       align-items: center !important;
       justify-content: center !important;
       touch-action: none !important;
