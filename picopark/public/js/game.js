@@ -33,6 +33,12 @@ let netSendCounter = 0;
 // koneksi terputus / device ini keluar.
 let currentRoomCode = null;
 
+// True kalau device ini adalah user yang diundang gratis (redeem kode
+// di gate) dan otomatis di-connect-kan sebagai Player 2 ke room host,
+// TANPA pernah melihat layar pilih level (dia cuma numpang main sesi
+// host, bukan punya progress/level pilihan sendiri).
+let isForcedInviteeClient = false;
+
 const input = {
   p1: { left: false, right: false, jump: false },
   p2: { left: false, right: false, jump: false },
@@ -130,6 +136,32 @@ async function init() {
     progressMap = levelsRes.progress || {};
     const res = await fetch("/js/levels.json");
     levelsData = await res.json();
+
+    // User yang diundang gratis (belum bayar, tapi lagi aktif jadi
+    // invitee di room seorang host): langsung sambungkan otomatis
+    // sebagai Player 2, JANGAN tampilkan halaman pilih level sama
+    // sekali. Dia cuma ikut sesi host, levelnya host yang pilih.
+    if (me.user.free_room_code && !me.user.is_paid) {
+      isForcedInviteeClient = true;
+      initMultiplayerUI();
+      document.getElementById("mp-toggle-btn").style.display = "none";
+      document.getElementById("select-screen").classList.add("hidden");
+
+      const waitScreen = document.getElementById("mp-wait-screen");
+      document.getElementById("mp-wait-title").textContent = "Menghubungkan ke room host...";
+      document.getElementById("mp-wait-sub").textContent = "Mohon tunggu sebentar";
+      waitScreen.style.display = "flex";
+
+      try {
+        currentRoomCode = me.user.free_room_code;
+        await net.joinRoom(currentRoomCode);
+      } catch (e) {
+        document.getElementById("mp-wait-title").textContent = "Gagal terhubung ke room host";
+        document.getElementById("mp-wait-sub").textContent = "Coba refresh halaman, atau minta host generate kode baru.";
+      }
+      return;
+    }
+
     document.getElementById("select-screen").classList.remove("hidden");
     renderLevelSelect();
     initMultiplayerUI();
@@ -390,8 +422,8 @@ function initMultiplayerUI() {
     textAlign: "center", padding: "20px",
   });
   waitScreen.innerHTML = `
-    <div style="font-size:16px;margin-bottom:8px;">Terhubung sebagai Player 2 🎮</div>
-    <div style="color:#a29dc2;font-size:13px;">Menunggu host memilih level...</div>
+    <div id="mp-wait-title" style="font-size:16px;margin-bottom:8px;">Terhubung sebagai Player 2 🎮</div>
+    <div id="mp-wait-sub" style="color:#a29dc2;font-size:13px;">Menunggu host memilih level...</div>
   `;
   document.body.appendChild(waitScreen);
 
@@ -448,6 +480,8 @@ function initMultiplayerUI() {
 
     if (net.isClient()) {
       document.getElementById("select-screen")?.classList.add("hidden");
+      document.getElementById("mp-wait-title").textContent = "Terhubung sebagai Player 2 🎮";
+      document.getElementById("mp-wait-sub").textContent = "Menunggu host memilih level...";
       waitScreen.style.display = "flex";
     }
   };
@@ -468,6 +502,14 @@ function initMultiplayerUI() {
       document.getElementById("mp-room-code").style.display = "none";
       document.getElementById("mp-host-status").textContent = "Temanmu keluar, kode room ini sudah hangus.";
       api("/api/room/leave", { method: "POST", body: JSON.stringify({ code: codeToRevoke }) }).catch(() => {});
+    }
+
+    // Device ini invitee gratis yang otomatis di-connect-kan: begitu
+    // host disconnect, aksesnya kemungkinan sudah dicabut juga
+    // (room-nya dihapus dari sisi host). Reload supaya /api/me
+    // dicek ulang dan dia balik ke gate kalau memang sudah dicabut.
+    if (isForcedInviteeClient) {
+      window.location.reload();
     }
   };
 
