@@ -5,6 +5,60 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <title>DuoJump — Main</title>
 <link rel="stylesheet" href="/css/style.css" />
+<style>
+  /* Styling kotak info rekening transfer. Ditulis inline di sini (bukan
+     ditambahkan ke style.css) supaya tidak perlu file CSS itu diedit --
+     tetap pakai variable warna yang sama dengan sisa kartu (var(--text-dim)
+     dkk. sudah dipakai gate-card lewat style.css), dengan fallback warna
+     kalau variable itu ternyata belum ada. */
+  .transfer-info-box {
+    margin: 18px 0;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    text-align: left;
+  }
+  .transfer-info-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+  }
+  .transfer-info-row + .transfer-info-row {
+    border-top: 1px dashed rgba(255, 255, 255, 0.1);
+  }
+  .transfer-info-label {
+    flex: 0 0 100px;
+    font-size: 13px;
+    color: var(--text-dim, #9aa0b4);
+  }
+  .transfer-info-value {
+    flex: 1;
+    font-weight: 600;
+    color: #fff;
+  }
+  .transfer-rekening {
+    letter-spacing: 0.5px;
+  }
+  .transfer-info-amount .transfer-amount-value {
+    color: #facc7a;
+    font-size: 17px;
+  }
+  .btn-copy-rekening {
+    flex: 0 0 auto;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+    cursor: pointer;
+  }
+  .btn-copy-rekening:hover {
+    background: rgba(255, 255, 255, 0.14);
+  }
+</style>
 </head>
 <body>
 <!-- ===================== GATE PEMBAYARAN ===================== -->
@@ -13,6 +67,31 @@
     <span class="badge">Akses Premium</span>
     <h2>Buka Semua 100 Level</h2>
     <p style="color:var(--text-dim)">Bayar sekali, main selamanya berdua. Upload bukti transfer di bawah, tim kami akan cek manual dan aktifkan akunmu.</p>
+
+    <!-- Info rekening tujuan transfer + nominal. Ditaruh sebelum upload-box
+         supaya user baca dulu ke mana & berapa harus transfer sebelum upload
+         bukti. Nomor rekening bisa di-tap buat disalin (lihat script kecil
+         di bawah, #btn-copy-rekening). -->
+    <div class="transfer-info-box" id="transfer-info-box">
+      <div class="transfer-info-row">
+        <span class="transfer-info-label">Transfer ke</span>
+        <span class="transfer-info-value">SeaBank</span>
+      </div>
+      <div class="transfer-info-row">
+        <span class="transfer-info-label">No. Rekening</span>
+        <span class="transfer-info-value transfer-rekening" id="transfer-rekening-number">9015 1357 9165</span>
+        <button type="button" class="btn-copy-rekening" id="btn-copy-rekening" title="Salin nomor rekening">Salin</button>
+      </div>
+      <div class="transfer-info-row">
+        <span class="transfer-info-label">A.N.</span>
+        <span class="transfer-info-value">Bustanul Labib Alwasi</span>
+      </div>
+      <div class="transfer-info-row transfer-info-amount">
+        <span class="transfer-info-label">Nominal</span>
+        <span class="transfer-info-value transfer-amount-value">Rp 30.000</span>
+      </div>
+    </div>
+
     <div id="gate-form">
       <div class="upload-box" id="upload-box">
         <div id="upload-placeholder">📎 Tap untuk upload bukti pembayaran (screenshot transfer)</div>
@@ -87,5 +166,26 @@
 </div>
 <script src="/js/payment.js"></script>
 <script type="module" src="/js/game.js"></script>
+<script>
+  // Salin nomor rekening ke clipboard saat tombol "Salin" ditekan.
+  // Ditulis inline (bukan di payment.js) supaya tidak perlu ubah file
+  // payment.js yang mungkin sudah punya logic upload/status sendiri --
+  // ini murni tambahan kecil, tidak bersinggungan sama flow submit/status.
+  (function () {
+    const btn = document.getElementById('btn-copy-rekening');
+    if (!btn) return;
+    btn.addEventListener('click', async () => {
+      const number = document.getElementById('transfer-rekening-number').textContent.trim();
+      const original = btn.textContent;
+      try {
+        await navigator.clipboard.writeText(number.replace(/\s+/g, ''));
+        btn.textContent = 'Tersalin!';
+      } catch (e) {
+        btn.textContent = 'Gagal salin';
+      }
+      setTimeout(() => { btn.textContent = original; }, 1500);
+    });
+  })();
+</script>
 </body>
 </html>
