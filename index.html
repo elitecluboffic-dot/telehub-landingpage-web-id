@@ -1,38 +1,9 @@
 <!doctype html>
 <html lang="en">
-<head><meta name="google-site-verification" content="dZL_xVfXZnOxlI3OIkdTg8hRVcl9IOdfcWuh5VGfeX8" /><meta name="google-adsense-account" content="ca-pub-1296306359438663">
-  <!-- Clarity tracking code for https://telehub.web.id/ -->
-<script>
-    (function(c,l,a,r,i,t,y){
-        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i+"?ref=bwt";
-        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-    })(window, document, "clarity", "script", "xkwvceqg7q");
-</script>
+<head>
+<meta name="google-site-verification" content="dZL_xVfXZnOxlI3OIkdTg8hRVcl9IOdfcWuh5VGfeX8" />
+<meta name="google-adsense-account" content="ca-pub-1296306359438663">
 
-
-  
-<!-- Yandex.Metrika counter -->
-<script type="text/javascript">
-    (function(m,e,t,r,i,k,a){
-        m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-        m[i].l=1*new Date();
-        for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
-        k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
-    })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=110780284', 'ym');
-
-    ym(110780284, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
-</script>
-<noscript><div><img src="https://mc.yandex.ru/watch/110780284" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
-<!-- /Yandex.Metrika counter -->
-
-
-
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1296306359438663"
-     crossorigin="anonymous"></script>
-
-  
-  
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="robots" content="index, follow">
@@ -59,11 +30,19 @@
 <meta name="twitter:image" content="https://telehub.web.id/og-image.jpg" />
 <meta name="twitter:image:alt" content="Telehub - A network built to fly" />
 
+<!-- Preconnect ke semua origin eksternal yang kepake -- ngurangin delay DNS/TLS -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://unpkg.com" crossorigin>
+<link rel="preconnect" href="https://www.clarity.ms">
+<link rel="preconnect" href="https://mc.yandex.ru">
+<link rel="preconnect" href="https://pagead2.googlesyndication.com">
+
 <link href="https://fonts.googleapis.com/css2?family=Michroma&family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet">
 <link rel="canonical" href="https://telehub.web.id/">
 
+<!-- Preload CSS utama biar prioritas fetch-nya naik -->
+<link rel="preload" href="style.css" as="style" />
 <link rel="stylesheet" href="style.css" />
 
 <!-- favicon -->
@@ -71,7 +50,6 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-
 
 <meta name="application-name" content="Telehub Bimxr">
 <meta itemprop="name" content="Telehub Bimxr">
@@ -189,8 +167,40 @@
   }
 }
 </script>
-<script src="https://unpkg.com/gsap@3.12.5/dist/gsap.min.js"></script>
-<script src="https://unpkg.com/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+<script src="https://unpkg.com/gsap@3.12.5/dist/gsap.min.js" defer></script>
+<script src="https://unpkg.com/gsap@3.12.5/dist/ScrollTrigger.min.js" defer></script>
 <script type="module" src="main.js"></script>
+
+<!-- ============ ANALYTICS & ADS ============ -->
+<!-- Dipindah ke akhir body & defer/async biar nggak nge-block render konten utama.
+     Ini nggak butuh dieksekusi sebelum LCP -- tracking tetap jalan normal begitu
+     halaman selesai dimuat. -->
+
+<!-- Clarity tracking code for https://telehub.web.id/ -->
+<script>
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i+"?ref=bwt";
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "xkwvceqg7q");
+</script>
+
+<!-- Yandex.Metrika counter -->
+<script type="text/javascript">
+    (function(m,e,t,r,i,k,a){
+        m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+        m[i].l=1*new Date();
+        for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+        k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+    })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=110780284', 'ym');
+
+    ym(110780284, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
+</script>
+<noscript><div><img src="https://mc.yandex.ru/watch/110780284" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+<!-- /Yandex.Metrika counter -->
+
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1296306359438663"
+   crossorigin="anonymous"></script>
+
 </body>
 </html>
