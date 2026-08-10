@@ -12,17 +12,26 @@ const initialForm = {
   paymentMethod: "",
 };
 
+// Catatan: cuma channel yang statusnya ON di dashboard Duitku (Production)
+// yang dimasukin ke sini -- per 10 Agustus 2026.
+// - E-wallet (OVO, DANA, LinkAja, ShopeePay) masih OFF, nunggu approval
+//   manual dari tim Duitku.
+// - BCA VA & Indomaret juga belum kekonfirmasi ON, jadi belum dimasukin.
+// Begitu channel lain di-ON-in di dashboard, tinggal tambahin entry-nya
+// di sini pakai kode dari tabel dokumentasi Duitku.
 const PAYMENT_METHODS = [
-  { value: "BC", label: "BCA Virtual Account" },
+  { value: "AG", label: "Bank Artha Graha (AGI)" },
+  { value: "A1", label: "ATM Bersama" },
+  { value: "NC", label: "Bank Neo Commerce (BNC)" },
+  { value: "I1", label: "BNI Virtual Account" },
+  { value: "BR", label: "BRIVA (BRI Virtual Account)" },
+  { value: "BV", label: "BSI Virtual Account" },
+  { value: "B1", label: "CIMB Niaga Virtual Account" },
+  { value: "DM", label: "Danamon Virtual Account" },
   { value: "M2", label: "Mandiri Virtual Account" },
   { value: "VA", label: "Maybank Virtual Account" },
-  { value: "I1", label: "BNI Virtual Account" },
   { value: "BT", label: "Permata Bank Virtual Account" },
-  { value: "OV", label: "OVO (Support Void)" },
-  { value: "DA", label: "DANA" },
-  { value: "IR", label: "Indomaret" },
-  { value: "DM", label: "Danamon Virtual Account" },
-  { value: "BV", label: "BSI Virtual Account" },
+  { value: "S1", label: "Bank Sahabat Sampoerna" },
 ];
 
 function PaymentMethodSelect({ value, onChange }) {
