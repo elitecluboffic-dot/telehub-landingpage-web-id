@@ -54,4 +54,10 @@
        <changefreq>daily</changefreq>
        <priority>0.8000</priority>
   </url>
+  <url>
+       <loc>https://telehub.web.id/discord</loc>
+       <lastmod>2026-08-10T03:24:00+00:00</lastmod>
+       <changefreq>daily</changefreq>
+       <priority>0.8000</priority>
+  </url>
 </urlset>
