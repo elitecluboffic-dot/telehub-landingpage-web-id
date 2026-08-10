@@ -69,18 +69,15 @@ scene.add(fill);
    (like the old fakeLoad()) is the only option for that kind of
    fiction.
 
-   What IS real, measurable work that happens exactly once per
-   page load:
-     1. web fonts finishing (document.fonts.ready)
-     2. actually constructing the scene graph (clouds, route,
-        debris, plane) — done in chunks below so each chunk only
-        reports progress once it has truly been built
-     3. asking the GPU to actually compile every material/shader
-        used in the scene (renderer.compileAsync) before we ever
-        show a frame — this is genuine, variable-duration GPU work
-
-   Each step below flips its own "done" flag only at the exact
-   point that work finishes. Nothing here is time-based or eased.
+   IMPORTANT (LCP): only the work that is actually required to
+   paint the intro gate screen (fonts + the plane + compiling
+   ITS shaders) blocks the reveal below. Everything only needed
+   later, once the user scrolls into the flight experience
+   (clouds, route line, broken-track debris, and compiling
+   their shaders) is built AFTER the gate is already visible —
+   see the "background build" section inside boot(). This is
+   what the intro-logo text (the page's LCP element) was
+   waiting on before, and why it used to paint late.
 ========================================================= */
 const loadingScreenEl = document.getElementById('loading-screen');
 const introScreenEl = document.getElementById('intro-screen');
@@ -88,12 +85,9 @@ const barFill = document.getElementById('loading-bar-fill');
 const pctEl = document.getElementById('loading-percent');
 
 const loadSteps = [
-  { label: 'fonts', weight: 15, done: 0 },
-  { label: 'plane', weight: 10, done: 0 },
-  { label: 'route', weight: 15, done: 0 },
-  { label: 'debris', weight: 10, done: 0 },
-  { label: 'clouds', weight: 30, done: 0 },
-  { label: 'shaders', weight: 20, done: 0 },
+  { label: 'fonts', weight: 30, done: 0 },
+  { label: 'plane', weight: 30, done: 0 },
+  { label: 'shaders-intro', weight: 40, done: 0 },
 ];
 const loadTotalWeight = loadSteps.reduce((sum, s) => sum + s.weight, 0);
 
@@ -116,9 +110,8 @@ function setStep(label, fraction) {
 }
 
 // Yields control back to the browser for one frame. Used to break up
-// heavier construction loops (the cloud field) into visible chunks so the
-// bar can actually repaint between them, instead of the whole scene being
-// built in one blocking tick and the bar just jumping 0 -> 100.
+// heavier construction loops (the cloud field) into visible chunks so
+// nothing blocks the main thread for too long in one go.
 function nextFrame() {
   return new Promise((resolve) => requestAnimationFrame(() => resolve()));
 }
@@ -229,9 +222,8 @@ const cloudField = new THREE.Group();
 const CLOUD_COUNT = 90;
 const CLOUDS_PER_CHUNK = 6; // how many clusters get built before we yield a frame
 
-// Builds the cloud field a few clusters at a time and reports real,
-// incremental progress after each cluster actually exists — as opposed to
-// building all 90 in one blocking loop and only reporting 100% at the end.
+// Builds the cloud field a few clusters at a time. Runs in the background,
+// after the intro gate is already visible — see boot() below.
 async function buildCloudField() {
   for (let i = 0; i < CLOUD_COUNT; i++) {
     const c = buildCloudCluster();
@@ -239,7 +231,6 @@ async function buildCloudField() {
     c.position.set((Math.random() - 0.5) * 44, (Math.random() - 0.5) * 16 + 2, -t * FLIGHT_LENGTH - 8);
     c.scale.setScalar(0.8 + Math.random() * 1.6);
     cloudField.add(c);
-    setStep('clouds', (i + 1) / CLOUD_COUNT);
     if (i % CLOUDS_PER_CHUNK === CLOUDS_PER_CHUNK - 1) await nextFrame();
   }
   scene.add(cloudField);
@@ -302,7 +293,7 @@ function flightTangent(p, out) {
 // visible route line the plane follows — a thin winding streak through the sky.
 // This represents the FULL track (all 3 turns), and it terminates exactly where
 // the plane will fall off it — see the broken-edge debris built right after it.
-// Built lazily (see buildRouteIntoScene) so it counts as a real loading step.
+// Built lazily (see buildRouteIntoScene) as part of the background build.
 function buildRouteIntoScene() {
   const routeSamples = [];
   const ROUTE_RESOLUTION = 400;
@@ -314,7 +305,6 @@ function buildRouteIntoScene() {
   const routeMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 });
   const routeLine = new THREE.Mesh(routeGeo, routeMat);
   scene.add(routeLine);
-  setStep('route', 1);
 }
 
 /* =========================================================
@@ -374,7 +364,6 @@ function buildBrokenEdge() {
 
 function buildDebrisIntoScene() {
   scene.add(buildBrokenEdge());
-  setStep('debris', 1);
 }
 
 const clock = new THREE.Clock();
@@ -657,52 +646,65 @@ document.getElementById('restart-btn').addEventListener('click', resetToIntro);
 
 /* =========================================================
    LOADING BOOT SEQUENCE
-   Orchestrates the real steps declared in the "REAL LOADING
-   PIPELINE" block above. Fonts and scene construction run
-   concurrently (neither depends on the other); shader
-   compilation only starts once every mesh/material that will
-   ever appear in the intro/experience actually exists in the
-   scene graph, since compileAsync needs the real scene to walk.
-========================================================= */
+   -----------------------------------------------------------
+   Phase 1 (blocks the intro reveal — kept as small as possible
+   for LCP): fonts ready + build the plane + compile just its
+   shaders. This is everything the intro gate screen actually
+   needs to render.
 
-// Purely cosmetic: keeps the finished (100%) bar on screen for a brief beat
-// before the intro gate appears, so it doesn't just flash and vanish on fast
-// devices. It does NOT affect what percentage is shown — the bar always
-// reflects genuinely completed work. Set to 0 to disable entirely.
-const MIN_VISIBLE_MS_AFTER_100 = 250;
+   Phase 2 (background — runs AFTER the intro gate is already
+   visible, does not block LCP): build the route line, the
+   broken-track debris, all 90 cloud clusters, and compile their
+   shaders. This finishes well before the user is done reading
+   the intro screen on most devices; if they press ENTER before
+   it's done, enterExperience() below simply waits for it.
+========================================================= */
+let fullSceneReady = false;
+let pendingEnter = false;
 
 async function boot() {
   const fontsPromise = (document.fonts ? document.fonts.ready : Promise.resolve())
     .then(() => setStep('fonts', 1));
 
   buildPlaneIntoScene();
-  buildRouteIntoScene();
-  buildDebrisIntoScene();
 
-  await buildCloudField(); // reports incremental progress internally
-
-  // Every object that will ever be rendered now exists in the scene graph —
-  // ask the GPU to actually compile its shaders/materials up front, instead
-  // of hitching on the very first real frame the user sees.
+  // Compile only what currently exists in the scene (plane + lights) —
+  // this is the minimum GPU work needed before the intro screen can be
+  // shown without a shader-compile hitch on the first real frame.
   if (typeof renderer.compileAsync === 'function') {
     await renderer.compileAsync(scene, camera);
   } else {
     renderer.compile(scene, camera);
   }
-  setStep('shaders', 1);
+  setStep('shaders-intro', 1);
 
   await fontsPromise;
 
-  // Every real task above has now genuinely finished (renderLoadProgress()
-  // will read 100% at this point) — reveal the gate screen.
-  if (MIN_VISIBLE_MS_AFTER_100 > 0) {
-    await new Promise((res) => setTimeout(res, MIN_VISIBLE_MS_AFTER_100));
-  }
-
+  // Reveal the gate screen now. This is the true "page ready" moment for
+  // the user (and the LCP element, intro-logo) — no more artificial delay
+  // and no more waiting on clouds/route/debris to exist first.
   loadingScreenEl.classList.add('hidden');
   introScreenEl.classList.add('visible');
   introScreenEl.removeAttribute('aria-hidden');
   state = 'intro';
+
+  // ---- background build: everything only needed once the user scrolls
+  // into the flight experience, built AFTER the gate is already on screen ----
+  buildRouteIntoScene();
+  buildDebrisIntoScene();
+  await buildCloudField();
+
+  if (typeof renderer.compileAsync === 'function') {
+    await renderer.compileAsync(scene, camera);
+  } else {
+    renderer.compile(scene, camera);
+  }
+
+  fullSceneReady = true;
+  if (pendingEnter) {
+    pendingEnter = false;
+    enterExperience();
+  }
 }
 
 boot();
@@ -725,6 +727,15 @@ function speakWelcome() {
 }
 
 function enterExperience() {
+  // The scroll-driven flight needs the route/debris/clouds to already exist
+  // in the scene. If the user smashes ENTER before the background build in
+  // boot() has finished, queue the entry — it fires automatically the
+  // instant fullSceneReady flips true, no extra click needed.
+  if (!fullSceneReady) {
+    pendingEnter = true;
+    return;
+  }
+
   // safety net: make sure we're starting the flight from the very top of the
   // page, even in the unlikely case something nudged scrollTop before this
   window.scrollTo(0, 0);
